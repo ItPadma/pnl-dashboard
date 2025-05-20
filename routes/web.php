@@ -6,6 +6,7 @@ use App\Http\Controllers\PNL\MasterDataController;
 use App\Http\Controllers\PNL\NonRegulerController;
 use App\Http\Controllers\PNL\RegulerController;
 use App\Http\Controllers\User\AuthController;
+use App\Http\Controllers\Utilities\SettingController;
 use App\Http\Middleware\AuthnCheck;
 
 Route::controller(AuthController::class)->group(function () {
@@ -39,6 +40,17 @@ Route::controller(MasterDataController::class)->group(function () {
     Route::get('/pnl/master-data/brands', 'getBrands')->name('pnl.master-data.brands');
     Route::get('/pnl/master-data/depos', 'getDepo')->name('pnl.master-data.depos');
     Route::get('/pnl/master-data/companies', 'getCompanies')->name('pnl.master-data.companies');
+    Route::get('/pnl/master-data/users', 'getUsers')->name('pnl.master-data.users');
     Route::get('/pnl/master-data/import/master-pkp', 'indexMasterPKP')->name('pnl.master-data.index.master-pkp');
     Route::post('/pnl/master-data/import/master-pkp', 'importMasterPKP')->name('pnl.master-data.import.master-pkp');
 });
+
+
+Route::controller(SettingController::class)->group(function () {
+    Route::get('/pnl/setting/userman', 'usermanIndex')->name('pnl.setting.userman.index')->middleware([AuthnCheck::class]);
+    Route::post('/pnl/setting/userman/show', 'usermanShow')->name('pnl.setting.userman.show')->middleware([AuthnCheck::class]);
+    Route::post('/pnl/setting/userman', 'usermanStore')->name('pnl.setting.userman.store')->middleware([AuthnCheck::class]);
+    Route::put('/pnl/setting/userman', 'usermanUpdate')->name('pnl.setting.userman.update')->middleware([AuthnCheck::class]);
+    Route::delete('/pnl/setting/userman', 'usermanDelete')->name('pnl.setting.userman.destroy')->middleware([AuthnCheck::class]);
+});
+

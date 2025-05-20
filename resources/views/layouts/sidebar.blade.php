@@ -21,7 +21,7 @@
         <div class="sidebar-content">
             <ul class="nav nav-secondary">
                 <li class="nav-item {{ Request::is('/') ? 'active' : '' }}">
-                    <a data-bs-toggle="collapse" href="/" class="collapsed" aria-expanded="false">
+                    <a href="/" class="collapsed" aria-expanded="false">
                         <i class="fas fa-home"></i>
                         <p>Dashboard</p>
                     </a>
@@ -96,6 +96,20 @@
                         </ul>
                     </div>
                 </li>
+                @if (Auth::user()->role == 'superuser')
+                <li class="nav-section">
+                    <span class="sidebar-mini-icon">
+                        <i class="fa fa-ellipsis-h"></i>
+                    </span>
+                    <h4 class="text-section">Settings</h4>
+                </li>
+                <li class="nav-item {{ Request::is('pnl/setting/userman') ? 'active' : '' }}">
+                    <a href="{{ route('pnl.setting.userman.index') }}" class="collapsed" aria-expanded="false">
+                        <i class="fas fa-users"></i>
+                        <p>User Manager</p>
+                    </a>
+                </li>
+                @endif
             </ul>
         </div>
     </div>

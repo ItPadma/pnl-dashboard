@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MasterPkp;
 use App\Models\PajakKeluaranDetail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -172,6 +173,10 @@ class RegulerController extends Controller
             }
             if ($request->has('brand') && $request->brand != 'all') {
                 $query->where('brand', $request->brand);
+            }
+            if ($request->has('depo') && $request->depo == 'all') {
+                $currentUserDepo = explode("|", Auth::user()->depo);
+                $query->whereIn('depo', $currentUserDepo);
             }
             if ($request->has('depo') && $request->depo != 'all') {
                 $query->where('depo', $request->depo);
@@ -382,7 +387,6 @@ class RegulerController extends Controller
             ], 500);
         }
     }
-
 
     public function download(Request $request)
     {

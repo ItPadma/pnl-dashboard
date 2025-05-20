@@ -2488,12 +2488,32 @@
                 type: "GET",
                 dataType: "json",
                 success: function(data) {
-                    $.each(data.data, function(index, depo) {
-                        $('#filter_depo').append($('<option>', {
-                            value: depo.code,
-                            text: depo.code + ' - ' + depo.name
-                        }));
-                    });
+                    let currentUserDepo = "{{ Auth::user()->depo }}";
+                    currentUserDepo = currentUserDepo.split('|');
+
+                    // Check if user has 'all' access
+                    let hasAllAccess = currentUserDepo.includes('all');
+
+                    // If user doesn't have 'all' access, filter the depos
+                    if (!hasAllAccess) {
+                        // Filter data to only show depos the user has access to
+                        $.each(data.data, function(index, depo) {
+                            if (currentUserDepo.includes(depo.code)) {
+                                $('#filter_depo').append($('<option>', {
+                                    value: depo.code,
+                                    text: depo.code + ' - ' + depo.name
+                                }));
+                            }
+                        });
+                    } else {
+                        // User has 'all' access, show all depos
+                        $.each(data.data, function(index, depo) {
+                            $('#filter_depo').append($('<option>', {
+                                value: depo.code,
+                                text: depo.code + ' - ' + depo.name
+                            }));
+                        });
+                    }
                 },
                 error: function(xhr) {
                     console.error(xhr.responseText);
