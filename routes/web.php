@@ -30,6 +30,11 @@ Route::controller(RegulerController::class)->group(function () {
     Route::get('/pnl/reguler/pajak-masukan', 'pmIndex')->name('pnl.reguler.pajak-masukan.index')->middleware([AuthnCheck::class]);
 });
 
+Route::controller(NonRegulerController::class)->group(function () {
+    Route::get('/pnl/non-reguler/pajak-keluaran', 'pkIndex')->name('pnl.non-reguler.pajak-keluaran.index')->middleware([AuthnCheck::class]);
+    Route::get('/pnl/non-reguler/pajak-masukan', 'pmIndex')->name('pnl.non-reguler.pajak-masukan.index')->middleware([AuthnCheck::class]);
+});
+
 Route::controller(MasterDataController::class)->group(function () {
     Route::get('/pnl/master-data/brands', 'getBrands')->name('pnl.master-data.brands');
     Route::get('/pnl/master-data/depos', 'getDepo')->name('pnl.master-data.depos');

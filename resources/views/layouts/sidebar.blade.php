@@ -62,12 +62,12 @@
                     <div class="collapse {{ Request::is('pnl/non-reguler*') ? 'show' : '' }}" id="nonreguler">
                         <ul class="nav nav-collapse">
                             <li class="{{ Request::is('pnl/non-reguler/pajak-keluaran*') ? 'active' : '' }}">
-                                <a data-bs-toggle="collapse" href="#subnavnrpk">
+                                <a href="{{ route('pnl.non-reguler.pajak-keluaran.index') }}">
                                     <span class="sub-item">Pajak Keluaran</span>
                                 </a>
                             </li>
                             <li class="{{ Request::is('pnl/non-reguler/pajak-masukan*') ? 'active' : '' }}">
-                                <a data-bs-toggle="collapse" href="#subnavnrpm">
+                                <a href="{{ route('pnl.non-reguler.pajak-masukan.index') }}">
                                     <span class="sub-item">Pajak Masukan</span>
                                 </a>
                             </li>

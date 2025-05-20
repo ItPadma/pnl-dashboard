@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'Pajak Masukan - Reguler | PNL')
+@section('title', 'Pajak Keluaran - NonReguler | PNL')
 
 @section('style')
     <link rel="stylesheet" href="{{ asset('assets/css/daterangepicker.css') }}">
@@ -10,7 +10,7 @@
     <div class="container">
         <div class="page-inner">
             <div class="page-header">
-                <h3 class="fw-bold mb-3">Pajak Masukan</h3>
+                <h3 class="fw-bold mb-3">Pajak Keluaran</h3>
                 <ul class="breadcrumbs mb-3">
                     <li class="nav-home">
                         <a href="#">
@@ -21,13 +21,13 @@
                         <i class="icon-arrow-right"></i>
                     </li>
                     <li class="nav-item">
-                        <a href="#">Reguler</a>
+                        <a href="#">Non-Reguler</a>
                     </li>
                     <li class="separator">
                         <i class="icon-arrow-right"></i>
                     </li>
                     <li class="nav-item">
-                        <a href="#">Pajak Masukan</a>
+                        <a href="#">Pajak Keluaran</a>
                     </li>
                 </ul>
             </div>

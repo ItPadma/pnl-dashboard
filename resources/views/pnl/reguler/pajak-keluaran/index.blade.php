@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'Pajak Keluaran - PNL Reguler')
+@section('title', 'Pajak Keluaran - Reguler | PNL')
 
 @section('style')
     <link rel="stylesheet" href="{{ asset('assets/css/daterangepicker.css') }}">
