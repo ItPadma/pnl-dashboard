@@ -272,7 +272,7 @@
                             </li>
                             <li>
                                 <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="#">Change Password</a>
+                                <a class="dropdown-item" href="#" id="changepass">Change Password</a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="{{ route('logout') }}">Logout</a>
                             </li>

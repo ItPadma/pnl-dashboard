@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Utilities;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class SettingController extends Controller
 {
@@ -111,6 +112,30 @@ class SettingController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => 'User Deleted Successfully',
+                'data' => $user
+            ], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong',
+                'data' => $th->getMessage()
+            ], 500);
+        }
+    }
+
+    public function usermanChangePassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'password' => 'required',
+            ]);
+            $userId = Auth::user()->id;
+            $user = User::find($userId);
+            $user->password = bcrypt($request->password);
+            $user->save();
+            return response()->json([
+                'status' => true,
+                'message' => 'Password Changed Successfully',
                 'data' => $user
             ], 200);
         } catch (\Throwable $th) {

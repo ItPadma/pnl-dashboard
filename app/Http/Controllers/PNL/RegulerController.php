@@ -4,6 +4,7 @@ namespace App\Http\Controllers\PNL;
 
 use App\Exports\PajakKeluaranDetailExport;
 use App\Http\Controllers\Controller;
+use App\Models\MasterDepo;
 use App\Models\MasterPkp;
 use App\Models\PajakKeluaranDetail;
 use Illuminate\Http\Request;
@@ -21,118 +22,6 @@ class RegulerController extends Controller
     public function pmIndex()
     {
         return view('pnl.reguler.pajak-masukan.index');
-    }
-
-    public function pkGetData(Request $request)
-    {
-        try {
-            // filter
-            $brand = $request->input('brand');
-            $depo = $request->input('depo');
-            $periode = $request->input('periode');
-            $periode_awal = explode(' - ', $periode)[0];
-            $periode_akhir = explode(' - ', $periode)[1];
-
-            if ($brand == 'all' && $depo == 'all') {
-                $data = PajakKeluaranDetail::where('periode', '>=', $periode_awal)
-                    ->where('periode', '<=', $periode_akhir)
-                    ->get();
-            }
-            if ($brand == 'all' && $depo != 'all') {
-                $data = PajakKeluaranDetail::where('periode', '>=', $periode_awal)
-                    ->where('periode', '<=', $periode_akhir)
-                    ->where('depo', $depo)
-                    ->get();
-            }
-            if ($brand != 'all' && $depo == 'all') {
-                $data = PajakKeluaranDetail::where('periode', '>=', $periode_awal)
-                    ->where('periode', '<=', $periode_akhir)
-                    ->where('brand', $brand)
-                    ->get();
-            }
-            if ($brand != 'all' && $depo != 'all') {
-                $data = PajakKeluaranDetail::where('periode', '>=', $periode_awal)
-                    ->where('periode', '<=', $periode_akhir)
-                    ->where('brand', $brand)
-                    ->where('depo', $depo)
-                    ->get();
-            }
-            // check if data is empty
-            if ($data->isEmpty()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Data not found',
-                    'data' => [],
-                ]);
-            }
-            return response()->json([
-                'status' => true,
-                'message' => 'Data retrieved successfully',
-                'data' => $data,
-            ]);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'status' => false,
-                'message' => $th->getMessage(),
-                'data' => [],
-            ]);
-        }
-    }
-
-    public function pmGetData(Request $request)
-    {
-        try {
-            // filter
-            $brand = $request->input('brand');
-            $depo = $request->input('depo');
-            $periode = $request->input('periode');
-            $periode_awal = explode(' - ', $periode)[0];
-            $periode_akhir = explode(' - ', $periode)[1];
-
-            if ($brand == 'all' && $depo == 'all') {
-                $data = PajakKeluaranDetail::where('periode', '>=', $periode_awal)
-                    ->where('periode', '<=', $periode_akhir)
-                    ->get();
-            }
-            if ($brand == 'all' && $depo != 'all') {
-                $data = PajakKeluaranDetail::where('periode', '>=', $periode_awal)
-                    ->where('periode', '<=', $periode_akhir)
-                    ->where('depo', $depo)
-                    ->get();
-            }
-            if ($brand != 'all' && $depo == 'all') {
-                $data = PajakKeluaranDetail::where('periode', '>=', $periode_awal)
-                    ->where('periode', '<=', $periode_akhir)
-                    ->where('brand', $brand)
-                    ->get();
-            }
-            if ($brand != 'all' && $depo != 'all') {
-                $data = PajakKeluaranDetail::where('periode', '>=', $periode_awal)
-                    ->where('periode', '<=', $periode_akhir)
-                    ->where('brand', $brand)
-                    ->where('depo', $depo)
-                    ->get();
-            }
-            // check if data is empty
-            if ($data->isEmpty()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Data not found',
-                    'data' => [],
-                ]);
-            }
-            return response()->json([
-                'status' => true,
-                'message' => 'Data retrieved successfully',
-                'data' => $data,
-            ]);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'status' => false,
-                'message' => $th->getMessage(),
-                'data' => [],
-            ]);
-        }
     }
 
     public function dtPKGetData(Request $request)
@@ -175,11 +64,18 @@ class RegulerController extends Controller
                 $query->where('brand', $request->brand);
             }
             if ($request->has('depo') && $request->depo == 'all') {
-                $currentUserDepo = explode("|", Auth::user()->depo);
-                $query->whereIn('depo', $currentUserDepo);
+                $currentUserDepo = Auth::user()->depo;
+                if (str_contains($currentUserDepo, '|')) {
+                    $currentUserDepo = explode("|", $currentUserDepo);
+                    if (!in_array('all', $currentUserDepo)) {
+                        $depo = MasterDepo::whereIn('code', $currentUserDepo)->get()->pluck('name')->toArray();
+                        $query->whereIn('depo', $depo);
+                    }
+                }
             }
             if ($request->has('depo') && $request->depo != 'all') {
-                $query->where('depo', $request->depo);
+                $depo = MasterDepo::where('code', $request->depo)->first();
+                $query->where('depo', $depo->name);
             }
             if ($request->has('periode')) {
                 $periode = explode(' - ', $request->periode);
@@ -212,7 +108,7 @@ class RegulerController extends Controller
                 }
                 if ($request->tipe == 'retur') {
                     $query->where('qty_pcs', '<', 0);
-                    $tipe = " AND qty_pcs < 0";
+                    $tipe = " AND b.decUomQty < 0";
                 }
             }
             if($request->has('chstatus')) {

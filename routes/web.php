@@ -23,7 +23,7 @@ Route::controller(DashboardController::class)->group(function () {
 
 Route::controller(RegulerController::class)->group(function () {
     Route::get('/pnl/reguler/pajak-keluaran', 'pkIndex')->name('pnl.reguler.pajak-keluaran.index')->middleware([AuthnCheck::class]);
-    Route::post('/pnl/reguler/pajak-keluaran/get-data', 'pkGetData')->name('pnl.reguler.pajak-keluaran.get-data');
+    // Route::post('/pnl/reguler/pajak-keluaran/get-data', 'pkGetData')->name('pnl.reguler.pajak-keluaran.get-data');
     Route::post('/pnl/reguler/pajak-keluaran/dtdata', 'dtPKGetData')->name('pnl.reguler.pajak-keluaran.dtdata');
     Route::post('/pnl/reguler/pajak-keluaran/update-checked', 'updateChecked')->name('pnl.reguler.pajak-keluaran.updateChecked');
     Route::get('/pnl/reguler/pajak-keluaran/export', 'download')->name('pnl.reguler.pajak-keluaran.download');
@@ -48,6 +48,7 @@ Route::controller(MasterDataController::class)->group(function () {
 
 Route::controller(SettingController::class)->group(function () {
     Route::get('/pnl/setting/userman', 'usermanIndex')->name('pnl.setting.userman.index')->middleware([AuthnCheck::class]);
+    Route::post('/pnl/setting/userman/changepass', 'usermanChangePassword')->name('pnl.setting.userman.changepassword')->middleware([AuthnCheck::class]);
     Route::post('/pnl/setting/userman/show', 'usermanShow')->name('pnl.setting.userman.show')->middleware([AuthnCheck::class]);
     Route::post('/pnl/setting/userman', 'usermanStore')->name('pnl.setting.userman.store')->middleware([AuthnCheck::class]);
     Route::put('/pnl/setting/userman', 'usermanUpdate')->name('pnl.setting.userman.update')->middleware([AuthnCheck::class]);

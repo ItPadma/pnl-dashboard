@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -64,9 +65,23 @@ class PajakKeluaranDetail extends Model
         try {
             $filter_pt = $pt !== 'all' ? " AND e.szCategory_9 = '$pt'" : "";
             $filter_brand = $brand !== 'all' ? " AND e.szCategory_1 = '$brand'" : "";
-            $filter_depo = $depo !== 'all' ? " AND a.szWorkplaceId = '$depo'" : "";
             $filter_tanggal = " FORMAT (a.dtmDelivery, 'yyyy-MM-dd') BETWEEN '$start' AND '$end'";
             $filter_tipe = $tipe ?? '';
+            if ($depo == 'all') {
+                $currentUserDepo = Auth::user()->depo;
+                if (str_contains($currentUserDepo, '|')) {
+                    $currentUserDepo = explode("|", $currentUserDepo);
+                    if (in_array('all', $currentUserDepo)) {
+                        $filter_depo = "";
+                    } else {
+                        $filter_depo = " AND a.[szWorkplaceId] IN (" . implode(',', $currentUserDepo) . ")";
+                    }
+                } else {
+                    $filter_depo = "";
+                }
+            } else {
+                $filter_depo = " AND a.[szWorkplaceId] = '$depo'";
+            }
 
             $query  = "SELECT
                     a.[szFInvoiceId] AS 'no_invoice',
