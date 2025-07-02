@@ -4,6 +4,7 @@
 
 @section('style')
     <link rel="stylesheet" href="{{ asset('assets/css/daterangepicker.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/toastr.min.css') }}">
     <style>
         thead input.column-filter {
             width: 100%;
@@ -162,8 +163,8 @@
                 </div>
                 <div class="col-xm-12 col-sm-12 col-md-9 col-lg-9 mb-3">
                     <div class="input-group">
-                        <label class="input-group-text" for="inputGroupFilter">Terapkan ke:</label>
-                        <select class="form-select" id="inputGroupFilter" aria-label="Example select with button addon">
+                        <label class="input-group-text" for="inputGroupFilter">Terapkan filter ke:</label>
+                        <select class="form-select" id="inputGroupFilter" aria-label="Terapkan filter ke:">
                             <option value='all'>--ALL--</option>
                             <option value="pkp">PKP</option>
                             <option value="pkpnppn">PKP (Non-PPN)</option>
@@ -220,10 +221,11 @@
                                         </tr>
                                     </table>
                                 </div>
-                                <table class="table table-sm table-striped table-bordered table-hover" id="table-pkp">
+                                <table class="table table-xm table-striped table-bordered table-hover" id="table-pkp">
                                     <thead>
                                         <tr>
                                             <th><input type="checkbox" id="select-all-pkp"></th> <!-- Checkbox untuk select all -->
+                                            <th>MOVE TO</th>
                                             <th>NO INVOICE</th>
                                             <th>NO DO</th>
                                             <th>KODE PRODUK</th>
@@ -257,6 +259,7 @@
                                             <th>JENIS</th>
                                         </tr>
                                         <tr>
+                                            <th></th>
                                             <th></th>
                                             <th><input type="text" class="form-control form-control-sm column-filter-pkp"
                                                     placeholder="Filter Invoice" data-column="1"></th>
@@ -845,7 +848,27 @@
 @section('script')
     <script src="{{ asset('assets/js/plugin/moment/moment.min.js') }}"></script>
     <script src="{{ asset('assets/js/plugin/daterangepicker/daterangepicker.min.js') }}"></script>
+    <script src="{{ asset('assets/js/plugin/toastr/toastr.min.js') }}"></script>
     <script>
+        toastr.options = {
+            "closeButton": true,
+            "debug": false,
+            "newestOnTop": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "preventDuplicates": false,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": "5000",
+            "extendedTimeOut": "1000",
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut",
+            "toastClass": "colored-toast"
+        };
+
         let tablePkp;
         let tablePkpNppn;
         let tableNonPkp;
@@ -889,6 +912,23 @@
                                 return '<div style="display: flex; align-items: center; gap: 5px;"><i class="fas fa-fw fa-check text-secondary"></i><i class="fas fa-fw fa-download text-secondary"></i></div>';
                             }
                             return `<input type="checkbox" class="row-checkbox-pkp" data-id="${row.id}" ${checked}>`;
+                        }
+                    },
+                    {
+                        data: 'id',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            const checked = row.is_checked == 1 ? '' : 'disabled';
+                            return `<select id="move-to-${row.id}" class="form-select move-to" data-id="${row.id}" data-from="pkp" ${checked}>
+                                <option value="">Pilih...</option>
+                                <option value="pkp">PKP</option>
+                                <option value="pkpnppn">PKP Non-PPN</option>
+                                <option value="npkp">Non-PKP</option>
+                                <option value="npkpnppn">Non-PKP Non-PPN</option>
+                                <option value="retur">Retur</option>
+                            </select>`;
                         }
                     },
                     {
@@ -1053,7 +1093,7 @@
                     // Apply the search for each column
                     api.columns().every(function() {
                         var column = this;
-                        var input = $('.column-filter-pkp[data-column="' + column.index() + '"]');
+                        var input = $('.column-filter-pkp[data-column="' + (column.index() - 1) + '"]');
 
                         input.on('keyup change clear', function() {
                             if (column.search() !== this.value) {
@@ -2208,6 +2248,15 @@
                 const isChecked = $(this).is(':checked') ? 1 : 0;
                 const id = $(this).data('id');
 
+                // Class move-to dengan data-id bersangkutan berubah menjadi disabled
+                const checkbox = $(this);
+                const moveToButton = $('.move-to[data-id="' + id + '"]');
+                if (checkbox.is(':checked')) {
+                    moveToButton.prop('disabled', true);
+                } else {
+                    moveToButton.prop('disabled', false);
+                }
+
                 // Kirim AJAX request untuk memperbarui status di database
                 $.ajax({
                     url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}", // Tambahkan route untuk update
@@ -2460,6 +2509,58 @@
                     error: function(xhr) {
                         console.error(xhr.responseText);
                         setDownloadCounter('retur');
+                    }
+                });
+            });
+
+            function reloadTableMoveFromMove2(move_from, move_to) {
+                // Mapping tipe ke variabel DataTable
+                const tableMap = {
+                    pkp: tablePkp,
+                    pkpnppn: tablePkpNppn,
+                    npkp: tableNonPkp,
+                    npkpnppn: tableNonPkpNppn,
+                    retur: tableRetur
+                };
+
+                // Reload tabel asal
+                if (tableMap[move_from]) {
+                    tableMap[move_from].ajax.reload();
+                    setDownloadCounter(move_from);
+                }
+                // Reload tabel tujuan jika berbeda
+                if (move_to && move_to !== move_from && tableMap[move_to]) {
+                    tableMap[move_to].ajax.reload();
+                    setDownloadCounter(move_to);
+                }
+            }
+
+            // Event listener untuk select class move-to
+            $(document).on('change', '.move-to', function(){
+                console.log('hit move')
+                const id = $(this).data('id');
+                const move_from = $(this).data('from');
+                const move_to = $(this).val();
+                // Kirim AJAX request untuk memperbarui status di database
+                $.ajax({
+                    url: "{{ route('pnl.reguler.pajak-keluaran.updateMove2') }}",
+                    type: "POST",
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        id: id,
+                        move_from: move_from,
+                        move_to: move_to
+                    },
+                    success: function(response) {
+                        if (response.status){
+                            reloadTableMoveFromMove2(move_from, move_to);
+                            toastr.success(response.message);
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        toastr.error(xhr.responseText);
                     }
                 });
             });

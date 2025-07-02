@@ -4,6 +4,7 @@ namespace App\Http\Controllers\PNL;
 
 use App\Exports\PajakKeluaranDetailExport;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Utilities\LogController;
 use App\Models\MasterDepo;
 use App\Models\MasterPkp;
 use App\Models\PajakKeluaranDetail;
@@ -89,25 +90,30 @@ class RegulerController extends Controller
                 if ($request->tipe == 'pkp') {
                     $query->whereIn('customer_id', $pkp);
                     $query->where('tipe_ppn', 'PPN');
+                    $query->orWhere('moved_to', 'pkp');
                     $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId IN ('" . implode("','", $pkp) . "')";
                 }
                 if ($request->tipe == 'pkpnppn') {
                     $query->whereIn('customer_id', $pkp);
                     $query->where('tipe_ppn', 'NON-PPN');
+                    $query->orWhere('moved_to', 'pkpnppn');
                     $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId IN ('" . implode("','", $pkp) . "')";
                 }
                 if ($request->tipe == 'npkp') {
                     $query->whereNotIn('customer_id', $pkp);
                     $query->where('tipe_ppn', 'PPN');
+                    $query->orWhere('moved_to', 'npkp');
                     $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
                 }
                 if ($request->tipe == 'npkpnppn') {
                     $query->whereNotIn('customer_id', $pkp);
                     $query->where('tipe_ppn', 'NON-PPN');
+                    $query->orWhere('moved_to', 'npkpnppn');
                     $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
                 }
                 if ($request->tipe == 'retur') {
                     $query->where('qty_pcs', '<', 0);
+                    $query->orWhere('moved_to', 'retur');
                     $tipe = " AND b.decUomQty < 0";
                 }
             }
@@ -151,6 +157,45 @@ class RegulerController extends Controller
                 'iTotalDisplayRecords' => $totalRecordswithFilter,
                 'aaData' => $records,
                 'status' => true,
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage(),
+                'data' => []
+            ]);
+        }
+    }
+
+    public function updateMove2(Request $request)
+    {
+        try {
+            $request->validate([
+                'id' => 'required',
+                'move_from' => 'required|in:pkp,pkpnppn,npkp,npkpnppn,retur',
+                'move_to' => 'required|in:pkp,pkpnppn,npkp,npkpnppn,retur'
+            ]);
+            $id = $request->input('id');
+            $item = PajakKeluaranDetail::findOrFail($id);
+            $item->has_moved = 'y';
+            $item->moved_to = $request->input('move_to');
+            $item->moved_at = now();
+            $item->save();
+
+            LogController::createLog(
+                Auth::user()->id,
+                'Move Item from '.$request->input('move_from').' to '.$request->input('move_to'),
+                'Update',
+                '{id: '.$id.', no_invoice: '.$item->no_invoice.', no_do: '.$item->no_do.', kode_produk: '.$item->kode_produk.', move_from: '.$request->input('move_from').', move_to: '.$request->input('move_to').'}',
+                'pajak_keluaran_details',
+                'info',
+                $request
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Item moved successfully',
+                'data' => $item
             ]);
         } catch (\Throwable $th) {
             return response()->json([

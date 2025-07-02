@@ -23,9 +23,9 @@ Route::controller(DashboardController::class)->group(function () {
 
 Route::controller(RegulerController::class)->group(function () {
     Route::get('/pnl/reguler/pajak-keluaran', 'pkIndex')->name('pnl.reguler.pajak-keluaran.index')->middleware([AuthnCheck::class]);
-    // Route::post('/pnl/reguler/pajak-keluaran/get-data', 'pkGetData')->name('pnl.reguler.pajak-keluaran.get-data');
     Route::post('/pnl/reguler/pajak-keluaran/dtdata', 'dtPKGetData')->name('pnl.reguler.pajak-keluaran.dtdata');
     Route::post('/pnl/reguler/pajak-keluaran/update-checked', 'updateChecked')->name('pnl.reguler.pajak-keluaran.updateChecked');
+    Route::post('/pnl/reguler/pajak-keluaran/update-move2', 'updateMove2')->name('pnl.reguler.pajak-keluaran.updateMove2');
     Route::get('/pnl/reguler/pajak-keluaran/export', 'download')->name('pnl.reguler.pajak-keluaran.download');
     Route::post('/pnl/reguler/pajak-keluaran/count', 'count')->name('pnl.reguler.pajak-keluaran.count');
     Route::get('/pnl/reguler/pajak-masukan', 'pmIndex')->name('pnl.reguler.pajak-masukan.index')->middleware([AuthnCheck::class]);
