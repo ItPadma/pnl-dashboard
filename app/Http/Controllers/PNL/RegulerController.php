@@ -95,29 +95,34 @@ class RegulerController extends Controller
                 if ($request->tipe == 'pkp') {
                     $query->whereIn('customer_id', $pkp);
                     $query->where('tipe_ppn', 'PPN');
+                    $query->where('has_moved', 'n');
                     $query->orWhere('moved_to', 'pkp');
                     $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId IN ('" . implode("','", $pkp) . "')";
                 }
                 if ($request->tipe == 'pkpnppn') {
                     $query->whereIn('customer_id', $pkp);
                     $query->where('tipe_ppn', 'NON-PPN');
+                    $query->where('has_moved', 'n');
                     $query->orWhere('moved_to', 'pkpnppn');
                     $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId IN ('" . implode("','", $pkp) . "')";
                 }
                 if ($request->tipe == 'npkp') {
                     $query->whereNotIn('customer_id', $pkp);
                     $query->where('tipe_ppn', 'PPN');
+                    $query->where('has_moved', 'n');
                     $query->orWhere('moved_to', 'npkp');
                     $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
                 }
                 if ($request->tipe == 'npkpnppn') {
                     $query->whereNotIn('customer_id', $pkp);
                     $query->where('tipe_ppn', 'NON-PPN');
+                    $query->where('has_moved', 'n');
                     $query->orWhere('moved_to', 'npkpnppn');
                     $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
                 }
                 if ($request->tipe == 'retur') {
                     $query->where('qty_pcs', '<', 0);
+                    $query->where('has_moved', 'n');
                     $query->orWhere('moved_to', 'retur');
                     $tipe = " AND b.decUomQty < 0";
                 }
@@ -292,20 +297,48 @@ class RegulerController extends Controller
             $pkp = MasterPkp::all()->pluck('IDPelanggan')->toArray();
             switch ($tipe) {
                 case 'pkp':
-                    $query->whereIn('customer_id', $pkp);
-                    $query->where('tipe_ppn', 'PPN');
+                    $query->where(function($q) use ($pkp) {
+                        $q->where('tipe_ppn', 'PPN')
+                          ->whereIn('customer_id', $pkp)
+                          ->where('has_moved', 'n');
+                    });
+                    $query->orWhere(function($q) {
+                        $q->where('has_moved', 'y')
+                          ->where('moved_to', 'pkp');
+                    });
                     break;
                 case 'pkpnppn':
-                    $query->whereIn('customer_id', $pkp);
-                    $query->where('tipe_ppn', 'NON-PPN');
+                    $query->where(function($q) use ($pkp) {
+                        $q->where('tipe_ppn', 'NON-PPN')
+                          ->whereIn('customer_id', $pkp)
+                          ->where('has_moved', 'n');
+                    });
+                    $query->orWhere(function($q) {
+                        $q->where('has_moved', 'y')
+                          ->where('moved_to', 'pkpnppn');
+                    });
                     break;
                 case 'npkp':
-                    $query->whereNotIn('customer_id', $pkp);
-                    $query->where('tipe_ppn', 'PPN');
+                    $query->where(function($q) use ($pkp) {
+                        $q->where('tipe_ppn', 'PPN')
+                          ->whereNotIn('customer_id', $pkp)
+                          ->where('has_moved', 'n');
+                    });
+                    $query->orWhere(function($q) {
+                        $q->where('has_moved', 'y')
+                          ->where('moved_to', 'npkp');
+                    });
                     break;
                 case 'npkpnppn':
-                    $query->whereNotIn('customer_id', $pkp);
-                    $query->where('tipe_ppn', 'NON-PPN');
+                    $query->where(function($q) use ($pkp) {
+                        $q->where('tipe_ppn', 'NON-PPN')
+                          ->whereNotIn('customer_id', $pkp)
+                          ->where('has_moved', 'n');
+                    });
+                    $query->orWhere(function($q) {
+                        $q->where('has_moved', 'y')
+                          ->where('moved_to', 'npkpnppn');
+                    });
                     break;
                 case 'retur':
                     $query->where('qty_pcs', '<', 0);
@@ -314,8 +347,8 @@ class RegulerController extends Controller
 
             // Add the custom raw SQL to the query
             $counts = $query->selectRaw('
-                SUM(CASE WHEN is_downloaded = 0 THEN 1 ELSE 0 END) AS ready2download_count,
-                SUM(CASE WHEN is_downloaded = 1 THEN 1 ELSE 0 END) AS downloaded_count
+                SUM(CASE WHEN is_downloaded = 0 THEN 1 ELSE 0 END) AS total_ready2download_count,
+                SUM(CASE WHEN is_downloaded = 1 THEN 1 ELSE 0 END) AS total_downloaded_count
             ')
             ->where('is_checked', 1)
             ->get();
