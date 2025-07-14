@@ -29,6 +29,7 @@ Route::controller(RegulerController::class)->group(function () {
     Route::get('/pnl/reguler/pajak-keluaran/export', 'download')->name('pnl.reguler.pajak-keluaran.download');
     Route::post('/pnl/reguler/pajak-keluaran/count', 'count')->name('pnl.reguler.pajak-keluaran.count');
     Route::get('/pnl/reguler/pajak-masukan', 'pmIndex')->name('pnl.reguler.pajak-masukan.index')->middleware([AuthnCheck::class]);
+    Route::get('/pnl/reguler/uploadcsv', 'pmUploadCsvIndex')->name('pnl.reguler.pajak-masukan.uploadcsv')->middleware([AuthnCheck::class]);
 });
 
 Route::controller(NonRegulerController::class)->group(function () {

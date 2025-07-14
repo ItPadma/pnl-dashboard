@@ -50,6 +50,11 @@
                                     <span class="sub-item">Pajak Masukan</span>
                                 </a>
                             </li>
+                            <li class="{{ Request::is('pnl/reguler/uploadcsv*') ? 'active' : '' }}">
+                                <a href="{{ route('pnl.reguler.pajak-masukan.uploadcsv') }}">
+                                    <span class="sub-item">Upload CSV Coretax</span>
+                                </a>
+                            </li>
                         </ul>
                     </div>
                 </li>

@@ -204,7 +204,7 @@
                                 <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
                                     <table>
                                         <tr>
-                                            <td><i id="icon-counter" class="fas fa-info-circle"></i><div id="spinner-counter" class="spinner-border spinner-border-sm" role="status" style="display: none;"><span class="visually-hidden">Loading...</span></div> Terdapat: </td>
+                                            <td><i class="fas fa-info-circle icon-counter-pkp"></i><div class="spinner-border spinner-border-sm spinner-counter-pkp" role="status" style="display: none;"><span class="visually-hidden">Loading...</span></div> Terdapat: </td>
                                             <td id="total_ready2download_pkp">0</td>
                                             <td>data siap&nbsp;&nbsp; di-download</td>
                                             <td rowspan="2">
@@ -333,7 +333,7 @@
                                 <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
                                     <table>
                                         <tr>
-                                            <td><i class="fas fa-info-circle"></i> Terdapat: </td>
+                                            <td><i class="fas fa-info-circle icon-counter-pkpnppn"></i><div class="spinner-border spinner-border-sm spinner-counter-pkpnppn" role="status" style="display: none;"><span class="visually-hidden">Loading...</span></div> Terdapat: </td>
                                             <td id="total_ready2download_pkpnppn">0</td>
                                             <td>data siap&nbsp;&nbsp; di-download</td>
                                             <td rowspan="2">
@@ -460,7 +460,7 @@
                                 <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
                                     <table>
                                         <tr>
-                                            <td><i class="fas fa-info-circle"></i> Terdapat: </td>
+                                            <td><i class="fas fa-info-circle icon-counter-npkp"></i><div class="spinner-border spinner-border-sm spinner-counter-npkp" role="status" style="display: none;"><span class="visually-hidden">Loading...</span></div> Terdapat: </td>
                                             <td id="total_ready2download_npkp">0</td>
                                             <td>data siap&nbsp;&nbsp; di-download</td>
                                             <td rowspan="2">
@@ -587,7 +587,7 @@
                                 <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
                                     <table>
                                         <tr>
-                                            <td><i class="fas fa-info-circle"></i> Terdapat: </td>
+                                            <td><i class="fas fa-info-circle icon-counter-npkpnppn"></i><div class="spinner-border spinner-border-sm spinner-counter-npkpnppn" role="status" style="display: none;"><span class="visually-hidden">Loading...</span></div> Terdapat: </td>
                                             <td id="total_ready2download_npkpnppn">0</td>
                                             <td>data siap&nbsp;&nbsp; di-download</td>
                                             <td rowspan="2">
@@ -714,7 +714,7 @@
                                 <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
                                     <table>
                                         <tr>
-                                            <td><i class="fas fa-info-circle"></i> Terdapat: </td>
+                                            <td><i class="fas fa-info-circle icon-counter-retur"></i><div class="spinner-border spinner-border-sm spinner-counter-retur" role="status" style="display: none;"><span class="visually-hidden">Loading...</span></div> Terdapat: </td>
                                             <td id="total_ready2download_retur">0</td>
                                             <td>data siap&nbsp;&nbsp; di-download</td>
                                             <td rowspan="2">
@@ -2114,7 +2114,7 @@
                     tipe: tipe
                 },
                 beforeSend: function(xhr) {
-
+                    toggleSpinnerDownload(tipe, true);
                 },
                 success: function(response) {
                     $('#total_ready2download_' + tipe).text(response.data[0].ready2download_count ?? 0);
@@ -2124,11 +2124,25 @@
                     } else {
                         $('#btn-download-' + tipe).prop('hidden', true);
                     }
+                    toggleSpinnerDownload(tipe, false);
                 },
                 error: function(error) {
                     console.error('Error:', error);
+                    toggleSpinnerDownload(tipe, false);
                 }
             });
+        }
+
+        function toggleSpinnerDownload(tipe, show) {
+            const spinner = $(`.spinner-counter-${tipe}`);
+            const icon = $(`.icon-counter-${tipe}`);
+            if (show) {
+                spinner.show();
+                icon.hide();
+            } else {
+                spinner.hide();
+                icon.show();
+            }
         }
 
         $(document).ready(function() {
@@ -2233,21 +2247,13 @@
                         ids: ids,
                         is_checked: isChecked
                     },
-                    beforeSend: function(xhr) {
-                        $('#icon-counter').hide();
-                        $('#spinner-counter').show();
-                    },
                     success: function(response) {
                         console.log(response.message);
                         setDownloadCounter('pkp');
-                        $('#icon-counter').show();
-                        $('#spinner-counter').hide();
                     },
                     error: function(xhr) {
                         console.error(xhr.responseText);
                         setDownloadCounter('pkp');
-                        $('#icon-counter').show();
-                        $('#spinner-counter').hide();
                     }
                 });
             });
@@ -2274,21 +2280,13 @@
                         id: id,
                         is_checked: isChecked
                     },
-                    beforeSend: function(xhr) {
-                        $('#icon-counter').hide();
-                        $('#spinner-counter').show();
-                    },
                     success: function(response) {
                         console.log(response.message);
                         setDownloadCounter('pkp');
-                        $('#icon-counter').show();
-                        $('#spinner-counter').hide();
                     },
                     error: function(xhr) {
                         console.error(xhr.responseText);
                         setDownloadCounter('pkp');
-                        $('#icon-counter').show();
-                        $('#spinner-counter').hide();
                     }
                 });
             });

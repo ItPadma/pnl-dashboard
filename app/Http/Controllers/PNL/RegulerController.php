@@ -25,6 +25,11 @@ class RegulerController extends Controller
         return view('pnl.reguler.pajak-masukan.index');
     }
 
+    public function pmUploadCsvIndex()
+    {
+        return view('pnl.reguler.pajak-masukan.upload');
+    }
+
     public function dtPKGetData(Request $request)
     {
         try {
@@ -314,6 +319,17 @@ class RegulerController extends Controller
             ')
             ->where('is_checked', 1)
             ->get();
+
+            Log::info('Counts retrieved successfully', [
+                'tipe' => $tipe,
+                'pt' => $pt,
+                'brand' => $brand,
+                'depo' => $depo,
+                'periode_awal' => $periode_awal,
+                'periode_akhir' => $periode_akhir,
+                'counts' => $counts,
+                'query' => $query->toSql(),
+            ]);
 
             // Assuming you want to return the counts as JSON
             return response()->json([

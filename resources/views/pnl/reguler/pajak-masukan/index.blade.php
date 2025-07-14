@@ -164,10 +164,6 @@
 @section('script')
     <script src="{{ asset('assets/js/plugin/moment/moment.min.js') }}"></script>
     <script src="{{ asset('assets/js/plugin/daterangepicker/daterangepicker.min.js') }}"></script>
-    {{-- <script src="{{ asset('assets/js/plugin/datatables/buttons.html5.min.js') }}"></script>
-    <script src="{{ asset('assets/js/plugin/datatables/jszip.min.js') }}"></script>
-    <script src="{{ asset('assets/js/plugin/datatables/pdfmake.min.js') }}"></script>
-    <script src="{{ asset('assets/js/plugin/datatables/vfs_fonts.js') }}"></script> --}}
     <script>
         // Destroy existing DataTable instance if exists
         if ($.fn.DataTable.isDataTable('#table-pkp')) {
