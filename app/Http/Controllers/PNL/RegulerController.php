@@ -10,6 +10,7 @@ use App\Models\MasterPkp;
 use App\Models\PajakKeluaranDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -44,10 +45,11 @@ class RegulerController extends Controller
             $chstatus = '';
             $retrieve_count = 0;
             // Query base
-            $query = PajakKeluaranDetail::query();
+            $dbquery = DB::table('pajak_keluaran_details')
+                ->select('*');
             // Filtering by search value
             if (!empty($searchValue)) {
-                $query->where(function($q) use ($searchValue) {
+                $dbquery->where(function($q) use ($searchValue) {
                     $q->where('no_invoice', 'like', "%{$searchValue}%")
                       ->orWhere('no_do', 'like', "%{$searchValue}%")
                       ->orWhere('kode_produk', 'like', "%{$searchValue}%")
@@ -59,15 +61,15 @@ class RegulerController extends Controller
             // Column specific filters
             foreach ($request->get('columns') as $column) {
                 if (!empty($column['search']['value'])) {
-                    $query->where($column['data'], 'like', "%{$column['search']['value']}%");
+                    $dbquery->where($column['data'], 'like', "%{$column['search']['value']}%");
                 }
             }
             // Additional filters
             if ($request->has('pt') && $request->pt != 'all') {
-                $query->where('company', $request->pt);
+                $dbquery->whereRaw("company = '$request->pt'");
             }
             if ($request->has('brand') && $request->brand != 'all') {
-                $query->where('brand', $request->brand);
+                $dbquery->whereRaw("brand = '$request->brand'");
             }
             if ($request->has('depo') && $request->depo == 'all') {
                 $currentUserDepo = Auth::user()->depo;
@@ -75,73 +77,35 @@ class RegulerController extends Controller
                     $currentUserDepo = explode("|", $currentUserDepo);
                     if (!in_array('all', $currentUserDepo)) {
                         $depo = MasterDepo::whereIn('code', $currentUserDepo)->get()->pluck('name')->toArray();
-                        $query->whereIn('depo', $depo);
+                        $dbquery->whereIn('depo', $depo);
                     }
                 }
             }
             if ($request->has('depo') && $request->depo != 'all') {
                 $depo = MasterDepo::where('code', $request->depo)->first();
-                $query->where('depo', $depo->name);
+                $dbquery->whereRaw("depo = '$depo->name'");
             }
             if ($request->has('periode')) {
                 $periode = explode(' - ', $request->periode);
                 $periode_awal = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[0])->format('Y-m-d');
                 $periode_akhir = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[1])->format('Y-m-d');
-                $query->where('tgl_faktur_pajak', '>=', $periode_awal)
-                      ->where('tgl_faktur_pajak', '<=', $periode_akhir);
-            }
-            if ($request->has('tipe')) {
-                $pkp = MasterPkp::all()->pluck('IDPelanggan')->toArray();
-                if ($request->tipe == 'pkp') {
-                    $query->whereIn('customer_id', $pkp);
-                    $query->where('tipe_ppn', 'PPN');
-                    $query->where('has_moved', 'n');
-                    $query->orWhere('moved_to', 'pkp');
-                    $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId IN ('" . implode("','", $pkp) . "')";
-                }
-                if ($request->tipe == 'pkpnppn') {
-                    $query->whereIn('customer_id', $pkp);
-                    $query->where('tipe_ppn', 'NON-PPN');
-                    $query->where('has_moved', 'n');
-                    $query->orWhere('moved_to', 'pkpnppn');
-                    $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId IN ('" . implode("','", $pkp) . "')";
-                }
-                if ($request->tipe == 'npkp') {
-                    $query->whereNotIn('customer_id', $pkp);
-                    $query->where('tipe_ppn', 'PPN');
-                    $query->where('has_moved', 'n');
-                    $query->orWhere('moved_to', 'npkp');
-                    $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
-                }
-                if ($request->tipe == 'npkpnppn') {
-                    $query->whereNotIn('customer_id', $pkp);
-                    $query->where('tipe_ppn', 'NON-PPN');
-                    $query->where('has_moved', 'n');
-                    $query->orWhere('moved_to', 'npkpnppn');
-                    $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
-                }
-                if ($request->tipe == 'retur') {
-                    $query->where('qty_pcs', '<', 0);
-                    $query->where('has_moved', 'n');
-                    $query->orWhere('moved_to', 'retur');
-                    $tipe = " AND b.decUomQty < 0";
-                }
+                $dbquery->whereRaw("tgl_faktur_pajak >= '$periode_awal' AND tgl_faktur_pajak <= '$periode_akhir'");
             }
             if($request->has('chstatus')) {
                 switch ($request->chstatus) {
                     case 'checked-ready2download':
-                        $query->where('is_checked', 1);
+                        $dbquery->where('is_checked', 1);
                         $chstatus = ' AND is_checked = 1';
                         break;
 
                     case 'unchecked':
-                        $query->where('is_checked', 0);
+                        $dbquery->where('is_checked', 0);
                         $chstatus = ' AND is_checked = 0';
                         break;
 
                     case 'checked-downloaded':
-                        $query->where('is_checked', 1);
-                        $query->where('is_downloaded', 1);
+                        $dbquery->where('is_checked', 1);
+                        $dbquery->where('is_downloaded', 1);
                         $chstatus = ' AND is_checked = 1 AND is_downloaded = 1';
                         break;
 
@@ -149,15 +113,52 @@ class RegulerController extends Controller
                         break;
                 }
             }
-            while ($retrieve_count == 0 && $query->count() == 0) {
+            if ($request->has('tipe')) {
+                $pkp = MasterPkp::all()->pluck('IDPelanggan')->toArray();
+                if ($request->tipe == 'pkp') {
+                    $dbquery->whereRaw("
+                    (
+                        tipe_ppn = 'PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp)
+                    )
+                    OR
+                    (has_moved = 'y' AND moved_to = 'pkp')");
+                    $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId IN ('" . implode("','", $pkp) . "')";
+                }
+                if ($request->tipe == 'pkpnppn') {
+                    $dbquery->whereRaw("
+                    (
+                        tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp)
+                    ) OR (has_moved = 'y' AND moved_to = 'pkpnppn')");
+                    $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId IN ('" . implode("','", $pkp) . "')";
+                }
+                if ($request->tipe == 'npkp') {
+                    $dbquery->whereRaw("
+                    (
+                        tipe_ppn = 'PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
+                    ) OR (has_moved = 'y' AND moved_to = 'npkp')");
+                    $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
+                }
+                if ($request->tipe == 'npkpnppn') {
+                    $dbquery->whereRaw("
+                    (
+                        tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
+                    ) OR (has_moved = 'y' AND moved_to = 'npkpnppn')");
+                    $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
+                }
+                if ($request->tipe == 'retur') {
+                    $dbquery->whereRaw("qty_pcs < 0 AND has_moved = 'n' OR moved_to = 'retur'");
+                }
+            }
+            Log::info('sql: '.$dbquery->toSql());
+            while ($retrieve_count == 0 && $dbquery->count() == 0) {
                 Log::info('No records found in database, fetching from live');
                 PajakKeluaranDetail::getFromLive($request->pt, $request->brand, $request->depo, $periode_awal, $periode_akhir, $tipe, $chstatus);
                 $retrieve_count = 1;
             }
             // Total records
-            $totalRecords = $query->count();
-            $totalRecordswithFilter = $query->count();
-            $records = $query->orderBy($columnName, $columnSortOrder)
+            $totalRecords = $dbquery->count();
+            $totalRecordswithFilter = $dbquery->count();
+            $records = $dbquery->orderBy($columnName)
                 ->skip($start)
                 ->take($rowperpage)
                 ->get();
@@ -181,26 +182,28 @@ class RegulerController extends Controller
     {
         try {
             $request->validate([
-                'id' => 'required',
+                'ids' => 'required',
                 'move_from' => 'required|in:pkp,pkpnppn,npkp,npkpnppn,retur',
                 'move_to' => 'required|in:pkp,pkpnppn,npkp,npkpnppn,retur'
             ]);
-            $id = $request->input('id');
-            $item = PajakKeluaranDetail::findOrFail($id);
-            $item->has_moved = 'y';
-            $item->moved_to = $request->input('move_to');
-            $item->moved_at = now();
-            $item->save();
+            $ids = $request->input('ids');
+            $items = PajakKeluaranDetail::whereIn('id', $ids)->get();
+            foreach ($items as $item) {
+                $item->has_moved = 'y';
+                $item->moved_to = $request->input('move_to');
+                $item->moved_at = now();
+                $item->save();
+                LogController::createLog(
+                    Auth::user()->id,
+                    'Move Item from '.$request->input('move_from').' to '.$request->input('move_to'),
+                    'Update',
+                    '{id: '.$item->id.', no_invoice: '.$item->no_invoice.', no_do: '.$item->no_do.', kode_produk: '.$item->kode_produk.', move_from: '.$request->input('move_from').', move_to: '.$request->input('move_to').'}',
+                    'pajak_keluaran_details',
+                    'info',
+                    $request
+                );
+            }
 
-            LogController::createLog(
-                Auth::user()->id,
-                'Move Item from '.$request->input('move_from').' to '.$request->input('move_to'),
-                'Update',
-                '{id: '.$id.', no_invoice: '.$item->no_invoice.', no_do: '.$item->no_do.', kode_produk: '.$item->kode_produk.', move_from: '.$request->input('move_from').', move_to: '.$request->input('move_to').'}',
-                'pajak_keluaran_details',
-                'info',
-                $request
-            );
 
             return response()->json([
                 'status' => true,
@@ -260,6 +263,10 @@ class RegulerController extends Controller
 
             // Base query
             $query = PajakKeluaranDetail::query();
+            $query->selectRaw('
+                ISNULL(SUM(CASE WHEN is_downloaded = 0 AND is_checked = 1 THEN 1 ELSE 0 END), 0) AS ready2download_count,
+                ISNULL(SUM(CASE WHEN is_downloaded = 1 AND is_checked = 1 THEN 1 ELSE 0 END), 0) AS downloaded_count
+            ');
 
             // Additional filters
             if ($pt != 'all') {
@@ -272,20 +279,21 @@ class RegulerController extends Controller
                 $query->where('depo', $depo);
             }
             if ($periode_awal && $periode_akhir) {
-                $query->whereBetween('tgl_faktur_pajak', [$periode_awal, $periode_akhir]);
+                $query->where('tgl_faktur_pajak', '>=', $periode_awal)
+                      ->where('tgl_faktur_pajak', '<=', $periode_akhir);
             }
             if($request->has('chstatus')) {
                 switch ($request->chstatus) {
                     case 'checked-ready2download':
-                        $query->where('is_checked', 1);
+                        $query->where('is_checked', '1');
                         break;
 
                     case 'unchecked':
-                        $query->where('is_checked', 0);
+                        $query->where('is_checked', '0');
                         break;
 
                     case 'checked-downloaded':
-                        $query->where('is_downloaded', 1);
+                        $query->where('is_downloaded', '1');
                         break;
 
                     default:
@@ -297,74 +305,37 @@ class RegulerController extends Controller
             $pkp = MasterPkp::all()->pluck('IDPelanggan')->toArray();
             switch ($tipe) {
                 case 'pkp':
-                    $query->where(function($q) use ($pkp) {
-                        $q->where('tipe_ppn', 'PPN')
-                          ->whereIn('customer_id', $pkp)
-                          ->where('has_moved', 'n');
-                    });
-                    $query->orWhere(function($q) {
-                        $q->where('has_moved', 'y')
-                          ->where('moved_to', 'pkp');
-                    });
+                    $query->whereRaw("
+                    (
+                        tipe_ppn = 'PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp)
+                    )
+                    OR
+                    (has_moved = 'y' AND moved_to = 'pkp')");
                     break;
                 case 'pkpnppn':
-                    $query->where(function($q) use ($pkp) {
-                        $q->where('tipe_ppn', 'NON-PPN')
-                          ->whereIn('customer_id', $pkp)
-                          ->where('has_moved', 'n');
-                    });
-                    $query->orWhere(function($q) {
-                        $q->where('has_moved', 'y')
-                          ->where('moved_to', 'pkpnppn');
-                    });
+                    $query->whereRaw("
+                    (
+                        tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp)
+                    ) OR (has_moved = 'y' AND moved_to = 'pkpnppn')");
                     break;
                 case 'npkp':
-                    $query->where(function($q) use ($pkp) {
-                        $q->where('tipe_ppn', 'PPN')
-                          ->whereNotIn('customer_id', $pkp)
-                          ->where('has_moved', 'n');
-                    });
-                    $query->orWhere(function($q) {
-                        $q->where('has_moved', 'y')
-                          ->where('moved_to', 'npkp');
-                    });
+                    $query->whereRaw("
+                    (
+                        tipe_ppn = 'PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
+                    ) OR (has_moved = 'y' AND moved_to = 'npkp')");
                     break;
                 case 'npkpnppn':
-                    $query->where(function($q) use ($pkp) {
-                        $q->where('tipe_ppn', 'NON-PPN')
-                          ->whereNotIn('customer_id', $pkp)
-                          ->where('has_moved', 'n');
-                    });
-                    $query->orWhere(function($q) {
-                        $q->where('has_moved', 'y')
-                          ->where('moved_to', 'npkpnppn');
-                    });
+                    $query->whereRaw("
+                    (
+                        tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
+                    ) OR (has_moved = 'y' AND moved_to = 'npkpnppn')");
                     break;
                 case 'retur':
-                    $query->where('qty_pcs', '<', 0);
+                    $query->whereRaw("qty_pcs < 0 AND has_moved = 'n' OR moved_to = 'retur'");
                     break;
             }
-
-            // Add the custom raw SQL to the query
-            $counts = $query->selectRaw('
-                SUM(CASE WHEN is_downloaded = 0 THEN 1 ELSE 0 END) AS total_ready2download_count,
-                SUM(CASE WHEN is_downloaded = 1 THEN 1 ELSE 0 END) AS total_downloaded_count
-            ')
-            ->where('is_checked', 1)
-            ->get();
-
-            Log::info('Counts retrieved successfully', [
-                'tipe' => $tipe,
-                'pt' => $pt,
-                'brand' => $brand,
-                'depo' => $depo,
-                'periode_awal' => $periode_awal,
-                'periode_akhir' => $periode_akhir,
-                'counts' => $counts,
-                'query' => $query->toSql(),
-            ]);
-
-            // Assuming you want to return the counts as JSON
+            Log::info('sql count: '.$query->toSql());
+            $counts = $query->get();
             return response()->json([
                 'status' => true,
                 'message' => 'Counts retrieved successfully',

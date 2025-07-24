@@ -28,6 +28,8 @@
         let tableNonPkpNppn;
         let tableRetur;
 
+        $.fn.dataTable.ext.errMode = 'none';
+
         // Initialize new DataTable for PKP
         function initializeDataTablePkp() {
             if ($.fn.DataTable.isDataTable('#table-pkp')) {
@@ -51,6 +53,11 @@
                     },
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    async: true,
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching data:', error);
+                        toastr.error('Gagal memuat data. Silakan coba lagi.', 'Error');
                     }
                 },
                 columns: [
@@ -292,6 +299,11 @@
                     },
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    async: true,
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching data:', error);
+                        toastr.error('Gagal memuat data. Silakan coba lagi.', 'Error');
                     }
                 },
                 columns: [
@@ -306,6 +318,23 @@
                                 return '<div style="display: flex; align-items: center; gap: 5px;"><i class="fas fa-fw fa-check text-secondary"></i><i class="fas fa-fw fa-download text-secondary"></i></div>';
                             }
                             return `<input type="checkbox" class="row-checkbox-pkpnppn" data-id="${row.id}" ${checked}>`;
+                        }
+                    },
+                    {
+                        data: 'id',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            const checked = row.is_checked == 1 ? '' : 'disabled';
+                            return `<select id="move-to-${row.id}" class="form-select move-to" data-id="${row.id}" data-from="pkpnppn" ${checked}>
+                                <option value="">Pilih...</option>
+                                <option value="pkp">PKP</option>
+                                <option value="pkpnppn">PKP Non-PPN</option>
+                                <option value="npkp">Non-PKP</option>
+                                <option value="npkpnppn">Non-PKP Non-PPN</option>
+                                <option value="retur">Retur</option>
+                            </select>`;
                         }
                     },
                     {
@@ -516,6 +545,11 @@
                     },
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    async: true,
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching data:', error);
+                        toastr.error('Gagal memuat data. Silakan coba lagi.', 'Error');
                     }
                 },
                 columns: [
@@ -530,6 +564,23 @@
                                 return '<div style="display: flex; align-items: center; gap: 5px;"><i class="fas fa-fw fa-check text-secondary"></i><i class="fas fa-fw fa-download text-secondary"></i></div>';
                             }
                             return `<input type="checkbox" class="row-checkbox-npkp" data-id="${row.id}" ${checked}>`;
+                        }
+                    },
+                    {
+                        data: 'id',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            const checked = row.is_checked == 1 ? '' : 'disabled';
+                            return `<select id="move-to-${row.id}" class="form-select move-to" data-id="${row.id}" data-from="npkp" ${checked}>
+                                <option value="">Pilih...</option>
+                                <option value="pkp">PKP</option>
+                                <option value="pkpnppn">PKP Non-PPN</option>
+                                <option value="npkp">Non-PKP</option>
+                                <option value="npkpnppn">Non-PKP Non-PPN</option>
+                                <option value="retur">Retur</option>
+                            </select>`;
                         }
                     },
                     {
@@ -739,6 +790,11 @@
                     },
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    async: true,
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching data:', error);
+                        toastr.error('Gagal memuat data. Silakan coba lagi.', 'Error');
                     }
                 },
                 columns: [
@@ -753,6 +809,23 @@
                                 return '<div style="display: flex; align-items: center; gap: 5px;"><i class="fas fa-fw fa-check text-secondary"></i><i class="fas fa-fw fa-download text-secondary"></i></div>';
                             }
                             return `<input type="checkbox" class="row-checkbox-npkpnppn" data-id="${row.id}" ${checked}>`;
+                        }
+                    },
+                    {
+                        data: 'id',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            const checked = row.is_checked == 1 ? '' : 'disabled';
+                            return `<select id="move-to-${row.id}" class="form-select move-to" data-id="${row.id}" data-from="npkpnppn" ${checked}>
+                                <option value="">Pilih...</option>
+                                <option value="pkp">PKP</option>
+                                <option value="pkpnppn">PKP Non-PPN</option>
+                                <option value="npkp">Non-PKP</option>
+                                <option value="npkpnppn">Non-PKP Non-PPN</option>
+                                <option value="retur">Retur</option>
+                            </select>`;
                         }
                     },
                     {
@@ -962,6 +1035,11 @@
                     },
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    async: true,
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching data:', error);
+                        toastr.error('Gagal memuat data. Silakan coba lagi.', 'Error');
                     }
                 },
                 columns: [
@@ -976,6 +1054,23 @@
                                 return '<div style="display: flex; align-items: center; gap: 5px;"><i class="fas fa-fw fa-check text-secondary"></i><i class="fas fa-fw fa-download text-secondary"></i></div>';
                             }
                             return `<input type="checkbox" class="row-checkbox-retur" data-id="${row.id}" ${checked}>`;
+                        }
+                    },
+                    {
+                        data: 'id',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            const checked = row.is_checked == 1 ? '' : 'disabled';
+                            return `<select id="move-to-${row.id}" class="form-select move-to" data-id="${row.id}" data-from="retur" ${checked}>
+                                <option value="">Pilih...</option>
+                                <option value="pkp">PKP</option>
+                                <option value="pkpnppn">PKP Non-PPN</option>
+                                <option value="npkp">Non-PKP</option>
+                                <option value="npkpnppn">Non-PKP Non-PPN</option>
+                                <option value="retur">Retur</option>
+                            </select>`;
                         }
                     },
                     {
@@ -1264,8 +1359,10 @@
                     brand: $('#filter_brand').val(),
                     depo: $('#filter_depo').val(),
                     periode: $('#filter_periode').val(),
-                    tipe: tipe
+                    tipe: tipe,
+                    chstatus: 'checked-ready2download'
                 },
+                async: true,
                 beforeSend: function(xhr) {
                     toggleSpinnerDownload(tipe, true);
                 },
@@ -1377,12 +1474,6 @@
             })
 
             /////// Checkbox PKP //////////
-            // Event listener untuk checkbox individual
-            $('#table-pkp tbody').on('change', '.row-checkbox-pkp', function() {
-                const allChecked = $('.row-checkbox-pkp').length === $('.row-checkbox-pkp:checked').length;
-                $('#select-all-pkp').prop('checked', allChecked);
-                setDownloadCounter('pkp');
-            });
             // Event listener untuk checkbox select all
             $('#select-all-pkp').on('change', function() {
                 const isChecked = $(this).is(':checked');
@@ -1391,6 +1482,10 @@
                 const ids = $('.row-checkbox-pkp').map(function() {
                     return $(this).data('id');
                 }).get();
+                // Class move-to dengan data-id bersangkutan berubah menjadi disabled
+                for (const id of ids) {
+                    toggleMoveToSelect(id, isChecked);
+                }
                 // Kirim AJAX request untuk memperbarui semua status di database
                 $.ajax({
                     url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
@@ -1414,6 +1509,8 @@
             $('#table-pkp tbody').on('change', '.row-checkbox-pkp', function() {
                 const isChecked = $(this).is(':checked') ? 1 : 0;
                 const id = $(this).data('id');
+                const allChecked = $('.row-checkbox-pkp').length === $('.row-checkbox-pkp:checked').length;
+                $('#select-all-pkp').prop('checked', allChecked);
 
                 // Class move-to dengan data-id bersangkutan berubah menjadi disabled
                 toggleMoveToSelect(id, isChecked);
@@ -1439,12 +1536,6 @@
             });
 
             //////// Checkbox PKP Non-PPN ////////
-            // Event listener untuk checkbox individual
-            $('#table-pkpnppn tbody').on('change', '.row-checkbox-pkpnppn', function() {
-                const allChecked = $('.row-checkbox-pkpnppn').length === $('.row-checkbox-pkpnppn:checked').length;
-                $('#select-all-pkpnppn').prop('checked', allChecked);
-                setDownloadCounter('pkpnppn');
-            });
             // Event listener untuk checkbox select all
             $('#select-all-pkpnppn').on('change', function() {
                 const isChecked = $(this).is(':checked');
@@ -1453,6 +1544,10 @@
                 const ids = $('.row-checkbox-pkpnppn').map(function() {
                     return $(this).data('id');
                 }).get();
+                // Class move-to dengan data-id bersangkutan berubah menjadi disabled
+                for (const id of ids) {
+                    toggleMoveToSelect(id, isChecked);
+                }
                 // Kirim AJAX request untuk memperbarui semua status di database
                 $.ajax({
                     url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
@@ -1476,7 +1571,10 @@
             $('#table-pkpnppn tbody').on('change', '.row-checkbox-pkpnppn', function() {
                 const isChecked = $(this).is(':checked') ? 1 : 0;
                 const id = $(this).data('id');
-
+                const allChecked = $('.row-checkbox-pkpnppn').length === $('.row-checkbox-pkpnppn:checked').length;
+                $('#select-all-pkpnppn').prop('checked', allChecked);
+                // Class move-to dengan data-id bersangkutan berubah menjadi disabled
+                toggleMoveToSelect(id, isChecked);
                 // Kirim AJAX request untuk memperbarui status di database
                 $.ajax({
                     url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}", // Tambahkan route untuk update
@@ -1498,12 +1596,6 @@
             });
 
             //////// Checkbox Non-PKP //////////
-            // Event listener untuk checkbox individual
-            $('#table-npkp tbody').on('change', '.row-checkbox-npkp', function() {
-                const allChecked = $('.row-checkbox-npkp').length === $('.row-checkbox-npkp:checked').length;
-                $('#select-all-npkp').prop('checked', allChecked);
-                setDownloadCounter('npkp');
-            });
             // Event listener untuk checkbox select all
             $('#select-all-npkp').on('change', function() {
                 const isChecked = $(this).is(':checked');
@@ -1512,7 +1604,10 @@
                 const ids = $('.row-checkbox-npkp').map(function() {
                     return $(this).data('id');
                 }).get();
-
+                // Class move-to dengan data-id bersangkutan berubah menjadi disabled
+                for (const id of ids) {
+                    toggleMoveToSelect(id, isChecked);
+                }
                 // Kirim AJAX request untuk memperbarui semua status di database
                 $.ajax({
                     url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
@@ -1536,6 +1631,10 @@
             $('#table-npkp tbody').on('change', '.row-checkbox-npkp', function() {
                 const isChecked = $(this).is(':checked') ? 1 : 0;
                 const id = $(this).data('id');
+                const allChecked = $('.row-checkbox-npkp').length === $('.row-checkbox-npkp:checked').length;
+                $('#select-all-npkp').prop('checked', allChecked);
+                // Class move-to dengan data-id bersangkutan berubah menjadi disabled
+                toggleMoveToSelect(id, isChecked);
                 // Kirim AJAX request untuk memperbarui status di database
                 $.ajax({
                     url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}", // Tambahkan route untuk update
@@ -1557,12 +1656,6 @@
             });
 
             //////// Checkbox Non-PKP Non-PPN ////////
-            // Event listener untuk checkbox individual
-            $('#table-npkpnppn tbody').on('change', '.row-checkbox-npkpnppn', function() {
-                const allChecked = $('.row-checkbox-npkpnppn').length === $('.row-checkbox-npkpnppn:checked').length;
-                $('#select-all-npkpnppn').prop('checked', allChecked);
-                setDownloadCounter('npkpnppn');
-            });
             // Event listener untuk checkbox select all
             $('#select-all-npkpnppn').on('change', function() {
                 const isChecked = $(this).is(':checked');
@@ -1571,7 +1664,10 @@
                 const ids = $('.row-checkbox-npkpnppn').map(function() {
                     return $(this).data('id');
                 }).get();
-
+                // Class move-to dengan data-id bersangkutan berubah menjadi disabled
+                for (const id of ids) {
+                    toggleMoveToSelect(id, isChecked);
+                }
                 // Kirim AJAX request untuk memperbarui semua status di database
                 $.ajax({
                     url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
@@ -1595,6 +1691,10 @@
             $('#table-npkpnppn tbody').on('change', '.row-checkbox-npkpnppn', function() {
                 const isChecked = $(this).is(':checked') ? 1 : 0;
                 const id = $(this).data('id');
+                const allChecked = $('.row-checkbox-npkpnppn').length === $('.row-checkbox-npkpnppn:checked').length;
+                $('#select-all-npkpnppn').prop('checked', allChecked);
+                // Class move-to dengan data-id bersangkutan berubah menjadi disabled
+                toggleMoveToSelect(id, isChecked);
                 // Kirim AJAX request untuk memperbarui status di database
                 $.ajax({
                     url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}", // Tambahkan route untuk update
@@ -1616,12 +1716,6 @@
             });
 
             //////// Checkbox RETUR ////////
-            // Event listener untuk checkbox individual
-            $('#table-retur tbody').on('change', '.row-checkbox-retur', function() {
-                const allChecked = $('.row-checkbox-retur').length === $('.row-checkbox-retur:checked').length;
-                $('#select-all-retur').prop('checked', allChecked);
-                setDownloadCounter('retur');
-            });
             // Event listener untuk checkbox select all
             $('#select-all-retur').on('change', function() {
                 const isChecked = $(this).is(':checked');
@@ -1630,7 +1724,10 @@
                 const ids = $('.row-checkbox-retur').map(function() {
                     return $(this).data('id');
                 }).get();
-
+                // Class move-to dengan data-id bersangkutan berubah menjadi disabled
+                for (const id of ids) {
+                    toggleMoveToSelect(id, isChecked);
+                }
                 // Kirim AJAX request untuk memperbarui semua status di database
                 $.ajax({
                     url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
@@ -1654,6 +1751,10 @@
             $('#table-retur tbody').on('change', '.row-checkbox-retur', function() {
                 const isChecked = $(this).is(':checked') ? 1 : 0;
                 const id = $(this).data('id');
+                const allChecked = $('.row-checkbox-retur').length === $('.row-checkbox-retur:checked').length;
+                $('#select-all-retur').prop('checked', allChecked);
+                // Class move-to dengan data-id bersangkutan berubah menjadi disabled
+                toggleMoveToSelect(id, isChecked);
                 // Kirim AJAX request untuk memperbarui status di database
                 $.ajax({
                     url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}", // Tambahkan route untuk update
@@ -1698,32 +1799,18 @@
 
             // Event listener untuk select class move-to
             $(document).on('change', '.move-to', function(){
-                console.log('hit move')
                 const id = $(this).data('id');
                 const move_from = $(this).data('from');
                 const move_to = $(this).val();
-                // Kirim AJAX request untuk memperbarui status di database
-                $.ajax({
-                    url: "{{ route('pnl.reguler.pajak-keluaran.updateMove2') }}",
-                    type: "POST",
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                        id: id,
-                        move_from: move_from,
-                        move_to: move_to
-                    },
-                    success: function(response) {
-                        if (response.status){
-                            reloadTableMoveFromMove2(move_from, move_to);
-                            toastr.success(response.message);
-                        } else {
-                            toastr.error(response.message);
-                        }
-                    },
-                    error: function(xhr) {
-                        toastr.error(xhr.responseText);
-                    }
-                });
+                if (move_from && move_to) {
+                    $('.apply-move-to[data-for="' + move_from + '"]').prop('disabled', false);
+                }
+            });
+
+            // Event listener untuk tombol apply move-to
+            $(document).on('click', '.apply-move-to', function() {
+                const move_from = $(this).data('for');
+                applyMoveTo(move_from);
             });
 
             // Fungsi untuk mengaktifkan/menonaktifkan select move-to

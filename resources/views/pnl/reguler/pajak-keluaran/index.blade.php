@@ -260,7 +260,7 @@
                                         </tr>
                                         <tr>
                                             <th></th>
-                                            <th><button class="btn btn-sm btn-primary apply-move-to" data-for="pkp" onclick="applyMoveTo('pkp')" disabled>
+                                            <th><button class="btn btn-sm btn-primary apply-move-to" data-for="pkp" disabled>
                                                 <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
                                             <th><input type="text" class="form-control form-control-sm column-filter-pkp"
                                                     placeholder="Filter Invoice" data-column="1"></th>
@@ -355,6 +355,7 @@
                                     <thead>
                                         <tr>
                                             <th><input type="checkbox" id="select-all-pkpnppn"></th> <!-- Checkbox untuk select all -->
+                                            <th>UBAH TIPE</th>
                                             <th>NO INVOICE</th>
                                             <th>NO DO</th>
                                             <th>KODE PRODUK</th>
@@ -389,6 +390,8 @@
                                         </tr>
                                         <tr>
                                             <th></th>
+                                            <th><button class="btn btn-sm btn-primary apply-move-to" data-for="pkpnppn" disabled>
+                                                <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
                                             <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
                                                     placeholder="Filter Invoice" data-column="1"></th>
                                             <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
@@ -482,6 +485,7 @@
                                     <thead>
                                         <tr>
                                             <th><input type="checkbox" id="select-all-npkp"></th> <!-- Checkbox untuk select all -->
+                                            <th>UBAH TIPE</th>
                                             <th>NO INVOICE</th>
                                             <th>NO DO</th>
                                             <th>KODE PRODUK</th>
@@ -516,6 +520,8 @@
                                         </tr>
                                         <tr>
                                             <th></th>
+                                            <th><button class="btn btn-sm btn-primary apply-move-to" data-for="npkp" disabled>
+                                                <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
                                             <th><input type="text" class="form-control form-control-sm column-filter-npkp"
                                                     placeholder="Filter Invoice" data-column="1"></th>
                                             <th><input type="text" class="form-control form-control-sm column-filter-npkp"
@@ -609,6 +615,7 @@
                                     <thead>
                                         <tr>
                                             <th><input type="checkbox" id="select-all-npkpnppn"></th> <!-- Checkbox untuk select all -->
+                                            <th>UBAH TIPE</th>
                                             <th>NO INVOICE</th>
                                             <th>NO DO</th>
                                             <th>KODE PRODUK</th>
@@ -643,6 +650,8 @@
                                         </tr>
                                         <tr>
                                             <th></th>
+                                            <th><button class="btn btn-sm btn-primary apply-move-to" data-for="npkpnppn" disabled>
+                                                <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
                                             <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
                                                     placeholder="Filter Invoice" data-column="1"></th>
                                             <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
@@ -736,6 +745,7 @@
                                     <thead>
                                         <tr>
                                             <th><input type="checkbox" id="select-all-retur"></th> <!-- Checkbox untuk select all -->
+                                            <th>UBAH TIPE</th>
                                             <th>NO INVOICE</th>
                                             <th>NO DO</th>
                                             <th>KODE PRODUK</th>
@@ -770,6 +780,8 @@
                                         </tr>
                                         <tr>
                                             <th></th>
+                                            <th><button class="btn btn-sm btn-primary apply-move-to" data-for="retur" disabled>
+                                                <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
                                             <th><input type="text" class="form-control form-control-sm column-filter-retur"
                                                     placeholder="Filter Invoice" data-column="1"></th>
                                             <th><input type="text" class="form-control form-control-sm column-filter-retur"
