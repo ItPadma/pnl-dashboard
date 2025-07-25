@@ -149,7 +149,7 @@ class RegulerController extends Controller
                     $dbquery->whereRaw("qty_pcs < 0 AND has_moved = 'n' OR moved_to = 'retur'");
                 }
             }
-            Log::info('sql: '.$dbquery->toSql());
+            // Retrieve from live if no records found
             while ($retrieve_count == 0 && $dbquery->count() == 0) {
                 Log::info('No records found in database, fetching from live');
                 PajakKeluaranDetail::getFromLive($request->pt, $request->brand, $request->depo, $periode_awal, $periode_akhir, $tipe, $chstatus);
@@ -334,7 +334,7 @@ class RegulerController extends Controller
                     $query->whereRaw("qty_pcs < 0 AND has_moved = 'n' OR moved_to = 'retur'");
                     break;
             }
-            Log::info('sql count: '.$query->toSql());
+            // Log::info('sql count: '.$query->toSql());
             $counts = $query->get();
             return response()->json([
                 'status' => true,
