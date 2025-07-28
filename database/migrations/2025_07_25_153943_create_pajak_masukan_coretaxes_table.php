@@ -22,15 +22,15 @@ return new class extends Migration
             $table->string('masa_pajak_pengkreditkan')->nullable();
             $table->integer('tahun_pajak_pengkreditan')->nullable();
             $table->string('status_faktur')->nullable();
-            $table->decimal('harga_jual_dpp', 15, 2)->nullable();
-            $table->decimal('dpp_nilai_lain', 15, 2)->nullable();
-            $table->decimal('ppn', 15, 2)->nullable();
-            $table->decimal('ppnbm', 15, 2)->nullable();
+            $table->decimal('harga_jual_dpp', 30, 4)->nullable();
+            $table->decimal('dpp_nilai_lain', 30, 4)->nullable();
+            $table->decimal('ppn', 30, 4)->nullable();
+            $table->decimal('ppnbm', 30, 4)->nullable();
             $table->string('perekam')->nullable();
             $table->string('nomor_sp2d')->nullable();
-            $table->boolean('valid')->default(false);
-            $table->boolean('dilaporkan')->default(false);
-            $table->boolean('dilaporkan_oleh_penjual')->default(false);
+            $table->boolean('valid')->nullable();
+            $table->boolean('dilaporkan')->nullable();
+            $table->boolean('dilaporkan_oleh_penjual')->nullable();
             $table->timestamps();
         });
     }

@@ -5,9 +5,11 @@ namespace App\Http\Controllers\PNL;
 use App\Exports\PajakKeluaranDetailExport;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Utilities\LogController;
+use App\Imports\PajakMasukanCoretaxImport;
 use App\Models\MasterDepo;
 use App\Models\MasterPkp;
 use App\Models\PajakKeluaranDetail;
+use App\Models\PajakMasukanCoretax;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -364,6 +366,22 @@ class RegulerController extends Controller
                 'status' => false,
                 'message' => $th->getMessage()
             ], 500);
+        }
+    }
+
+    public function uploadPMCoretax(Request $request)
+    {
+        try {
+            $request->validate([
+                'file' => 'required|file|mimes:csv,txt,xlsx,xls'
+            ]);
+            $file = $request->file('file');
+            $path = $file->store('public/import');
+            Excel::import(new PajakMasukanCoretaxImport, $path);
+            LogController::createLog($request->user()->id, 'Import Pajak Masukan Coretax', 'Import Pajak Masukan Coretax', '-', 'pajak_masukan_coretax', 'info', $request);
+            return redirect()->back()->with('success', 'Data imported successfully');
+        } catch (\Throwable $th) {
+            return redirect()->back()->with('error', $th->getMessage());
         }
     }
 }

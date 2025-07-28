@@ -5,8 +5,6 @@ namespace App\Imports;
 use App\Models\MasterPkp;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\ToCollection;
-use Maatwebsite\Excel\Concerns\ToModel;
-use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
 class MasterPkpImport implements ToCollection
 {
