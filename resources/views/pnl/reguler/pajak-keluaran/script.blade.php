@@ -1,7 +1,6 @@
 @section('script')
     <script src="{{ asset('assets/js/plugin/moment/moment.min.js') }}"></script>
     <script src="{{ asset('assets/js/plugin/daterangepicker/daterangepicker.min.js') }}"></script>
-
     <script src="{{ asset('assets/js/plugin/select2/select2.full.min.js') }}"></script>
     <script>
 
@@ -199,11 +198,49 @@
                         name: 'barang_jasa'
                     }
                 ],
-                columnDefs: [{
-                    targets: [0, ],
-                    className: 'text-center',
-                    width: '10%'
-                }],
+                columnDefs: [
+                    {
+                        targets: [0, ],
+                        className: 'text-center',
+                        width: '10%'
+                    },
+                    {
+                        targets: [1],
+                        width: '100px'
+                    },
+                    { targets: 1, width: '100px' },  // UBAH TIPE
+                    { targets: 2, width: '120px' },  // NO INVOICE
+                    { targets: 3, width: '120px' },  // NO DO
+                    { targets: 4, width: '120px' },  // KODE PRODUK
+                    { targets: 5, width: '80px' },   // QTY
+                    { targets: 6, width: '120px' },  // HARGA SATUAN
+                    { targets: 7, width: '80px' },   // DISC
+                    { targets: 8, width: '120px' },  // HARGA TOTAL
+                    { targets: 9, width: '100px' },  // DPP
+                    { targets: 10, width: '100px' }, // PPN
+                    { targets: 11, width: '120px' }, // TGL FAKTUR PAJAK
+                    { targets: 12, width: '80px' },  // DEPO
+                    { targets: 13, width: '100px' }, // AREA
+                    { targets: 14, width: '200px' }, // NAMA PRODUK
+                    { targets: 15, width: '150px' }, // NPWP CUSTOMER
+                    { targets: 16, width: '100px' }, // CUSTOMER ID
+                    { targets: 17, width: '200px' }, // NAMA CUSTOMER
+                    { targets: 18, width: '250px' }, // ALAMAT
+                    { targets: 19, width: '100px' }, // TYPE PAJAK
+                    { targets: 20, width: '80px' },  // SATUAN
+                    { targets: 21, width: '200px' }, // NAMA SESUAI NPWP
+                    { targets: 22, width: '250px' }, // ALAMAT NPWP
+                    { targets: 23, width: '100px' }, // NO TELEPON
+                    { targets: 24, width: '100px' }, // NO FP
+                    { targets: 25, width: '100px' }, // BRAND
+                    { targets: 26, width: '100px' }, // TYPE JUAL
+                    { targets: 27, width: '120px' }, // KODE JENIS FP
+                    { targets: 28, width: '100px' }, // STATUS FP
+                    { targets: 29, width: '100px' }, // NIK
+                    { targets: 30, width: '100px' }, // DPP LAIN
+                    { targets: 31, width: '120px' }, // ID TKU PEMBELI
+                    { targets: 32, width: '100px' }  // JENIS
+                ],
                 order: [
                     [1, 'desc']
                 ],
@@ -214,8 +251,7 @@
                 pageLength: 10,
                 ordering: true,
                 responsive: false,
-                autoWidth: true,
-                scrollX: true,
+                autoWidth: false,
                 language: {
                     processing: '<div><i class="fas fa-spinner fa-spin fa-2x"></i><span>Loading...</span></div>',
                     emptyTable: "Tidak ada data yang tersedia",
@@ -228,10 +264,10 @@
                     '<"row"<"col-sm-12"tr>>' +
                     '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
                 initComplete: function() {
-                    // Remove thead from .dataTables_scrollBody
-                    $('.dataTables_scrollBody thead').remove();
-                    $('.dataTables_scrollBody tfoot').remove();
                     var api = this.api();
+
+                    // Remove thead and tfoot from scrollBody
+                    $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
 
                     // Apply the search for each column
                     api.columns().every(function() {
@@ -244,18 +280,19 @@
                             }
                         });
                     });
-
-                    tablePkp.columns.adjust();
+                    api.columns.adjust();
                 },
                 ajaxComplete: function() {
                     setDownloadCounter('pkp');
                 },
                 drawCallback: function(settings) {
-                    // Remove thead from .dataTables_scrollBody
-                    $('.dataTables_scrollBody thead').remove();
-                    $('.dataTables_scrollBody tfoot').remove();
+                    var api = this.api();
+
+                    // Remove thead and tfoot from scrollBody
+                    $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
+
                     setDownloadCounter('pkp');
-                }
+                },
             });
         }
 
@@ -460,8 +497,8 @@
                 pageLength: 10,
                 ordering: true,
                 responsive: false,
-                autoWidth: true,
-                scrollX: true,
+                // autoWidth: true,
+                // scrollX: true,
                 language: {
                     processing: '<div><i class="fas fa-spinner fa-spin fa-2x"></i><span>Loading...</span></div>',
                     emptyTable: "Tidak ada data yang tersedia",
@@ -707,7 +744,7 @@
                 ordering: true,
                 responsive: false,
                 autoWidth: true,
-                scrollX: true,
+                // scrollX: true,
                 language: {
                     processing: '<div><i class="fas fa-spinner fa-spin fa-2x"></i><span>Loading...</span></div>',
                     emptyTable: "Tidak ada data yang tersedia",
@@ -952,7 +989,7 @@
                 ordering: true,
                 responsive: false,
                 autoWidth: true,
-                scrollX: true,
+                // scrollX: true,
                 language: {
                     processing: '<div><i class="fas fa-spinner fa-spin fa-2x"></i><span>Loading...</span></div>',
                     emptyTable: "Tidak ada data yang tersedia",
@@ -1197,7 +1234,7 @@
                 ordering: true,
                 responsive: false,
                 autoWidth: true,
-                scrollX: true,
+                // scrollX: true,
                 language: {
                     processing: '<div><i class="fas fa-spinner fa-spin fa-2x"></i><span>Loading...</span></div>',
                     emptyTable: "Tidak ada data yang tersedia",

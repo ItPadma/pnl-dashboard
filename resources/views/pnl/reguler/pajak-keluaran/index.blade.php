@@ -66,9 +66,11 @@
             white-space: nowrap;
         }
 
-        table.dataTable thead th:nth-child(1),
-        table.dataTable tbody td:nth-child(1) {
-            width: 12px;
+        /* .tbl-container scroll horizontal */
+        .tbl-container {
+            overflow-x: auto;
+            overflow-y: hidden;
+            width: 100%;
         }
     </style>
 @endsection
@@ -203,114 +205,116 @@
                                         </tr>
                                     </table>
                                 </div>
-                                <table class="table table-xm table-striped table-bordered table-hover" id="table-pkp">
-                                    <thead>
-                                        <tr>
-                                            <th><input type="checkbox" id="select-all-pkp"></th> <!-- Checkbox untuk select all -->
-                                            <th>UBAH TIPE</th>
-                                            <th>NO INVOICE</th>
-                                            <th>NO DO</th>
-                                            <th>KODE PRODUK</th>
-                                            <th>QTY (PCS)</th>
-                                            <th>HARGA SATUAN</th>
-                                            <th>DISC</th>
-                                            <th>HARGA TOTAL</th>
-                                            <th>DPP</th>
-                                            <th>PPN 11%</th>
-                                            <th>TGL FAKTUR PAJAK</th>
-                                            <th>DEPO</th>
-                                            <th>AREA</th>
-                                            <th>NAMA PRODUK</th>
-                                            <th>NPWP CUSTOMER</th>
-                                            <th>CUSTOMER ID</th>
-                                            <th>NAMA CUSTOMER</th>
-                                            <th>ALAMAT</th>
-                                            <th>TYPE PAJAK</th>
-                                            <th>SATUAN</th>
-                                            <th>NAMA SESUAI NPWP</th>
-                                            <th>ALAMAT NPWP</th>
-                                            <th>NO TELEPON</th>
-                                            <th>NO FP</th>
-                                            <th>BRAND</th>
-                                            <th>TYPE JUAL</th>
-                                            <th>KODE JENIS FP</th>
-                                            <th>STATUS FP</th>
-                                            <th>NIK</th>
-                                            <th>DPP LAIN</th>
-                                            <th>ID TKU PEMBELI</th>
-                                            <th>JENIS</th>
-                                        </tr>
-                                        <tr>
-                                            <th></th>
-                                            <th><button class="btn btn-sm btn-primary apply-move-to" data-for="pkp" disabled>
-                                                <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Invoice" data-column="1"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter DO" data-column="2"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Kode Produk" data-column="3"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Qty" data-column="4"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Harga Satuan" data-column="5"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Disc" data-column="6"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Harga Total" data-column="7"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter DPP" data-column="8"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter PPN" data-column="9"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Tgl Faktur Pajak" data-column="10"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Depo" data-column="11"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Area" data-column="12"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Nama Produk" data-column="13"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter NPWP Customer" data-column="14"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Customer ID" data-column="15"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Nama Customer" data-column="16"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Alamat" data-column="17"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Type Pajak" data-column="18"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Satuan" data-column="19"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Nama Sesuai NPWP" data-column="20"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Alamat NPWP" data-column="21"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter No Telepon" data-column="22"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter No FP" data-column="23"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Brand" data-column="24"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Type Jual" data-column="25"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Kode Jenis FP" data-column="26"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Status FP" data-column="27"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter NIK" data-column="28"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter DPP Lain" data-column="29"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter ID TKU Pembeli" data-column="30"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkp"
-                                                    placeholder="Filter Jenis" data-column="31"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    </tbody>
-                                </table>
+                                <div class="tbl-container">
+                                    <table class="table table-sm table-bordered table-hover" id="table-pkp">
+                                        <thead>
+                                            <tr>
+                                                <th><input type="checkbox" id="select-all-pkp"></th> <!-- Checkbox untuk select all -->
+                                                <th>UBAH TIPE</th>
+                                                <th>NO INVOICE</th>
+                                                <th>NO DO</th>
+                                                <th>KODE PRODUK</th>
+                                                <th>QTY (PCS)</th>
+                                                <th>HARGA SATUAN</th>
+                                                <th>DISC</th>
+                                                <th>HARGA TOTAL</th>
+                                                <th>DPP</th>
+                                                <th>PPN 11%</th>
+                                                <th>TGL FAKTUR PAJAK</th>
+                                                <th>DEPO</th>
+                                                <th>AREA</th>
+                                                <th>NAMA PRODUK</th>
+                                                <th>NPWP CUSTOMER</th>
+                                                <th>CUSTOMER ID</th>
+                                                <th>NAMA CUSTOMER</th>
+                                                <th>ALAMAT</th>
+                                                <th>TYPE PAJAK</th>
+                                                <th>SATUAN</th>
+                                                <th>NAMA SESUAI NPWP</th>
+                                                <th>ALAMAT NPWP</th>
+                                                <th>NO TELEPON</th>
+                                                <th>NO FP</th>
+                                                <th>BRAND</th>
+                                                <th>TYPE JUAL</th>
+                                                <th>KODE JENIS FP</th>
+                                                <th>STATUS FP</th>
+                                                <th>NIK</th>
+                                                <th>DPP LAIN</th>
+                                                <th>ID TKU PEMBELI</th>
+                                                <th>JENIS</th>
+                                            </tr>
+                                            <tr>
+                                                <th></th>
+                                                <th><button class="btn btn-sm btn-primary apply-move-to" data-for="pkp" disabled>
+                                                    <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Invoice" data-column="1"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter DO" data-column="2"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Kode Produk" data-column="3"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Qty" data-column="4"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Harga Satuan" data-column="5"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Disc" data-column="6"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Harga Total" data-column="7"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter DPP" data-column="8"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter PPN" data-column="9"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Tgl Faktur Pajak" data-column="10"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Depo" data-column="11"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Area" data-column="12"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Nama Produk" data-column="13"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter NPWP Customer" data-column="14"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Customer ID" data-column="15"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Nama Customer" data-column="16"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Alamat" data-column="17"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Type Pajak" data-column="18"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Satuan" data-column="19"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Nama Sesuai NPWP" data-column="20"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Alamat NPWP" data-column="21"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter No Telepon" data-column="22"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter No FP" data-column="23"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Brand" data-column="24"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Type Jual" data-column="25"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Kode Jenis FP" data-column="26"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Status FP" data-column="27"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter NIK" data-column="28"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter DPP Lain" data-column="29"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter ID TKU Pembeli" data-column="30"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkp"
+                                                        placeholder="Filter Jenis" data-column="31"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                             <div class="tab-pane" id="tabpanel-pkpnppn" role="tabpanel" aria-labelledby="tabpanel-pkpnppn">
                                 <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
@@ -333,114 +337,116 @@
                                         </tr>
                                     </table>
                                 </div>
-                                <table class="table table-sm table-striped table-bordered table-hover" id="table-pkpnppn">
-                                    <thead>
-                                        <tr>
-                                            <th><input type="checkbox" id="select-all-pkpnppn"></th> <!-- Checkbox untuk select all -->
-                                            <th>UBAH TIPE</th>
-                                            <th>NO INVOICE</th>
-                                            <th>NO DO</th>
-                                            <th>KODE PRODUK</th>
-                                            <th>QTY (PCS)</th>
-                                            <th>HARGA SATUAN</th>
-                                            <th>DISC</th>
-                                            <th>HARGA TOTAL</th>
-                                            <th>DPP</th>
-                                            <th>PPN 11%</th>
-                                            <th>TGL FAKTUR PAJAK</th>
-                                            <th>DEPO</th>
-                                            <th>AREA</th>
-                                            <th>NAMA PRODUK</th>
-                                            <th>NPWP CUSTOMER</th>
-                                            <th>CUSTOMER ID</th>
-                                            <th>NAMA CUSTOMER</th>
-                                            <th>ALAMAT</th>
-                                            <th>TYPE PAJAK</th>
-                                            <th>SATUAN</th>
-                                            <th>NAMA SESUAI NPWP</th>
-                                            <th>ALAMAT NPWP</th>
-                                            <th>NO TELEPON</th>
-                                            <th>NO FP</th>
-                                            <th>BRAND</th>
-                                            <th>TYPE JUAL</th>
-                                            <th>KODE JENIS FP</th>
-                                            <th>STATUS FP</th>
-                                            <th>NIK</th>
-                                            <th>DPP LAIN</th>
-                                            <th>ID TKU PEMBELI</th>
-                                            <th>JENIS</th>
-                                        </tr>
-                                        <tr>
-                                            <th></th>
-                                            <th><button class="btn btn-sm btn-primary apply-move-to" data-for="pkpnppn" disabled>
-                                                <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Invoice" data-column="1"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter DO" data-column="2"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Kode Produk" data-column="3"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Qty" data-column="4"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Harga Satuan" data-column="5"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Disc" data-column="6"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Harga Total" data-column="7"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter DPP" data-column="8"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter PPN" data-column="9"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Tgl Faktur Pajak" data-column="10"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Depo" data-column="11"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Area" data-column="12"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Nama Produk" data-column="13"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter NPWP Customer" data-column="14"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Customer ID" data-column="15"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Nama Customer" data-column="16"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Alamat" data-column="17"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Type Pajak" data-column="18"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Satuan" data-column="19"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Nama Sesuai NPWP" data-column="20"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Alamat NPWP" data-column="21"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter No Telepon" data-column="22"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter No FP" data-column="23"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Brand" data-column="24"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Type Jual" data-column="25"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Kode Jenis FP" data-column="26"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Status FP" data-column="27"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter NIK" data-column="28"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter DPP Lain" data-column="29"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter ID TKU Pembeli" data-column="30"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
-                                                    placeholder="Filter Jenis" data-column="31"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    </tbody>
-                                </table>
+                                <div class="tbl-container">
+                                    <table class="table table-sm table-striped table-bordered table-hover" id="table-pkpnppn">
+                                        <thead>
+                                            <tr>
+                                                <th><input type="checkbox" id="select-all-pkpnppn"></th> <!-- Checkbox untuk select all -->
+                                                <th>UBAH TIPE</th>
+                                                <th>NO INVOICE</th>
+                                                <th>NO DO</th>
+                                                <th>KODE PRODUK</th>
+                                                <th>QTY (PCS)</th>
+                                                <th>HARGA SATUAN</th>
+                                                <th>DISC</th>
+                                                <th>HARGA TOTAL</th>
+                                                <th>DPP</th>
+                                                <th>PPN 11%</th>
+                                                <th>TGL FAKTUR PAJAK</th>
+                                                <th>DEPO</th>
+                                                <th>AREA</th>
+                                                <th>NAMA PRODUK</th>
+                                                <th>NPWP CUSTOMER</th>
+                                                <th>CUSTOMER ID</th>
+                                                <th>NAMA CUSTOMER</th>
+                                                <th>ALAMAT</th>
+                                                <th>TYPE PAJAK</th>
+                                                <th>SATUAN</th>
+                                                <th>NAMA SESUAI NPWP</th>
+                                                <th>ALAMAT NPWP</th>
+                                                <th>NO TELEPON</th>
+                                                <th>NO FP</th>
+                                                <th>BRAND</th>
+                                                <th>TYPE JUAL</th>
+                                                <th>KODE JENIS FP</th>
+                                                <th>STATUS FP</th>
+                                                <th>NIK</th>
+                                                <th>DPP LAIN</th>
+                                                <th>ID TKU PEMBELI</th>
+                                                <th>JENIS</th>
+                                            </tr>
+                                            <tr>
+                                                <th></th>
+                                                <th><button class="btn btn-sm btn-primary apply-move-to" data-for="pkpnppn" disabled>
+                                                    <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Invoice" data-column="1"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter DO" data-column="2"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Kode Produk" data-column="3"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Qty" data-column="4"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Harga Satuan" data-column="5"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Disc" data-column="6"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Harga Total" data-column="7"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter DPP" data-column="8"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter PPN" data-column="9"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Tgl Faktur Pajak" data-column="10"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Depo" data-column="11"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Area" data-column="12"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Nama Produk" data-column="13"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter NPWP Customer" data-column="14"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Customer ID" data-column="15"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Nama Customer" data-column="16"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Alamat" data-column="17"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Type Pajak" data-column="18"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Satuan" data-column="19"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Nama Sesuai NPWP" data-column="20"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Alamat NPWP" data-column="21"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter No Telepon" data-column="22"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter No FP" data-column="23"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Brand" data-column="24"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Type Jual" data-column="25"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Kode Jenis FP" data-column="26"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Status FP" data-column="27"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter NIK" data-column="28"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter DPP Lain" data-column="29"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter ID TKU Pembeli" data-column="30"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-pkpnppn"
+                                                        placeholder="Filter Jenis" data-column="31"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                             <div class="tab-pane" id="tabpanel-nonpkp" role="tabpanel" aria-labelledby="tabpanel-nonpkp">
                                 <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
@@ -463,114 +469,116 @@
                                         </tr>
                                     </table>
                                 </div>
-                                <table class="table table-sm table-striped table-bordered table-hover" id="table-npkp">
-                                    <thead>
-                                        <tr>
-                                            <th><input type="checkbox" id="select-all-npkp"></th> <!-- Checkbox untuk select all -->
-                                            <th>UBAH TIPE</th>
-                                            <th>NO INVOICE</th>
-                                            <th>NO DO</th>
-                                            <th>KODE PRODUK</th>
-                                            <th>QTY (PCS)</th>
-                                            <th>HARGA SATUAN</th>
-                                            <th>DISC</th>
-                                            <th>HARGA TOTAL</th>
-                                            <th>DPP</th>
-                                            <th>PPN 11%</th>
-                                            <th>TGL FAKTUR PAJAK</th>
-                                            <th>DEPO</th>
-                                            <th>AREA</th>
-                                            <th>NAMA PRODUK</th>
-                                            <th>NPWP CUSTOMER</th>
-                                            <th>CUSTOMER ID</th>
-                                            <th>NAMA CUSTOMER</th>
-                                            <th>ALAMAT</th>
-                                            <th>TYPE PAJAK</th>
-                                            <th>SATUAN</th>
-                                            <th>NAMA SESUAI NPWP</th>
-                                            <th>ALAMAT NPWP</th>
-                                            <th>NO TELEPON</th>
-                                            <th>NO FP</th>
-                                            <th>BRAND</th>
-                                            <th>TYPE JUAL</th>
-                                            <th>KODE JENIS FP</th>
-                                            <th>STATUS FP</th>
-                                            <th>NIK</th>
-                                            <th>DPP LAIN</th>
-                                            <th>ID TKU PEMBELI</th>
-                                            <th>JENIS</th>
-                                        </tr>
-                                        <tr>
-                                            <th></th>
-                                            <th><button class="btn btn-sm btn-primary apply-move-to" data-for="npkp" disabled>
-                                                <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Invoice" data-column="1"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter DO" data-column="2"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Kode Produk" data-column="3"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Qty" data-column="4"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Harga Satuan" data-column="5"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Disc" data-column="6"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Harga Total" data-column="7"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter DPP" data-column="8"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter PPN" data-column="9"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Tgl Faktur Pajak" data-column="10"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Depo" data-column="11"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Area" data-column="12"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Nama Produk" data-column="13"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter NPWP Customer" data-column="14"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Customer ID" data-column="15"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Nama Customer" data-column="16"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Alamat" data-column="17"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Type Pajak" data-column="18"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Satuan" data-column="19"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Nama Sesuai NPWP" data-column="20"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Alamat NPWP" data-column="21"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter No Telepon" data-column="22"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter No FP" data-column="23"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Brand" data-column="24"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Type Jual" data-column="25"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Kode Jenis FP" data-column="26"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Status FP" data-column="27"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter NIK" data-column="28"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter DPP Lain" data-column="29"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter ID TKU Pembeli" data-column="30"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkp"
-                                                    placeholder="Filter Jenis" data-column="31"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    </tbody>
-                                </table>
+                                <div class="tbl-container">
+                                    <table class="table table-sm table-striped table-bordered table-hover" id="table-npkp">
+                                        <thead>
+                                            <tr>
+                                                <th><input type="checkbox" id="select-all-npkp"></th> <!-- Checkbox untuk select all -->
+                                                <th>UBAH TIPE</th>
+                                                <th>NO INVOICE</th>
+                                                <th>NO DO</th>
+                                                <th>KODE PRODUK</th>
+                                                <th>QTY (PCS)</th>
+                                                <th>HARGA SATUAN</th>
+                                                <th>DISC</th>
+                                                <th>HARGA TOTAL</th>
+                                                <th>DPP</th>
+                                                <th>PPN 11%</th>
+                                                <th>TGL FAKTUR PAJAK</th>
+                                                <th>DEPO</th>
+                                                <th>AREA</th>
+                                                <th>NAMA PRODUK</th>
+                                                <th>NPWP CUSTOMER</th>
+                                                <th>CUSTOMER ID</th>
+                                                <th>NAMA CUSTOMER</th>
+                                                <th>ALAMAT</th>
+                                                <th>TYPE PAJAK</th>
+                                                <th>SATUAN</th>
+                                                <th>NAMA SESUAI NPWP</th>
+                                                <th>ALAMAT NPWP</th>
+                                                <th>NO TELEPON</th>
+                                                <th>NO FP</th>
+                                                <th>BRAND</th>
+                                                <th>TYPE JUAL</th>
+                                                <th>KODE JENIS FP</th>
+                                                <th>STATUS FP</th>
+                                                <th>NIK</th>
+                                                <th>DPP LAIN</th>
+                                                <th>ID TKU PEMBELI</th>
+                                                <th>JENIS</th>
+                                            </tr>
+                                            <tr>
+                                                <th></th>
+                                                <th><button class="btn btn-sm btn-primary apply-move-to" data-for="npkp" disabled>
+                                                    <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Invoice" data-column="1"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter DO" data-column="2"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Kode Produk" data-column="3"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Qty" data-column="4"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Harga Satuan" data-column="5"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Disc" data-column="6"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Harga Total" data-column="7"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter DPP" data-column="8"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter PPN" data-column="9"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Tgl Faktur Pajak" data-column="10"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Depo" data-column="11"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Area" data-column="12"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Nama Produk" data-column="13"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter NPWP Customer" data-column="14"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Customer ID" data-column="15"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Nama Customer" data-column="16"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Alamat" data-column="17"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Type Pajak" data-column="18"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Satuan" data-column="19"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Nama Sesuai NPWP" data-column="20"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Alamat NPWP" data-column="21"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter No Telepon" data-column="22"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter No FP" data-column="23"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Brand" data-column="24"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Type Jual" data-column="25"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Kode Jenis FP" data-column="26"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Status FP" data-column="27"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter NIK" data-column="28"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter DPP Lain" data-column="29"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter ID TKU Pembeli" data-column="30"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkp"
+                                                        placeholder="Filter Jenis" data-column="31"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                             <div class="tab-pane" id="tabpanel-nonpkpnppn" role="tabpanel" aria-labelledby="tabpanel-nonpkpnppn">
                                 <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
@@ -593,114 +601,116 @@
                                         </tr>
                                     </table>
                                 </div>
-                                <table class="table table-sm table-striped table-bordered table-hover" id="table-npkpnppn">
-                                    <thead>
-                                        <tr>
-                                            <th><input type="checkbox" id="select-all-npkpnppn"></th> <!-- Checkbox untuk select all -->
-                                            <th>UBAH TIPE</th>
-                                            <th>NO INVOICE</th>
-                                            <th>NO DO</th>
-                                            <th>KODE PRODUK</th>
-                                            <th>QTY (PCS)</th>
-                                            <th>HARGA SATUAN</th>
-                                            <th>DISC</th>
-                                            <th>HARGA TOTAL</th>
-                                            <th>DPP</th>
-                                            <th>PPN 11%</th>
-                                            <th>TGL FAKTUR PAJAK</th>
-                                            <th>DEPO</th>
-                                            <th>AREA</th>
-                                            <th>NAMA PRODUK</th>
-                                            <th>NPWP CUSTOMER</th>
-                                            <th>CUSTOMER ID</th>
-                                            <th>NAMA CUSTOMER</th>
-                                            <th>ALAMAT</th>
-                                            <th>TYPE PAJAK</th>
-                                            <th>SATUAN</th>
-                                            <th>NAMA SESUAI NPWP</th>
-                                            <th>ALAMAT NPWP</th>
-                                            <th>NO TELEPON</th>
-                                            <th>NO FP</th>
-                                            <th>BRAND</th>
-                                            <th>TYPE JUAL</th>
-                                            <th>KODE JENIS FP</th>
-                                            <th>STATUS FP</th>
-                                            <th>NIK</th>
-                                            <th>DPP LAIN</th>
-                                            <th>ID TKU PEMBELI</th>
-                                            <th>JENIS</th>
-                                        </tr>
-                                        <tr>
-                                            <th></th>
-                                            <th><button class="btn btn-sm btn-primary apply-move-to" data-for="npkpnppn" disabled>
-                                                <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Invoice" data-column="1"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter DO" data-column="2"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Kode Produk" data-column="3"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Qty" data-column="4"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Harga Satuan" data-column="5"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Disc" data-column="6"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Harga Total" data-column="7"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter DPP" data-column="8"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter PPN" data-column="9"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Tgl Faktur Pajak" data-column="10"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Depo" data-column="11"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Area" data-column="12"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Nama Produk" data-column="13"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter NPWP Customer" data-column="14"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Customer ID" data-column="15"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Nama Customer" data-column="16"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Alamat" data-column="17"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Type Pajak" data-column="18"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Satuan" data-column="19"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Nama Sesuai NPWP" data-column="20"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Alamat NPWP" data-column="21"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter No Telepon" data-column="22"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter No FP" data-column="23"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Brand" data-column="24"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Type Jual" data-column="25"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Kode Jenis FP" data-column="26"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Status FP" data-column="27"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter NIK" data-column="28"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter DPP Lain" data-column="29"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter ID TKU Pembeli" data-column="30"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
-                                                    placeholder="Filter Jenis" data-column="31"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    </tbody>
-                                </table>
+                                <div class="tbl-container">
+                                    <table class="table table-sm table-striped table-bordered table-hover" id="table-npkpnppn">
+                                        <thead>
+                                            <tr>
+                                                <th><input type="checkbox" id="select-all-npkpnppn"></th> <!-- Checkbox untuk select all -->
+                                                <th>UBAH TIPE</th>
+                                                <th>NO INVOICE</th>
+                                                <th>NO DO</th>
+                                                <th>KODE PRODUK</th>
+                                                <th>QTY (PCS)</th>
+                                                <th>HARGA SATUAN</th>
+                                                <th>DISC</th>
+                                                <th>HARGA TOTAL</th>
+                                                <th>DPP</th>
+                                                <th>PPN 11%</th>
+                                                <th>TGL FAKTUR PAJAK</th>
+                                                <th>DEPO</th>
+                                                <th>AREA</th>
+                                                <th>NAMA PRODUK</th>
+                                                <th>NPWP CUSTOMER</th>
+                                                <th>CUSTOMER ID</th>
+                                                <th>NAMA CUSTOMER</th>
+                                                <th>ALAMAT</th>
+                                                <th>TYPE PAJAK</th>
+                                                <th>SATUAN</th>
+                                                <th>NAMA SESUAI NPWP</th>
+                                                <th>ALAMAT NPWP</th>
+                                                <th>NO TELEPON</th>
+                                                <th>NO FP</th>
+                                                <th>BRAND</th>
+                                                <th>TYPE JUAL</th>
+                                                <th>KODE JENIS FP</th>
+                                                <th>STATUS FP</th>
+                                                <th>NIK</th>
+                                                <th>DPP LAIN</th>
+                                                <th>ID TKU PEMBELI</th>
+                                                <th>JENIS</th>
+                                            </tr>
+                                            <tr>
+                                                <th></th>
+                                                <th><button class="btn btn-sm btn-primary apply-move-to" data-for="npkpnppn" disabled>
+                                                    <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Invoice" data-column="1"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter DO" data-column="2"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Kode Produk" data-column="3"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Qty" data-column="4"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Harga Satuan" data-column="5"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Disc" data-column="6"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Harga Total" data-column="7"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter DPP" data-column="8"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter PPN" data-column="9"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Tgl Faktur Pajak" data-column="10"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Depo" data-column="11"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Area" data-column="12"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Nama Produk" data-column="13"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter NPWP Customer" data-column="14"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Customer ID" data-column="15"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Nama Customer" data-column="16"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Alamat" data-column="17"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Type Pajak" data-column="18"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Satuan" data-column="19"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Nama Sesuai NPWP" data-column="20"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Alamat NPWP" data-column="21"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter No Telepon" data-column="22"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter No FP" data-column="23"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Brand" data-column="24"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Type Jual" data-column="25"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Kode Jenis FP" data-column="26"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Status FP" data-column="27"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter NIK" data-column="28"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter DPP Lain" data-column="29"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter ID TKU Pembeli" data-column="30"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-npkpnppn"
+                                                        placeholder="Filter Jenis" data-column="31"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                             <div class="tab-pane" id="tabpanel-retur" role="tabpanel" aria-labelledby="tabpanel-retur">
                                 <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
@@ -723,114 +733,116 @@
                                         </tr>
                                     </table>
                                 </div>
-                                <table class="table table-sm table-striped table-bordered table-hover" id="table-retur">
-                                    <thead>
-                                        <tr>
-                                            <th><input type="checkbox" id="select-all-retur"></th> <!-- Checkbox untuk select all -->
-                                            <th>UBAH TIPE</th>
-                                            <th>NO INVOICE</th>
-                                            <th>NO DO</th>
-                                            <th>KODE PRODUK</th>
-                                            <th>QTY (PCS)</th>
-                                            <th>HARGA SATUAN</th>
-                                            <th>DISC</th>
-                                            <th>HARGA TOTAL</th>
-                                            <th>DPP</th>
-                                            <th>PPN 11%</th>
-                                            <th>TGL FAKTUR PAJAK</th>
-                                            <th>DEPO</th>
-                                            <th>AREA</th>
-                                            <th>NAMA PRODUK</th>
-                                            <th>NPWP CUSTOMER</th>
-                                            <th>CUSTOMER ID</th>
-                                            <th>NAMA CUSTOMER</th>
-                                            <th>ALAMAT</th>
-                                            <th>TYPE PAJAK</th>
-                                            <th>SATUAN</th>
-                                            <th>NAMA SESUAI NPWP</th>
-                                            <th>ALAMAT NPWP</th>
-                                            <th>NO TELEPON</th>
-                                            <th>NO FP</th>
-                                            <th>BRAND</th>
-                                            <th>TYPE JUAL</th>
-                                            <th>KODE JENIS FP</th>
-                                            <th>STATUS FP</th>
-                                            <th>NIK</th>
-                                            <th>DPP LAIN</th>
-                                            <th>ID TKU PEMBELI</th>
-                                            <th>JENIS</th>
-                                        </tr>
-                                        <tr>
-                                            <th></th>
-                                            <th><button class="btn btn-sm btn-primary apply-move-to" data-for="retur" disabled>
-                                                <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Invoice" data-column="1"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter DO" data-column="2"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Kode Produk" data-column="3"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Qty" data-column="4"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Harga Satuan" data-column="5"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Disc" data-column="6"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Harga Total" data-column="7"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter DPP" data-column="8"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter PPN" data-column="9"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Tgl Faktur Pajak" data-column="10"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Depo" data-column="11"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Area" data-column="12"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Nama Produk" data-column="13"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter NPWP Customer" data-column="14"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Customer ID" data-column="15"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Nama Customer" data-column="16"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Alamat" data-column="17"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Type Pajak" data-column="18"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Satuan" data-column="19"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Nama Sesuai NPWP" data-column="20"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Alamat NPWP" data-column="21"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter No Telepon" data-column="22"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter No FP" data-column="23"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Brand" data-column="24"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Type Jual" data-column="25"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Kode Jenis FP" data-column="26"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Status FP" data-column="27"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter NIK" data-column="28"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter DPP Lain" data-column="29"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter ID TKU Pembeli" data-column="30"></th>
-                                            <th><input type="text" class="form-control form-control-sm column-filter-retur"
-                                                    placeholder="Filter Jenis" data-column="31"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    </tbody>
-                                </table>
+                                <div class="tbl-container">
+                                    <table class="table table-sm table-striped table-bordered table-hover" id="table-retur">
+                                        <thead>
+                                            <tr>
+                                                <th><input type="checkbox" id="select-all-retur"></th> <!-- Checkbox untuk select all -->
+                                                <th>UBAH TIPE</th>
+                                                <th>NO INVOICE</th>
+                                                <th>NO DO</th>
+                                                <th>KODE PRODUK</th>
+                                                <th>QTY (PCS)</th>
+                                                <th>HARGA SATUAN</th>
+                                                <th>DISC</th>
+                                                <th>HARGA TOTAL</th>
+                                                <th>DPP</th>
+                                                <th>PPN 11%</th>
+                                                <th>TGL FAKTUR PAJAK</th>
+                                                <th>DEPO</th>
+                                                <th>AREA</th>
+                                                <th>NAMA PRODUK</th>
+                                                <th>NPWP CUSTOMER</th>
+                                                <th>CUSTOMER ID</th>
+                                                <th>NAMA CUSTOMER</th>
+                                                <th>ALAMAT</th>
+                                                <th>TYPE PAJAK</th>
+                                                <th>SATUAN</th>
+                                                <th>NAMA SESUAI NPWP</th>
+                                                <th>ALAMAT NPWP</th>
+                                                <th>NO TELEPON</th>
+                                                <th>NO FP</th>
+                                                <th>BRAND</th>
+                                                <th>TYPE JUAL</th>
+                                                <th>KODE JENIS FP</th>
+                                                <th>STATUS FP</th>
+                                                <th>NIK</th>
+                                                <th>DPP LAIN</th>
+                                                <th>ID TKU PEMBELI</th>
+                                                <th>JENIS</th>
+                                            </tr>
+                                            <tr>
+                                                <th></th>
+                                                <th><button class="btn btn-sm btn-primary apply-move-to" data-for="retur" disabled>
+                                                    <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Invoice" data-column="1"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter DO" data-column="2"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Kode Produk" data-column="3"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Qty" data-column="4"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Harga Satuan" data-column="5"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Disc" data-column="6"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Harga Total" data-column="7"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter DPP" data-column="8"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter PPN" data-column="9"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Tgl Faktur Pajak" data-column="10"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Depo" data-column="11"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Area" data-column="12"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Nama Produk" data-column="13"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter NPWP Customer" data-column="14"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Customer ID" data-column="15"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Nama Customer" data-column="16"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Alamat" data-column="17"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Type Pajak" data-column="18"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Satuan" data-column="19"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Nama Sesuai NPWP" data-column="20"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Alamat NPWP" data-column="21"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter No Telepon" data-column="22"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter No FP" data-column="23"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Brand" data-column="24"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Type Jual" data-column="25"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Kode Jenis FP" data-column="26"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Status FP" data-column="27"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter NIK" data-column="28"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter DPP Lain" data-column="29"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter ID TKU Pembeli" data-column="30"></th>
+                                                <th><input type="text" class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Filter Jenis" data-column="31"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
