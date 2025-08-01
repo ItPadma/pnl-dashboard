@@ -7,69 +7,79 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
-            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ef 100%);
-            color: #333;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            color: #111827;
             font-family: 'Segoe UI', Arial, sans-serif;
             margin: 0;
             padding: 0;
             min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
+
         .center-box {
-            max-width: 500px;
-            margin: 8% auto 0 auto;
-            background: #fff;
-            border-radius: 18px;
-            box-shadow: 0 8px 32px rgba(60,72,88,0.12);
-            padding: 48px 32px 40px 32px;
             text-align: center;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 40px 20px;
         }
+
         .center-box h1 {
-            font-size: 6rem;
-            font-weight: 800;
+            font-size: 3rem;
             color: #2563eb;
-            margin-bottom: 0.5rem;
-            letter-spacing: 2px;
-        }
-        .center-box h2 {
-            font-size: 2rem;
-            font-weight: 600;
             margin-bottom: 1rem;
-            color: #374151;
         }
+
         .center-box p {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             color: #6b7280;
-            margin-bottom: 2rem;
         }
+
         .btn-home {
             display: inline-block;
-            padding: 12px 32px;
+            padding: 10px 20px;
             background: #2563eb;
             color: #fff;
-            border-radius: 8px;
+            border-radius: 6px;
             text-decoration: none;
-            font-weight: 600;
             font-size: 1rem;
-            box-shadow: 0 2px 8px rgba(37,99,235,0.08);
-            transition: background 0.2s;
+            margin-top: 1rem;
         }
+
         .btn-home:hover {
             background: #1d4ed8;
         }
-        @media (max-width: 600px) {
+
+        .center-box img {
+            width: 480px;
+        }
+
+        /* responsive */
+        @media (max-width: 768px) {
             .center-box {
-                padding: 32px 10px 24px 10px;
+                padding: 20px 10px;
             }
+
             .center-box h1 {
-                font-size: 4rem;
+                font-size: 2rem;
+            }
+
+            .center-box p {
+                font-size: 1rem;
+            }
+
+            .center-box img {
+                width: 100%;
+                height: auto;
             }
         }
     </style>
 </head>
 <body>
     <div class="center-box">
-        <h1>404</h1>
-        <h2>Halaman Tidak Ditemukan</h2>
+        <img src="{{ asset('assets/img/not-found.png') }}" alt="not-found" width="480">
         <p>Maaf, halaman yang kamu cari tidak tersedia, sudah dipindahkan, atau mungkin sudah dihapus.<br>
         Silakan kembali ke halaman utama.</p>
         <a href="{{ url('/') }}" class="btn-home">Kembali ke Beranda</a>
