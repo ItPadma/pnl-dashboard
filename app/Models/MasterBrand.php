@@ -12,4 +12,9 @@ class MasterBrand extends Model
         'code',
         'name',
     ];
+
+    public function multiCompProdMappings()
+    {
+        return $this->hasMany(MultiCompProdMapping::class, 'szProductCategoryID', 'code');
+    }
 }

@@ -67,11 +67,11 @@ class RegulerController extends Controller
                 }
             }
             // Additional filters
-            if ($request->has('pt') && $request->pt != 'all') {
-                $dbquery->whereRaw("company = '$request->pt'");
+            if ($request->has('pt') && !in_array('all', $request->pt)) {
+                $dbquery->whereRaw("company IN ('" . implode("','", $request->pt) . "')");
             }
-            if ($request->has('brand') && $request->brand != 'all') {
-                $dbquery->whereRaw("brand = '$request->brand'");
+            if ($request->has('brand') && !in_array('all', $request->brand)) {
+                $dbquery->whereRaw("brand IN ('" . implode("','", $request->brand) . "')");
             }
             if ($request->has('depo') && $request->depo == 'all') {
                 $currentUserDepo = Auth::user()->depo;

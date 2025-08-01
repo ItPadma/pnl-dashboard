@@ -12,4 +12,9 @@ class MasterCompany extends Model
         'code',
         'name',
     ];
+
+    public function multiCompProdMappings()
+    {
+        return $this->hasMany(MultiCompProdMapping::class, 'szCompanyID', 'code');
+    }
 }

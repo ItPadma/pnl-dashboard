@@ -2,6 +2,7 @@
     <script src="{{ asset('assets/js/plugin/moment/moment.min.js') }}"></script>
     <script src="{{ asset('assets/js/plugin/daterangepicker/daterangepicker.min.js') }}"></script>
     <script src="{{ asset('assets/js/plugin/toastr/toastr.min.js') }}"></script>
+    <script src="{{ asset('assets/js/plugin/select2/select2.full.min.js') }}"></script>
     <script>
         toastr.options = {
             "closeButton": true,
@@ -1826,7 +1827,8 @@
             // Event listener untuk tombol apply move-to
             function applyMoveTo(from) {
                 const move_from = from;
-                const move_to = $('select[id*="move-to-"]').val();
+                // ambil nilai dari select dengan id move-to yang saat ini aktif (tidak disabled)
+                const move_to = $('select[id*="move-to-"]:not([disabled]):visible').val();
                 if (move_from && move_to) {
                     // Ambil semua ID dari checkbox yang dicentang
                     const ids = $('.row-checkbox-' + move_from).filter(':checked').map(function() {
@@ -1876,9 +1878,11 @@
                             text: brand.name
                         }));
                     });
+                    $('#sp-filter-brand').hide();
                 },
                 error: function(xhr) {
                     console.error(xhr.responseText);
+                    $('#sp-filter-brand').hide();
                 }
             });
 
@@ -1914,9 +1918,12 @@
                             }));
                         });
                     }
+
+                    $('#sp-filter-depo').hide();
                 },
                 error: function(xhr) {
                     console.error(xhr.responseText);
+                    toastr.error('Gagal memuat data DEPO.');
                 }
             });
 
@@ -1932,14 +1939,63 @@
                             text: pt.code + ' - ' +pt.name
                         }));
                     });
+                    $('#sp-filter-pt').hide();
                 },
                 error: function(xhr) {
                     console.error(xhr.responseText);
+                    toastr.error('Gagal memuat data PT.');
                 }
             });
 
             // Remove filter button since we're auto-filtering
             $('.btn-info').hide();
+
+            // select2 initialization, set default values to all
+            $('#filter_brand, #filter_depo, #filter_pt').select2({
+                allowClear: true,
+                width: '100%',
+                placeholder: 'Pilih..',
+            });
+
+            // get brand when filter_pt (multiple value from select2) changes
+            $('#filter_pt').on('change', function() {
+                let selectedPt = $(this).val();
+                if (selectedPt) {
+                    $.ajax({
+                        url: "{{ route('pnl.master-data.brands') }}",
+                        type: "GET",
+                        dataType: "json",
+                        data: {
+                            companies: selectedPt
+                        },
+                        beforeSend: function() {
+                            $('#filter_brand').empty().append($('<option>', {
+                                value: 'all',
+                                text: '--ALL--',
+                                selected: false
+                            }));
+                            $('#sp-filter-brand').show();
+                        },
+                        success: function(data) {
+                            $.each(data.data, function(index, brand) {
+                                $('#filter_brand').append($('<option>', {
+                                    value: brand.code,
+                                    text: brand.name
+                                }));
+                            });
+                            $('#filter_brand').val(null).trigger('change');
+                            $('#sp-filter-brand').hide();
+                        },
+                        error: function(xhr) {
+                            console.error(xhr.responseText);
+                            toastr.error('Gagal memuat data brand.');
+                            $('#sp-filter-brand').hide();
+                        }
+                    });
+                } else {
+                    $('#filter_brand').val(null).trigger('change');
+                }
+            });
         });
     </script>
 @endsection

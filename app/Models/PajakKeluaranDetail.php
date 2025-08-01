@@ -63,8 +63,16 @@ class PajakKeluaranDetail extends Model
     public static function getFromLive($pt, $brand, $depo, $start, $end, $tipe, $chstatus)
     {
         try {
-            $filter_pt = $pt !== 'all' ? " AND e.szCategory_9 = '$pt'" : "";
-            $filter_brand = $brand !== 'all' ? " AND e.szCategory_1 = '$brand'" : "";
+            if (is_array($pt)) {
+                $filter_pt = " AND e.szCategory_9 IN ('" . implode("','", $pt) . "')";
+            } else {
+                $filter_pt = $pt !== 'all' ? " AND e.szCategory_9 = '$pt'" : "";
+            }
+            if (is_array($brand)) {
+                $filter_brand = " AND e.szCategory_1 IN ('" . implode("','", $brand) . "')";
+            } else {
+                $filter_brand = $brand !== 'all' ? " AND e.szCategory_1 = '$brand'" : "";
+            }
             $filter_tanggal = " FORMAT (a.dtmDelivery, 'yyyy-MM-dd') BETWEEN '$start' AND '$end'";
             $filter_tipe = $tipe ?? '';
             if ($depo == 'all') {
@@ -253,17 +261,34 @@ class PajakKeluaranDetail extends Model
 
                     DB::commit();
                     Log::info('Berhasil update/insert pajak keluaran detail dari live db');
+                    broadcast(new \App\Events\UserEvent("success", "Pajak Keluaran Detail",
+                        "Berhasil menyimpan data pajak keluaran detail dari live server.",
+                        Auth::user()
+                    ));
                     return true;
                 } catch (\Throwable $th) {
                     Log::error("Failed to insert data from live db. " . $th->getMessage());
+                    broadcast(new \App\Events\UserEvent("error", "Pajak Keluaran Detail",
+                        "Gagal menyimpan data pajak keluaran detail dari live server. Silakan coba lagi.",
+                        Auth::user()
+                    ));
                     DB::rollBack();
                     return false;
                 }
             } else {
+                Log::info('No data found from live db for pajak keluaran detail');
+                broadcast(new \App\Events\UserEvent("info", "Pajak Keluaran Detail",
+                    "Tidak ada data pajak keluaran yang ditemukan dari live server.",
+                    Auth::user()
+                ));
                 return false;
             }
         } catch (\Throwable $th) {
             Log::error("Failed! " . $th->getMessage());
+            broadcast(new \App\Events\UserEvent("error", "Pajak Keluaran Detail",
+                "Gagal mengambil data pajak keluaran detail dari live server. Silakan coba lagi.",
+                Auth::user()
+            ));
             return false;
         }
     }

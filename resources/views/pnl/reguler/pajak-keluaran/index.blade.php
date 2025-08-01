@@ -65,29 +65,12 @@
 
         table.dataTable thead th {
             white-space: nowrap;
-            /* min-width: 100px; */
         }
-
-        /* table.dataTable thead th, */
-        /* table.dataTable tbody td {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        } */
 
         table.dataTable thead th:nth-child(1),
         table.dataTable tbody td:nth-child(1) {
             width: 12px;
-            /* max-width: 3%;
-            min-width: 2%; */
         }
-
-        /* kolom checkbox header ukuran fixed
-        table.dataTable thead th:nth-child(1) {
-            width: 5%;
-            max-width: 5%;
-            min-width: 5%;
-        } */
     </style>
 @endsection
 
@@ -119,31 +102,31 @@
             <div class="row">
                 <div class="col-md-3 col-xm-12 col-sm-12">
                     <div class="form-group form-group-default">
-                        <label>PT</label>
-                        <select class="form-select" id="filter_pt">
+                        <label for="filter_pt">PT <div class="spinner-border spinner-border-sm " id="sp-filter-pt" role="status"><span class="visually-hidden">Loading...</span></div></label>
+                        <select class="form-select" id="filter_pt" multiple="multiple">
                             <option value="all">--ALL--</option>
                         </select>
                     </div>
                 </div>
                 <div class="col-md-3 col-xm-12 col-sm-12">
                     <div class="form-group form-group-default">
-                        <label>BRAND</label>
-                        <select class="form-select" id="filter_brand">
+                        <label for="filter_brand">BRAND <div class="spinner-border spinner-border-sm " id="sp-filter-brand" role="status"><span class="visually-hidden">Loading...</span></div></label>
+                        <select class="form-select" id="filter_brand" multiple="multiple">
                             <option value="all">--ALL--</option>
                         </select>
                     </div>
                 </div>
                 <div class="col-md-3 col-xm-12 col-sm-12">
                     <div class="form-group form-group-default">
-                        <label>DEPO</label>
-                        <select class="form-select" id="filter_depo">
+                        <label for="filter_depo">DEPO <div class="spinner-border spinner-border-sm " id="sp-filter-depo" role="status"><span class="visually-hidden">Loading...</span></div></label>
+                        <select class="form-select" id="filter_depo" multiple="multiple">
                             <option value="all">--ALL--</option>
                         </select>
                     </div>
                 </div>
                 <div class="col-md-3 col-xm-12 col-sm-12">
                     <div class="form-group form-group-default">
-                        <label>PERIODE</label>
+                        <label for="filter_periode">PERIODE</label>
                         <div class="input-group">
                             <input type="text" class="form-control" name="filter_periode" id="filter_periode"
                                 placeholder="Pilih Periode" aria-label="Pilih Periode" value="01/01/2025 - 02/01/2025" />
@@ -152,7 +135,7 @@
                 </div>
                 <div class="col-md-3 col-xm-12 col-sm-12">
                     <div class="form-group form-group-default">
-                        <label>Status</label>
+                        <label for="filter_chstatus">Status</label>
                         <select class="form-select" id="filter_chstatus">
                             <option value="all">--ALL--</option>
                             <option value="checked-ready2download">Checked</option>

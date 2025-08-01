@@ -12,10 +12,24 @@ class MasterDataController extends Controller
     public function getBrands(Request $request)
     {
         try {
-            $brands = \App\Models\MasterBrand::all();
+            if ($request->has('companies') && !empty($request->companies)) {
+                $companies = $request->companies;
+                $brands = \App\Models\MasterBrand::whereHas('multiCompProdMappings', function ($query) use ($companies) {
+                    $query->whereIn('szCompanyID', $companies);
+                })->get();
+                $msg = 'Data retrieved successfully for specified companies: ' . implode(', ', $companies);
+            } elseif ($request->has('company') && !empty($request->company)) {
+                $brands = \App\Models\MasterBrand::whereHas('multiCompProdMappings', function ($query) use ($request) {
+                    $query->where('szCompanyID', $request->company);
+                })->get();
+                $msg = 'Data retrieved successfully for company: ' . $request->company;
+            } else {
+                $brands = \App\Models\MasterBrand::all();
+                $msg = 'All brands retrieved successfully';
+            }
             return response()->json([
                 'status' => true,
-                'message' => 'Data retrieved successfully',
+                'message' => $msg,
                 'data' => $brands,
             ])->setStatusCode(200);
         } catch (\Throwable $th) {
