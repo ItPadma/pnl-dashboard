@@ -12,7 +12,26 @@
 <script src="{{ asset('assets/js/plugin/sweetalert/sweetalert.min.js') }}"></script>
 <script src="{{ asset('assets/js/plugin/select2/select2.full.min.js') }}"></script>
 <script src="{{ asset('assets/js/kaiadmin.min.js') }}"></script>
+<script src="{{ asset('assets/js/plugin/toastr/toastr.min.js') }}"></script>
 <script>
+    toastr.options = {
+        "closeButton": true,
+        "debug": false,
+        "newestOnTop": true,
+        "progressBar": true,
+        "positionClass": "toast-top-right",
+        "preventDuplicates": false,
+        "onclick": null,
+        "showDuration": "300",
+        "hideDuration": "1000",
+        "timeOut": "5000",
+        "extendedTimeOut": "1000",
+        "showEasing": "swing",
+        "hideEasing": "linear",
+        "showMethod": "fadeIn",
+        "hideMethod": "fadeOut",
+        "toastClass": "colored-toast"
+    };
     $(document).ready(function() {
         $('#changepass').on('click', function(e) {
             e.preventDefault();

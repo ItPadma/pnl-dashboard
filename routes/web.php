@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\UserEvent;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PNL\DashboardController;
 use App\Http\Controllers\PNL\MasterDataController;
@@ -8,6 +9,12 @@ use App\Http\Controllers\PNL\RegulerController;
 use App\Http\Controllers\User\AuthController;
 use App\Http\Controllers\Utilities\SettingController;
 use App\Http\Middleware\AuthnCheck;
+use Illuminate\Support\Facades\Auth;
+
+Route::get('/test-notif', function () {
+    broadcast(new UserEvent("info", "Just Info", "Ini notifikasi test dari Reverb!", Auth::user()));
+    return 'Notifikasi dikirim.';
+});
 
 Route::controller(AuthController::class)->group(function () {
     Route::get('/login', 'index')->name('login')->withoutMiddleware([AuthnCheck::class]);

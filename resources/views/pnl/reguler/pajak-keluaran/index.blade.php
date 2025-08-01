@@ -4,7 +4,6 @@
 
 @section('style')
     <link rel="stylesheet" href="{{ asset('assets/css/daterangepicker.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/toastr.min.css') }}">
     <style>
         thead input.column-filter {
             width: 100%;

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\PNL;
 
+use App\Events\UserEvent;
 use App\Exports\PajakKeluaranDetailExport;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Utilities\LogController;
@@ -154,6 +155,7 @@ class RegulerController extends Controller
             // Retrieve from live if no records found
             while ($retrieve_count == 0 && $dbquery->count() == 0) {
                 Log::info('No records found in database, fetching from live');
+                broadcast(new UserEvent("info", "Info", "Record tidak ditemukan di database, mengambil data dari live...", Auth::user()));
                 PajakKeluaranDetail::getFromLive($request->pt, $request->brand, $request->depo, $periode_awal, $periode_akhir, $tipe, $chstatus);
                 $retrieve_count = 1;
             }
