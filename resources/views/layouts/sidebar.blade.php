@@ -2,7 +2,7 @@
     <div class="sidebar-logo">
         <div class="logo-header" data-background-color="dark">
             <a href="/" class="logo">
-                <h5 class="text-white">PNL</h5>
+                <h5 class="text-white">PAJAK</h5>
             </a>
             <div class="nav-toggle">
                 <button class="btn btn-toggle toggle-sidebar">
@@ -30,7 +30,7 @@
                     <span class="sidebar-mini-icon">
                         <i class="fa fa-ellipsis-h"></i>
                     </span>
-                    <h4 class="text-section">PNL</h4>
+                    <h4 class="text-section">Pajak</h4>
                 </li>
                 <li class="nav-item {{ Request::is('pnl/reguler*') ? 'active' : '' }}">
                     <a data-bs-toggle="collapse" href="#reguler">
