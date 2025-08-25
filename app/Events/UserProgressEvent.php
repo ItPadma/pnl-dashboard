@@ -9,16 +9,16 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class UserEvent implements ShouldBroadcast
+class UserProgressEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public User $user;
+    protected $user;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(public $notifType, public $notifTitle, public $notifMessage, public $userId)
+    public function __construct(public $notifType, public $procName, public $progress, public $message, public $userId)
     {
         $this->user = User::find($userId);
         if (!$this->user) {
@@ -34,7 +34,7 @@ class UserEvent implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel("App.User." . $this->user->id),
+            new PrivateChannel("App.User.Progress." . $this->user->id),
         ];
     }
 
@@ -43,13 +43,15 @@ class UserEvent implements ShouldBroadcast
         return array(
             'username' => $this->user->name,
             'ntype' => $this->notifType,
-            'title' => $this->notifTitle,
-            'message' => $this->notifMessage,
+            'procname' => $this->procName,
+            'progress' => $this->progress,
+            'timestamp' => now()->toDateTimeString(),
+            'message' => $this->message
         );
     }
 
     public function broadcastAs(): string
     {
-        return 'user.notification';
+        return 'user.proc.progress';
     }
 }

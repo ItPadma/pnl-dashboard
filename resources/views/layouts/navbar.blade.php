@@ -244,7 +244,11 @@
                         </div>
                     </div>
                 </li> --}}
-
+                @if (config('app.debug'))
+                    <li class="nav-item">
+                        <span class="badge text-bg-warning">Development Mode</span>
+                    </li>
+                @endif
                 <li class="nav-item topbar-user dropdown hidden-caret">
                     <a class="dropdown-toggle profile-pic" data-bs-toggle="dropdown" href="#"
                         aria-expanded="false">

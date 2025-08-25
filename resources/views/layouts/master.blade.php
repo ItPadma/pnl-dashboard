@@ -65,7 +65,6 @@
             try {
                 const channel = window.Echo.private(`App.User.${userID}`);
                 console.log('Channel created successfully');
-
                 channel.listen('.user.notification', (response) => {
                     // convert data to javascript object
                     switch (response.ntype) {
@@ -85,6 +84,8 @@
                             console.warn('Unknown notification type:', response.type);
                     }
                 });
+
+                @yield('echo-script')
 
                 console.log('Listener attached successfully');
             } catch (error) {

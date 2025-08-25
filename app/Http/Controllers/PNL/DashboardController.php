@@ -11,6 +11,7 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        broadcast(new UserEvent('info', 'Welcome', 'Selamat datang, '.Auth::user()->name, Auth::user()->id));
         return view('pnl.dashboard.index');
     }
 }

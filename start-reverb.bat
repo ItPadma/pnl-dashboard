@@ -6,6 +6,6 @@ REM Navigate to your Laravel project directory
 cd /d "D:\alvif\projects\app-pajak"
 
 REM Start PHP artisan reverb command
-php artisan reverb:start
+php artisan reverb:start --debug
 
 timeout /t 2 /nobreak > nul

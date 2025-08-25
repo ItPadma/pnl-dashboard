@@ -9,12 +9,7 @@ use App\Http\Controllers\PNL\RegulerController;
 use App\Http\Controllers\User\AuthController;
 use App\Http\Controllers\Utilities\SettingController;
 use App\Http\Middleware\AuthnCheck;
-use Illuminate\Support\Facades\Auth;
 
-Route::get('/test-notif', function () {
-    broadcast(new UserEvent("info", "Just Info", "Ini notifikasi test dari Reverb!", Auth::user()));
-    return 'Notifikasi dikirim.';
-});
 
 Route::controller(AuthController::class)->group(function () {
     Route::get('/login', 'index')->name('login')->withoutMiddleware([AuthnCheck::class]);
@@ -61,5 +56,10 @@ Route::controller(SettingController::class)->group(function () {
     Route::post('/pnl/setting/userman', 'usermanStore')->name('pnl.setting.userman.store')->middleware([AuthnCheck::class]);
     Route::put('/pnl/setting/userman', 'usermanUpdate')->name('pnl.setting.userman.update')->middleware([AuthnCheck::class]);
     Route::delete('/pnl/setting/userman', 'usermanDelete')->name('pnl.setting.userman.destroy')->middleware([AuthnCheck::class]);
+    Route::get('/coba-webdriver', 'cobaScraping')->name('pnl.setting.coba.webdriver')->middleware([AuthnCheck::class]);
+    Route::post('/pnl/setting/coretax-gathering', 'coretaxScraping')->name('pnl.setting.coretax.gathering')->middleware([AuthnCheck::class]);
+    Route::post('/pnl/setting/coretax-captcha', 'coretaxCaptcha')->name('pnl.setting.coretax.captcha')->middleware([AuthnCheck::class]);
+    Route::get('/pnl/setting/coretax-captcha-preview', 'coretaxCaptchaPreview')->name('pnl.setting.coretax.captcha.preview')->middleware([AuthnCheck::class]);
+    Route::get('/pnl/setting/generate-csrf-token', 'generateCsrfToken')->name('pnl.setting.generate.csrf.token');
 });
 

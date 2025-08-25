@@ -3,22 +3,24 @@
 namespace App\Events;
 
 use App\Models\User;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class UserEvent implements ShouldBroadcast
+class UserDataEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public User $user;
+    protected $user;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(public $notifType, public $notifTitle, public $notifMessage, public $userId)
+    public function __construct(public $notifType, public $procName, public $data, public $userId)
     {
         $this->user = User::find($userId);
         if (!$this->user) {
@@ -34,7 +36,7 @@ class UserEvent implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel("App.User." . $this->user->id),
+            new PrivateChannel("App.User.Data." . $this->user->id),
         ];
     }
 
@@ -43,13 +45,13 @@ class UserEvent implements ShouldBroadcast
         return array(
             'username' => $this->user->name,
             'ntype' => $this->notifType,
-            'title' => $this->notifTitle,
-            'message' => $this->notifMessage,
+            'procname' => $this->procName,
+            'data' => $this->data,
         );
     }
 
     public function broadcastAs(): string
     {
-        return 'user.notification';
+        return 'user.data';
     }
 }
