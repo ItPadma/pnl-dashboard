@@ -434,14 +434,6 @@
                         name: 'type_pajak'
                     },
                     {
-                        data: 'depo',
-                        name: 'depo'
-                    },
-                    {
-                        data: 'area',
-                        name: 'area'
-                    },
-                    {
                         data: 'nama_sesuai_npwp',
                         name: 'nama_sesuai_npwp'
                     },
@@ -462,6 +454,14 @@
                         name: 'brand'
                     },
                     {
+                        data: 'depo',
+                        name: 'depo'
+                    },
+                    {
+                        data: 'area',
+                        name: 'area'
+                    },
+                    {
                         data: 'type_jual',
                         name: 'type_jual'
                     },
@@ -473,7 +473,6 @@
                         data: 'fp_normal_pengganti',
                         name: 'fp_normal_pengganti'
                     },
-
                     {
                         data: 'id_tku_pembeli',
                         name: 'id_tku_pembeli'
@@ -605,16 +604,40 @@
                         }
                     },
                     {
-                        data: 'no_invoice',
-                        name: 'no_invoice'
+                        data: 'customer_id',
+                        name: 'customer_id'
+                    },
+                    {
+                        data: 'nik',
+                        name: 'nik'
+                    },
+                    {
+                        data: 'nama_customer_sistem',
+                        name: 'nama_customer_sistem'
+                    },
+                    {
+                        data: 'npwp_customer',
+                        name: 'npwp_customer'
                     },
                     {
                         data: 'no_do',
                         name: 'no_do'
                     },
                     {
+                        data: 'no_invoice',
+                        name: 'no_invoice'
+                    },
+                    {
                         data: 'kode_produk',
                         name: 'kode_produk'
+                    },
+                    {
+                        data: 'nama_produk',
+                        name: 'nama_produk'
+                    },
+                    {
+                        data: 'satuan',
+                        name: 'satuan'
                     },
                     {
                         data: 'qty_pcs',
@@ -625,16 +648,20 @@
                         name: 'hargasatuan_sblm_ppn'
                     },
                     {
-                        data: 'disc',
-                        name: 'disc'
-                    },
-                    {
                         data: 'hargatotal_sblm_ppn',
                         name: 'hargatotal_sblm_ppn'
                     },
                     {
+                        data: 'disc',
+                        name: 'disc'
+                    },
+                    {
                         data: 'dpp',
                         name: 'dpp'
+                    },
+                    {
+                        data: 'dpp_lain',
+                        name: 'dpp_lain'
                     },
                     {
                         data: 'ppn',
@@ -645,40 +672,12 @@
                         name: 'tgl_faktur_pajak'
                     },
                     {
-                        data: 'depo',
-                        name: 'depo'
-                    },
-                    {
-                        data: 'area',
-                        name: 'area'
-                    },
-                    {
-                        data: 'nama_produk',
-                        name: 'nama_produk'
-                    },
-                    {
-                        data: 'npwp_customer',
-                        name: 'npwp_customer'
-                    },
-                    {
-                        data: 'customer_id',
-                        name: 'customer_id'
-                    },
-                    {
-                        data: 'nama_customer_sistem',
-                        name: 'nama_customer_sistem'
-                    },
-                    {
                         data: 'alamat_sistem',
                         name: 'alamat_sistem'
                     },
                     {
                         data: 'type_pajak',
                         name: 'type_pajak'
-                    },
-                    {
-                        data: 'satuan',
-                        name: 'satuan'
                     },
                     {
                         data: 'nama_sesuai_npwp',
@@ -701,6 +700,14 @@
                         name: 'brand'
                     },
                     {
+                        data: 'depo',
+                        name: 'depo'
+                    },
+                    {
+                        data: 'area',
+                        name: 'area'
+                    },
+                    {
                         data: 'type_jual',
                         name: 'type_jual'
                     },
@@ -711,14 +718,6 @@
                     {
                         data: 'fp_normal_pengganti',
                         name: 'fp_normal_pengganti'
-                    },
-                    {
-                        data: 'nik',
-                        name: 'nik'
-                    },
-                    {
-                        data: 'dpp_lain',
-                        name: 'dpp_lain'
                     },
                     {
                         data: 'id_tku_pembeli',
@@ -850,16 +849,40 @@
                         }
                     },
                     {
-                        data: 'no_invoice',
-                        name: 'no_invoice'
+                        data: 'customer_id',
+                        name: 'customer_id'
+                    },
+                    {
+                        data: 'nik',
+                        name: 'nik'
+                    },
+                    {
+                        data: 'nama_customer_sistem',
+                        name: 'nama_customer_sistem'
+                    },
+                    {
+                        data: 'npwp_customer',
+                        name: 'npwp_customer'
                     },
                     {
                         data: 'no_do',
                         name: 'no_do'
                     },
                     {
+                        data: 'no_invoice',
+                        name: 'no_invoice'
+                    },
+                    {
                         data: 'kode_produk',
                         name: 'kode_produk'
+                    },
+                    {
+                        data: 'nama_produk',
+                        name: 'nama_produk'
+                    },
+                    {
+                        data: 'satuan',
+                        name: 'satuan'
                     },
                     {
                         data: 'qty_pcs',
@@ -870,16 +893,20 @@
                         name: 'hargasatuan_sblm_ppn'
                     },
                     {
-                        data: 'disc',
-                        name: 'disc'
-                    },
-                    {
                         data: 'hargatotal_sblm_ppn',
                         name: 'hargatotal_sblm_ppn'
                     },
                     {
+                        data: 'disc',
+                        name: 'disc'
+                    },
+                    {
                         data: 'dpp',
                         name: 'dpp'
+                    },
+                    {
+                        data: 'dpp_lain',
+                        name: 'dpp_lain'
                     },
                     {
                         data: 'ppn',
@@ -890,40 +917,12 @@
                         name: 'tgl_faktur_pajak'
                     },
                     {
-                        data: 'depo',
-                        name: 'depo'
-                    },
-                    {
-                        data: 'area',
-                        name: 'area'
-                    },
-                    {
-                        data: 'nama_produk',
-                        name: 'nama_produk'
-                    },
-                    {
-                        data: 'npwp_customer',
-                        name: 'npwp_customer'
-                    },
-                    {
-                        data: 'customer_id',
-                        name: 'customer_id'
-                    },
-                    {
-                        data: 'nama_customer_sistem',
-                        name: 'nama_customer_sistem'
-                    },
-                    {
                         data: 'alamat_sistem',
                         name: 'alamat_sistem'
                     },
                     {
                         data: 'type_pajak',
                         name: 'type_pajak'
-                    },
-                    {
-                        data: 'satuan',
-                        name: 'satuan'
                     },
                     {
                         data: 'nama_sesuai_npwp',
@@ -946,6 +945,14 @@
                         name: 'brand'
                     },
                     {
+                        data: 'depo',
+                        name: 'depo'
+                    },
+                    {
+                        data: 'area',
+                        name: 'area'
+                    },
+                    {
                         data: 'type_jual',
                         name: 'type_jual'
                     },
@@ -956,14 +963,6 @@
                     {
                         data: 'fp_normal_pengganti',
                         name: 'fp_normal_pengganti'
-                    },
-                    {
-                        data: 'nik',
-                        name: 'nik'
-                    },
-                    {
-                        data: 'dpp_lain',
-                        name: 'dpp_lain'
                     },
                     {
                         data: 'id_tku_pembeli',
@@ -1095,16 +1094,40 @@
                         }
                     },
                     {
-                        data: 'no_invoice',
-                        name: 'no_invoice'
+                        data: 'customer_id',
+                        name: 'customer_id'
+                    },
+                    {
+                        data: 'nik',
+                        name: 'nik'
+                    },
+                    {
+                        data: 'nama_customer_sistem',
+                        name: 'nama_customer_sistem'
+                    },
+                    {
+                        data: 'npwp_customer',
+                        name: 'npwp_customer'
                     },
                     {
                         data: 'no_do',
                         name: 'no_do'
                     },
                     {
+                        data: 'no_invoice',
+                        name: 'no_invoice'
+                    },
+                    {
                         data: 'kode_produk',
                         name: 'kode_produk'
+                    },
+                    {
+                        data: 'nama_produk',
+                        name: 'nama_produk'
+                    },
+                    {
+                        data: 'satuan',
+                        name: 'satuan'
                     },
                     {
                         data: 'qty_pcs',
@@ -1115,16 +1138,20 @@
                         name: 'hargasatuan_sblm_ppn'
                     },
                     {
-                        data: 'disc',
-                        name: 'disc'
-                    },
-                    {
                         data: 'hargatotal_sblm_ppn',
                         name: 'hargatotal_sblm_ppn'
                     },
                     {
+                        data: 'disc',
+                        name: 'disc'
+                    },
+                    {
                         data: 'dpp',
                         name: 'dpp'
+                    },
+                    {
+                        data: 'dpp_lain',
+                        name: 'dpp_lain'
                     },
                     {
                         data: 'ppn',
@@ -1135,40 +1162,12 @@
                         name: 'tgl_faktur_pajak'
                     },
                     {
-                        data: 'depo',
-                        name: 'depo'
-                    },
-                    {
-                        data: 'area',
-                        name: 'area'
-                    },
-                    {
-                        data: 'nama_produk',
-                        name: 'nama_produk'
-                    },
-                    {
-                        data: 'npwp_customer',
-                        name: 'npwp_customer'
-                    },
-                    {
-                        data: 'customer_id',
-                        name: 'customer_id'
-                    },
-                    {
-                        data: 'nama_customer_sistem',
-                        name: 'nama_customer_sistem'
-                    },
-                    {
                         data: 'alamat_sistem',
                         name: 'alamat_sistem'
                     },
                     {
                         data: 'type_pajak',
                         name: 'type_pajak'
-                    },
-                    {
-                        data: 'satuan',
-                        name: 'satuan'
                     },
                     {
                         data: 'nama_sesuai_npwp',
@@ -1191,6 +1190,14 @@
                         name: 'brand'
                     },
                     {
+                        data: 'depo',
+                        name: 'depo'
+                    },
+                    {
+                        data: 'area',
+                        name: 'area'
+                    },
+                    {
                         data: 'type_jual',
                         name: 'type_jual'
                     },
@@ -1201,14 +1208,6 @@
                     {
                         data: 'fp_normal_pengganti',
                         name: 'fp_normal_pengganti'
-                    },
-                    {
-                        data: 'nik',
-                        name: 'nik'
-                    },
-                    {
-                        data: 'dpp_lain',
-                        name: 'dpp_lain'
                     },
                     {
                         data: 'id_tku_pembeli',
