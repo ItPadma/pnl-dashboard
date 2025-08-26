@@ -44,7 +44,7 @@
         window.Echo = new Echo({
             broadcaster: 'pusher',
             key: "{{ config('broadcasting.connections.reverb.key') }}",
-            wsHost: "{{ env('REVERB_HOST', 'localhost') }}",
+            wsHost: window.location.hostname,
             wsPort: "{{ env('REVERB_PORT', 6001) }}",
             wssPort: "{{ env('REVERB_PORT', 6001) }}",
             forceTLS: {{ config('broadcasting.connections.reverb.scheme') === 'https' ? 'true' : 'false' }},
