@@ -50,6 +50,12 @@ class RegulerController extends Controller
             // Query base
             $dbquery = DB::table('pajak_keluaran_details')
                 ->select('*');
+            // Column specific filters
+            foreach ($request->get('columns') as $column) {
+                if (!empty($column['search']['value'])) {
+                    $dbquery->where($column['data'], 'like', "%{$column['search']['value']}%");
+                }
+            }
             // Filtering by search value
             if (!empty($searchValue)) {
                 $dbquery->where(function($q) use ($searchValue) {
@@ -58,14 +64,11 @@ class RegulerController extends Controller
                       ->orWhere('kode_produk', 'like', "%{$searchValue}%")
                       ->orWhere('nama_produk', 'like', "%{$searchValue}%")
                       ->orWhere('brand', 'like', "%{$searchValue}%")
-                      ->orWhere('depo', 'like', "%{$searchValue}%");
+                      ->orWhere('depo', 'like', "%{$searchValue}%")
+                      ->orWhere('customer_id', 'like', "%{$searchValue}%")
+                      ->orWhere('nik', 'like', "%{$searchValue}%")
+                      ->orWhere('nama_customer_sistem', 'like', "%{$searchValue}%");
                 });
-            }
-            // Column specific filters
-            foreach ($request->get('columns') as $column) {
-                if (!empty($column['search']['value'])) {
-                    $dbquery->where($column['data'], 'like', "%{$column['search']['value']}%");
-                }
             }
             // Additional filters
             if ($request->has('pt') && !in_array('all', $request->pt)) {
@@ -137,7 +140,7 @@ class RegulerController extends Controller
                 if ($request->tipe == 'npkp') {
                     $dbquery->whereRaw("
                     (
-                        tipe_ppn = 'PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
+                        tipe_ppn = 'PPN' AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
                     ) OR (has_moved = 'y' AND moved_to = 'npkp')");
                     $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
                 }
@@ -155,7 +158,7 @@ class RegulerController extends Controller
             // Retrieve from live if no records found
             while ($retrieve_count == 0 && $dbquery->count() == 0) {
                 Log::info('No records found in database, fetching from live');
-                broadcast(new UserEvent("info", "Info", "Record tidak ditemukan di database, mengambil data dari live...", Auth::user()));
+                broadcast(new UserEvent("info", "Info", "Record tidak ditemukan di database, mengambil data dari live...", Auth::user()->id));
                 PajakKeluaranDetail::getFromLive($request->pt, $request->brand, $request->depo, $periode_awal, $periode_akhir, $tipe, $chstatus);
                 $retrieve_count = 1;
             }

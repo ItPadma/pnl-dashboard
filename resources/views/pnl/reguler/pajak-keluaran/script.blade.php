@@ -12,6 +12,8 @@
 
         $.fn.dataTable.ext.errMode = 'none';
 
+        let npkp_data = [];
+
         // Initialize new DataTable for PKP
         function initializeDataTablePkp() {
             if ($.fn.DataTable.isDataTable('#table-pkp')) {
@@ -562,6 +564,10 @@
                         d.tipe = 'npkp';
                         d.chstatus = $('#filter_chstatus').val();
                         return d;
+                    },
+                    dataSrc: function(json){
+                        npkp_data = json.aaData;
+                        return json.aaData;
                     },
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
