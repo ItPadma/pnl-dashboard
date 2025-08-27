@@ -1024,6 +1024,7 @@
                             }
                         });
                     });
+
                     tableNonPkpNppn.columns.adjust();
                 },
                 ajaxComplete: function() {
@@ -1652,6 +1653,7 @@
                         setDownloadCounter('npkp');
                     }
                 });
+                showCheckedSummary('npkp');
             });
             // Event listener untuk checkbox individual
             $('#table-npkp tbody').on('change', '.row-checkbox-npkp', function() {
@@ -1679,6 +1681,7 @@
                         setDownloadCounter('npkp');
                     }
                 });
+                showCheckedSummary('npkp');
             });
 
             //////// Checkbox Non-PKP Non-PPN ////////
@@ -1800,6 +1803,95 @@
                     }
                 });
             });
+
+            function toDecimal4(num) {
+                if (isNaN(num) || num === null) return '0.0000';
+                let val = parseFloat(num);
+                // Jika hasilnya sangat kecil, set ke 0
+                if (Math.abs(val) < 0.00005) val = 0;
+                return val.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+            }
+
+            function showCheckedSummary(tipe) {
+                const checkedRows = $('#table-' + tipe + ' tbody .row-checkbox-' + tipe + ':checked');
+                // Hapus summary sebelumnya
+                $('#table-npkp tbody tr.summary-row').remove();
+
+                if (checkedRows.length === 0) return;
+
+                // Summary harga_total, disc, dpp, dpp_lain, ppn by customer id
+                const summaryData = checkedRows.toArray().reduce((acc, row) => {
+                    const customerId = npkp_data.find(item => item.id == $(row).data('id'))?.customer_id || 'Unknown';
+                    const hargaTotal = parseFloat(npkp_data.find(item => item.id == $(row).data('id'))?.hargatotal_sblm_ppn || 0);
+                    const disc = parseFloat(npkp_data.find(item => item.id == $(row).data('id'))?.disc || 0);
+                    const dpp = parseFloat(npkp_data.find(item => item.id == $(row).data('id'))?.dpp || 0);
+                    const dppLain = parseFloat(npkp_data.find(item => item.id == $(row).data('id'))?.dpp_lain || 0);
+                    const ppn = parseFloat(npkp_data.find(item => item.id == $(row).data('id'))?.ppn || 0);
+
+                    if (!acc[customerId]) {
+                        acc[customerId] = {
+                            total_harga: 0,
+                            total_disc: 0,
+                            total_dpp: 0,
+                            total_dpp_lain: 0,
+                            total_ppn: 0
+                        };
+                    }
+
+                    acc[customerId].total_harga += hargaTotal;
+                    acc[customerId].total_disc += disc;
+                    acc[customerId].total_dpp += dpp;
+                    acc[customerId].total_dpp_lain += dppLain;
+                    acc[customerId].total_ppn += ppn;
+
+                    return acc;
+                }, {});
+
+                // generate table from summary
+                let summaryTable = '';
+                let summaryTableRows = '';
+                for (const [customerId, totals] of Object.entries(summaryData)) {
+                    summaryTableRows += `
+                        <tr>
+                            <td>${customerId}</td>
+                            <td>${toDecimal4(totals.total_harga)}</td>
+                            <td>${toDecimal4(totals.total_disc)}</td>
+                            <td>${toDecimal4(totals.total_dpp)}</td>
+                            <td>${toDecimal4(totals.total_dpp_lain)}</td>
+                            <td>${toDecimal4(totals.total_ppn)}</td>
+                        </tr>
+                    `;
+                }
+                summaryTable += `
+                    <table class="table table-bordered table-sm" style="width: 20%; font-size: 12px;">
+                        <thead>
+                            <th style="padding:2px;">Customer ID</th>
+                            <th style="padding:2px;">Total Harga</th>
+                            <th style="padding:2px;">Total Disc</th>
+                            <th style="padding:2px;">Total DPP</th>
+                            <th style="padding:2px;">Total DPP Lain</th>
+                            <th style="padding:2px;">Total PPN</th>
+                        </thead>
+                        <tbody>
+                            ${summaryTableRows}
+                        </tbody>
+                    </table>
+                `;
+
+                // Ambil baris terakhir yang dicheck
+                const lastChecked = checkedRows.last().closest('tr');
+                // Buat elemen summary, generate table
+                const summaryHtml = `
+                    <tr class="summary-row bg-light">
+                        <td colspan="33">
+                            <b>Summary:</b>
+                            ${summaryTable}
+                        </td>
+                    </tr>
+                `;
+                // Sisipkan summary setelah baris terakhir yang dicheck
+                lastChecked.after(summaryHtml);
+            }
 
             function reloadTableMoveFromMove2(move_from, move_to) {
                 // Mapping tipe ke variabel DataTable

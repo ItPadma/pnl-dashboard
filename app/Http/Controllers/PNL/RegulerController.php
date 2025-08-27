@@ -328,7 +328,7 @@ class RegulerController extends Controller
                 case 'npkp':
                     $query->whereRaw("
                     (
-                        tipe_ppn = 'PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
+                        tipe_ppn = 'PPN' AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
                     ) OR (has_moved = 'y' AND moved_to = 'npkp')");
                     break;
                 case 'npkpnppn':
