@@ -12,7 +12,11 @@
 
         $.fn.dataTable.ext.errMode = 'none';
 
+        let pkp_data = [];
+        let pkpnppn_data = [];
         let npkp_data = [];
+        let npkpnppn_data = [];
+        let retur_data = [];
 
         // Initialize new DataTable for PKP
         function initializeDataTablePkp() {
@@ -34,6 +38,10 @@
                         d.tipe = 'pkp';
                         d.chstatus = $('#filter_chstatus').val();
                         return d;
+                    },
+                    dataSrc: function(json){
+                        pkp_data = json.aaData;
+                        return json.aaData;
                     },
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -318,6 +326,10 @@
                         d.tipe = 'pkpnppn';
                         d.chstatus = $('#filter_chstatus').val();
                         return d;
+                    },
+                    dataSrc: function(json){
+                        pkpnppn_data = json.aaData;
+                        return json.aaData;
                     },
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -814,6 +826,10 @@
                         d.chstatus = $('#filter_chstatus').val();
                         return d;
                     },
+                    dataSrc: function(json){
+                        npkpnppn_data = json.aaData;
+                        return json.aaData;
+                    },
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
@@ -1059,6 +1075,10 @@
                         d.tipe = 'retur';
                         d.chstatus = $('#filter_chstatus').val();
                         return d;
+                    },
+                    dataSrc: function(json){
+                        retur_data = json.aaData;
+                        return json.aaData;
                     },
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -1531,6 +1551,7 @@
                         setDownloadCounter('pkp');
                     }
                 });
+                showCheckedSummary('pkp', pkp_data);
             });
             // Event listener untuk checkbox individual
             $('#table-pkp tbody').on('change', '.row-checkbox-pkp', function() {
@@ -1560,6 +1581,7 @@
                         setDownloadCounter('pkp');
                     }
                 });
+                showCheckedSummary('pkp', pkp_data);
             });
 
             //////// Checkbox PKP Non-PPN ////////
@@ -1593,6 +1615,7 @@
                         setDownloadCounter('pkpnppn');
                     }
                 });
+                showCheckedSummary('pkpnppn', pkpnppn_data);
             });
             // Event listener untuk checkbox individual
             $('#table-pkpnppn tbody').on('change', '.row-checkbox-pkpnppn', function() {
@@ -1620,6 +1643,7 @@
                         setDownloadCounter('pkpnppn');
                     }
                 });
+                showCheckedSummary('pkpnppn', pkpnppn_data);
             });
 
             //////// Checkbox Non-PKP //////////
@@ -1653,7 +1677,7 @@
                         setDownloadCounter('npkp');
                     }
                 });
-                showCheckedSummary('npkp');
+                showCheckedSummary('npkp', npkp_data);
             });
             // Event listener untuk checkbox individual
             $('#table-npkp tbody').on('change', '.row-checkbox-npkp', function() {
@@ -1681,7 +1705,7 @@
                         setDownloadCounter('npkp');
                     }
                 });
-                showCheckedSummary('npkp');
+                showCheckedSummary('npkp', npkp_data);
             });
 
             //////// Checkbox Non-PKP Non-PPN ////////
@@ -1715,6 +1739,7 @@
                         setDownloadCounter('npkpnppn');
                     }
                 });
+                showCheckedSummary('npkpnppn', npkpnppn_data);
             });
             // Event listener untuk checkbox individual
             $('#table-npkpnppn tbody').on('change', '.row-checkbox-npkpnppn', function() {
@@ -1742,6 +1767,7 @@
                         setDownloadCounter('npkpnppn');
                     }
                 });
+                showCheckedSummary('npkpnppn', npkpnppn_data);
             });
 
             //////// Checkbox RETUR ////////
@@ -1775,6 +1801,7 @@
                         setDownloadCounter('retur');
                     }
                 });
+                showCheckedSummary('retur', retur_data);
             });
             // Event listener untuk checkbox individual
             $('#table-retur tbody').on('change', '.row-checkbox-retur', function() {
@@ -1802,6 +1829,7 @@
                         setDownloadCounter('retur');
                     }
                 });
+                showCheckedSummary('retur', retur_data);
             });
 
             function toDecimal4(num) {
@@ -1812,21 +1840,21 @@
                 return val.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
             }
 
-            function showCheckedSummary(tipe) {
+            function showCheckedSummary(tipe, src_data) {
                 const checkedRows = $('#table-' + tipe + ' tbody .row-checkbox-' + tipe + ':checked');
                 // Hapus summary sebelumnya
-                $('#table-npkp tbody tr.summary-row').remove();
+                $('#table-' + tipe +' tbody tr.summary-row').remove();
 
                 if (checkedRows.length === 0) return;
 
                 // Summary harga_total, disc, dpp, dpp_lain, ppn by customer id
                 const summaryData = checkedRows.toArray().reduce((acc, row) => {
-                    const customerId = npkp_data.find(item => item.id == $(row).data('id'))?.customer_id || 'Unknown';
-                    const hargaTotal = parseFloat(npkp_data.find(item => item.id == $(row).data('id'))?.hargatotal_sblm_ppn || 0);
-                    const disc = parseFloat(npkp_data.find(item => item.id == $(row).data('id'))?.disc || 0);
-                    const dpp = parseFloat(npkp_data.find(item => item.id == $(row).data('id'))?.dpp || 0);
-                    const dppLain = parseFloat(npkp_data.find(item => item.id == $(row).data('id'))?.dpp_lain || 0);
-                    const ppn = parseFloat(npkp_data.find(item => item.id == $(row).data('id'))?.ppn || 0);
+                    const customerId = src_data.find(item => item.id == $(row).data('id'))?.customer_id || 'Unknown';
+                    const hargaTotal = parseFloat(src_data.find(item => item.id == $(row).data('id'))?.hargatotal_sblm_ppn || 0);
+                    const disc = parseFloat(src_data.find(item => item.id == $(row).data('id'))?.disc || 0);
+                    const dpp = parseFloat(src_data.find(item => item.id == $(row).data('id'))?.dpp || 0);
+                    const dppLain = parseFloat(src_data.find(item => item.id == $(row).data('id'))?.dpp_lain || 0);
+                    const ppn = parseFloat(src_data.find(item => item.id == $(row).data('id'))?.ppn || 0);
 
                     if (!acc[customerId]) {
                         acc[customerId] = {
@@ -1863,7 +1891,7 @@
                     `;
                 }
                 summaryTable += `
-                    <table class="table table-bordered table-sm" style="width: 20%; font-size: 12px;">
+                    <table class="table table-bordered table-sm bg-primary" style="width: 20%; font-size: 12px;">
                         <thead>
                             <th style="padding:2px;">Customer ID</th>
                             <th style="padding:2px;">Total Harga</th>
