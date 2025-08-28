@@ -140,7 +140,7 @@ class RegulerController extends Controller
                 if ($request->tipe == 'npkp') {
                     $dbquery->whereRaw("
                     (
-                        tipe_ppn = 'PPN' AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
+                        tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000) AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
                     ) OR (has_moved = 'y' AND moved_to = 'npkp')");
                     $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
                 }
@@ -152,7 +152,7 @@ class RegulerController extends Controller
                     $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
                 }
                 if ($request->tipe == 'retur') {
-                    $dbquery->whereRaw("qty_pcs < 0 AND has_moved = 'n' OR moved_to = 'retur'");
+                    $dbquery->whereRaw("qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000 AND has_moved = 'n' OR moved_to = 'retur'");
                 }
             }
             // Retrieve from live if no records found
@@ -328,7 +328,7 @@ class RegulerController extends Controller
                 case 'npkp':
                     $query->whereRaw("
                     (
-                        tipe_ppn = 'PPN' AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
+                        tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000) AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
                     ) OR (has_moved = 'y' AND moved_to = 'npkp')");
                     break;
                 case 'npkpnppn':
@@ -338,7 +338,7 @@ class RegulerController extends Controller
                     ) OR (has_moved = 'y' AND moved_to = 'npkpnppn')");
                     break;
                 case 'retur':
-                    $query->whereRaw("qty_pcs < 0 AND has_moved = 'n' OR moved_to = 'retur'");
+                    $query->whereRaw("qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000 AND has_moved = 'n' OR moved_to = 'retur'");
                     break;
             }
             // Log::info('sql count: '.$query->toSql());

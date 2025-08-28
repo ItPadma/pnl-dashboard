@@ -1543,7 +1543,6 @@
                         is_checked: isChecked
                     },
                     success: function(response) {
-                        console.log(response.message);
                         setDownloadCounter('pkp');
                     },
                     error: function(xhr) {
@@ -1573,7 +1572,6 @@
                         is_checked: isChecked
                     },
                     success: function(response) {
-                        console.log(response.message);
                         setDownloadCounter('pkp');
                     },
                     error: function(xhr) {
@@ -1607,7 +1605,6 @@
                         is_checked: isChecked
                     },
                     success: function(response) {
-                        console.log(response.message);
                         setDownloadCounter('pkpnppn');
                     },
                     error: function(xhr) {
@@ -1635,7 +1632,6 @@
                         is_checked: isChecked
                     },
                     success: function(response) {
-                        console.log(response.message);
                         setDownloadCounter('pkpnppn');
                     },
                     error: function(xhr) {
@@ -1669,7 +1665,6 @@
                         is_checked: isChecked
                     },
                     success: function(response) {
-                        console.log(response.message);
                         setDownloadCounter('npkp');
                     },
                     error: function(xhr) {
@@ -1697,7 +1692,6 @@
                         is_checked: isChecked
                     },
                     success: function(response) {
-                        console.log(response.message);
                         setDownloadCounter('npkp');
                     },
                     error: function(xhr) {
@@ -1731,7 +1725,6 @@
                         is_checked: isChecked
                     },
                     success: function(response) {
-                        console.log(response.message);
                         setDownloadCounter('npkpnppn');
                     },
                     error: function(xhr) {
@@ -1759,7 +1752,6 @@
                         is_checked: isChecked
                     },
                     success: function(response) {
-                        console.log(response.message);
                         setDownloadCounter('npkpnppn');
                     },
                     error: function(xhr) {
@@ -1793,7 +1785,6 @@
                         is_checked: isChecked
                     },
                     success: function(response) {
-                        console.log(response.message);
                         setDownloadCounter('retur');
                     },
                     error: function(xhr) {
@@ -1821,7 +1812,6 @@
                         is_checked: isChecked
                     },
                     success: function(response) {
-                        console.log(response.message);
                         setDownloadCounter('retur');
                     },
                     error: function(xhr) {
