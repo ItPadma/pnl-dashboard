@@ -3,52 +3,52 @@
 @section('title', 'Pajak Masukan - Upload CSV Coretax')
 
 @section('style')
-<link rel="stylesheet" href="{{ asset('assets/js/plugin/sweetalert/sweetalert2.min.css') }}">
-<script>
-    // Use a TokenManager to handle tokens properly
-    const TokenManager = {
-        gatheringToken: '{{ csrf_token() }}',
-        swalToken: '{{ csrf_token() }}',
+    <link rel="stylesheet" href="{{ asset('assets/js/plugin/sweetalert/sweetalert2.min.css') }}">
+    <script>
+        // Use a TokenManager to handle tokens properly
+        const TokenManager = {
+            gatheringToken: '{{ csrf_token() }}',
+            swalToken: '{{ csrf_token() }}',
 
-        refreshGatheringToken: function() {
-            return $.ajax({
-                url: "{{ route('pnl.setting.generate.csrf.token') }}",
-                type: 'GET',
-                headers: {
-                    'X-CSRF-TOKEN': this.gatheringToken
-                }
-            }).then(response => {
-                if(response.status && response.data && response.data.token) {
-                    this.gatheringToken = response.data.token;
-                    console.log('Gathering token refreshed:', this.gatheringToken);
-                }
-                return this.gatheringToken;
-            }).catch(error => {
-                console.error('Failed to refresh gathering token:', error);
-                return this.gatheringToken;
-            });
-        },
+            refreshGatheringToken: function() {
+                return $.ajax({
+                    url: "{{ route('pnl.setting.generate.csrf.token') }}",
+                    type: 'GET',
+                    headers: {
+                        'X-CSRF-TOKEN': this.gatheringToken
+                    }
+                }).then(response => {
+                    if (response.status && response.data && response.data.token) {
+                        this.gatheringToken = response.data.token;
+                        console.log('Gathering token refreshed:', this.gatheringToken);
+                    }
+                    return this.gatheringToken;
+                }).catch(error => {
+                    console.error('Failed to refresh gathering token:', error);
+                    return this.gatheringToken;
+                });
+            },
 
-        refreshSwalToken: function() {
-            return $.ajax({
-                url: "{{ route('pnl.setting.generate.csrf.token') }}",
-                type: 'GET',
-                headers: {
-                    'X-CSRF-TOKEN': this.swalToken
-                }
-            }).then(response => {
-                if(response.status && response.data && response.data.token) {
-                    this.swalToken = response.data.token;
-                    console.log('SwalToken refreshed:', this.swalToken);
-                }
-                return this.swalToken;
-            }).catch(error => {
-                console.error('Failed to refresh swal token:', error);
-                return this.swalToken;
-            });
-        }
-    };
-</script>
+            refreshSwalToken: function() {
+                return $.ajax({
+                    url: "{{ route('pnl.setting.generate.csrf.token') }}",
+                    type: 'GET',
+                    headers: {
+                        'X-CSRF-TOKEN': this.swalToken
+                    }
+                }).then(response => {
+                    if (response.status && response.data && response.data.token) {
+                        this.swalToken = response.data.token;
+                        console.log('SwalToken refreshed:', this.swalToken);
+                    }
+                    return this.swalToken;
+                }).catch(error => {
+                    console.error('Failed to refresh swal token:', error);
+                    return this.swalToken;
+                });
+            }
+        };
+    </script>
 @endsection
 
 @section('content')
@@ -82,16 +82,43 @@
                     </li>
                 </ul>
             </div>
+            {{-- Get Flash Message --}}
+            @include('layouts.alert')
+            @if (session('stats'))
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5>Import Statistics</h5>
+                                <ul>
+                                    <li>Inserted: {{ session('stats')['inserted'] }}</li>
+                                    <li>Updated: {{ session('stats')['updated'] }}</li>
+                                    <li>Errors: {{ session('stats')['errors'] }}</li>
+                                    <li>Total Processed: {{ session('stats')['total'] }}</li>
+                                </ul>
+                                @if (session('error_messages'))
+                                    <h6>Error Details:</h6>
+                                    <ul>
+                                        @foreach (session('error_messages') as $errorMsg)
+                                            <li>{{ $errorMsg }}</li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-body">
-                            <form action="#" method="POST" enctype="multipart/form-data">
+                            <form action="{{ route('pnl.reguler.pajak-masukan.uploadcsv.process') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <div class="mb-3">
-                                    <label for="csv_file" class="form-label">Upload <b>.xlsx</b> File</label>
-                                    <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv"
-                                        required>
+                                    <label for="file" class="form-label">Upload <b>.xlsx</b> File</label>
+                                    <input type="file" class="form-control" id="file" name="file"
+                                        accept=".xlsx,.xls,.csv" required>
                                 </div>
                                 <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-fw fa-upload"></i>
                                     Upload</button>
@@ -100,7 +127,7 @@
                     </div>
                 </div>
                 <div class="col-md-12">
-                    <div class="card">
+                    <div class="card position-relative">
                         <div class="card-body">
                             <h3>CoreTax Data Gathering</h3>
                             <div class="mb-3">
@@ -131,6 +158,13 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-75 text-white" style="z-index: 10;">
+                            <div class="text-center">
+                                <i class="fas fa-wrench fa-3x mb-3"></i>
+                                <h2 class="fw-bold" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">Under Development</h2>
+                                <p class="mb-0">This feature is currently being worked on.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -142,38 +176,39 @@
     const channelData = window.Echo.private(`App.User.Data.${userID}`);
     console.log('Channel User.Data created successfully');
     channelData.listen('.user.data', async function (response) {
-        // convert data to javascript object
-        switch (response.ntype) {
-            case 'success':
-                if (response.procname === 'CoreTax Captcha'){
-                    // open new tab and focus to it.
-                    let newtab = window.open("{{ route('pnl.setting.coretax.captcha.preview' ) }}?procname=" + response.procname + "&image=" + response.data, '_blank');
-                    if (newtab) {
-                        newtab.focus();
-                    } else {
-                        toastr.warning('Popup captcha gagal dibuka. Silakan periksa pengaturan popup browser Anda.');
-                    }
-                }
-                break;
-            case 'error':
-                toastr.error(response.message, response.title);
-                break;
-            default:
-                console.warn('Unknown notification type:', response.type);
-        }
+    // convert data to javascript object
+    switch (response.ntype) {
+    case 'success':
+    if (response.procname === 'CoreTax Captcha'){
+    // open new tab and focus to it.
+    let newtab = window.open("{{ route('pnl.setting.coretax.captcha.preview') }}?procname=" + response.procname + "&image="
+    + response.data, '_blank');
+    if (newtab) {
+    newtab.focus();
+    } else {
+    toastr.warning('Popup captcha gagal dibuka. Silakan periksa pengaturan popup browser Anda.');
+    }
+    }
+    break;
+    case 'error':
+    toastr.error(response.message, response.title);
+    break;
+    default:
+    console.warn('Unknown notification type:', response.type);
+    }
     });
 
     const channelProgress = window.Echo.private(`App.User.Progress.${userID}`);
     console.log('Channel User.Proc.Progress created successfully');
     channelProgress.listen('.user.proc.progress', (response) => {
-        console.log('Progress update received:', response);
-        if (response.ntype === 'info') {
-            // Update progress bar
-            $('.progress-bar').css('width', response.progress + '%');
-            $('.progress-bar').attr('aria-valuenow', response.progress);
-            $('.progress-bar').text(`${response.progress}%`);
-            $('#progress-text').text(`${response.message}`);
-        }
+    console.log('Progress update received:', response);
+    if (response.ntype === 'info') {
+    // Update progress bar
+    $('.progress-bar').css('width', response.progress + '%');
+    $('.progress-bar').attr('aria-valuenow', response.progress);
+    $('.progress-bar').text(`${response.progress}%`);
+    $('#progress-text').text(`${response.message}`);
+    }
     });
 @endsection
 

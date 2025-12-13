@@ -37,15 +37,22 @@ class ScrapingJob implements ShouldQueue
         $host = 'http://localhost:4444/wd/hub';
         $options = new ChromeOptions();
         $options->addArguments([
+            '--start-maximized',
+            '--no-sandbox',
+            '--disable-gpu',
+            '--disable-dev-shm-usage',
+            '--disable-extensions',
             '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
             '--disable-blink-features=AutomationControlled',
-            '--disable-infobars',
             '--disable-features=Sensor',
             '--deny-permission-prompts'
         ]);
         $options->setExperimentalOption("excludeSwitches", ["enable-automation"]);
         $options->setExperimentalOption("useAutomationExtension", false);
-
+        $options->setExperimentalOption('prefs', [
+            'credentials_enable_service' => false,
+            'profile.password_manager_enabled' => false
+        ]);
         $capabilities = DesiredCapabilities::chrome();
         $capabilities->setCapability(ChromeOptions::CAPABILITY, $options);
 

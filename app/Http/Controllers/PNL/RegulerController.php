@@ -10,7 +10,6 @@ use App\Imports\PajakMasukanCoretaxImport;
 use App\Models\MasterDepo;
 use App\Models\MasterPkp;
 use App\Models\PajakKeluaranDetail;
-use App\Models\PajakMasukanCoretax;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -52,36 +51,36 @@ class RegulerController extends Controller
                 ->select('*');
             // Column specific filters
             foreach ($request->get('columns') as $column) {
-                if (!empty($column['search']['value'])) {
+                if (! empty($column['search']['value'])) {
                     $dbquery->where($column['data'], 'like', "%{$column['search']['value']}%");
                 }
             }
             // Filtering by search value
-            if (!empty($searchValue)) {
-                $dbquery->where(function($q) use ($searchValue) {
+            if (! empty($searchValue)) {
+                $dbquery->where(function ($q) use ($searchValue) {
                     $q->where('no_invoice', 'like', "%{$searchValue}%")
-                      ->orWhere('no_do', 'like', "%{$searchValue}%")
-                      ->orWhere('kode_produk', 'like', "%{$searchValue}%")
-                      ->orWhere('nama_produk', 'like', "%{$searchValue}%")
-                      ->orWhere('brand', 'like', "%{$searchValue}%")
-                      ->orWhere('depo', 'like', "%{$searchValue}%")
-                      ->orWhere('customer_id', 'like', "%{$searchValue}%")
-                      ->orWhere('nik', 'like', "%{$searchValue}%")
-                      ->orWhere('nama_customer_sistem', 'like', "%{$searchValue}%");
+                        ->orWhere('no_do', 'like', "%{$searchValue}%")
+                        ->orWhere('kode_produk', 'like', "%{$searchValue}%")
+                        ->orWhere('nama_produk', 'like', "%{$searchValue}%")
+                        ->orWhere('brand', 'like', "%{$searchValue}%")
+                        ->orWhere('depo', 'like', "%{$searchValue}%")
+                        ->orWhere('customer_id', 'like', "%{$searchValue}%")
+                        ->orWhere('nik', 'like', "%{$searchValue}%")
+                        ->orWhere('nama_customer_sistem', 'like', "%{$searchValue}%");
                 });
             }
             // Additional filters
-            if ($request->has('pt') && !in_array('all', $request->pt)) {
-                $dbquery->whereRaw("company IN ('" . implode("','", $request->pt) . "')");
+            if ($request->has('pt') && ! in_array('all', $request->pt)) {
+                $dbquery->whereRaw("company IN ('".implode("','", $request->pt)."')");
             }
-            if ($request->has('brand') && !in_array('all', $request->brand)) {
-                $dbquery->whereRaw("brand IN ('" . implode("','", $request->brand) . "')");
+            if ($request->has('brand') && ! in_array('all', $request->brand)) {
+                $dbquery->whereRaw("brand IN ('".implode("','", $request->brand)."')");
             }
             if ($request->has('depo') && $request->depo == 'all') {
                 $currentUserDepo = Auth::user()->depo;
                 if (str_contains($currentUserDepo, '|')) {
-                    $currentUserDepo = explode("|", $currentUserDepo);
-                    if (!in_array('all', $currentUserDepo)) {
+                    $currentUserDepo = explode('|', $currentUserDepo);
+                    if (! in_array('all', $currentUserDepo)) {
                         $depo = MasterDepo::whereIn('code', $currentUserDepo)->get()->pluck('name')->toArray();
                         $dbquery->whereIn('depo', $depo);
                     }
@@ -97,7 +96,7 @@ class RegulerController extends Controller
                 $periode_akhir = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[1])->format('Y-m-d');
                 $dbquery->whereRaw("tgl_faktur_pajak >= '$periode_awal' AND tgl_faktur_pajak <= '$periode_akhir'");
             }
-            if($request->has('chstatus')) {
+            if ($request->has('chstatus')) {
                 switch ($request->chstatus) {
                     case 'checked-ready2download':
                         $dbquery->where('is_checked', 1);
@@ -128,28 +127,28 @@ class RegulerController extends Controller
                     )
                     OR
                     (has_moved = 'y' AND moved_to = 'pkp')");
-                    $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId IN ('" . implode("','", $pkp) . "')";
+                    $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId IN ('".implode("','", $pkp)."')";
                 }
                 if ($request->tipe == 'pkpnppn') {
                     $dbquery->whereRaw("
                     (
                         tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp)
                     ) OR (has_moved = 'y' AND moved_to = 'pkpnppn')");
-                    $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId IN ('" . implode("','", $pkp) . "')";
+                    $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId IN ('".implode("','", $pkp)."')";
                 }
                 if ($request->tipe == 'npkp') {
                     $dbquery->whereRaw("
                     (
                         tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000) AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
                     ) OR (has_moved = 'y' AND moved_to = 'npkp')");
-                    $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
+                    $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN ('".implode("','", $pkp)."')";
                 }
                 if ($request->tipe == 'npkpnppn') {
                     $dbquery->whereRaw("
                     (
                         tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
                     ) OR (has_moved = 'y' AND moved_to = 'npkpnppn')");
-                    $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId NOT IN ('" . implode("','", $pkp) . "')";
+                    $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId NOT IN ('".implode("','", $pkp)."')";
                 }
                 if ($request->tipe == 'retur') {
                     $dbquery->whereRaw("qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000 AND has_moved = 'n' OR moved_to = 'retur'");
@@ -158,7 +157,7 @@ class RegulerController extends Controller
             // Retrieve from live if no records found
             while ($retrieve_count == 0 && $dbquery->count() == 0) {
                 Log::info('No records found in database, fetching from live');
-                broadcast(new UserEvent("info", "Info", "Record tidak ditemukan di database, mengambil data dari live...", Auth::user()->id));
+                broadcast(new UserEvent('info', 'Info', 'Record tidak ditemukan di database, mengambil data dari live...', Auth::user()->id));
                 PajakKeluaranDetail::getFromLive($request->pt, $request->brand, $request->depo, $periode_awal, $periode_akhir, $tipe, $chstatus);
                 $retrieve_count = 1;
             }
@@ -169,6 +168,7 @@ class RegulerController extends Controller
                 ->skip($start)
                 ->take($rowperpage)
                 ->get();
+
             return response()->json([
                 'draw' => intval($draw),
                 'iTotalRecords' => $totalRecords,
@@ -180,7 +180,7 @@ class RegulerController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => $th->getMessage(),
-                'data' => []
+                'data' => [],
             ]);
         }
     }
@@ -191,7 +191,7 @@ class RegulerController extends Controller
             $request->validate([
                 'ids' => 'required',
                 'move_from' => 'required|in:pkp,pkpnppn,npkp,npkpnppn,retur',
-                'move_to' => 'required|in:pkp,pkpnppn,npkp,npkpnppn,retur'
+                'move_to' => 'required|in:pkp,pkpnppn,npkp,npkpnppn,retur',
             ]);
             $ids = $request->input('ids');
             $items = PajakKeluaranDetail::whereIn('id', $ids)->get();
@@ -211,17 +211,16 @@ class RegulerController extends Controller
                 );
             }
 
-
             return response()->json([
                 'status' => true,
                 'message' => 'Item moved successfully',
-                'data' => $item
+                'data' => $item,
             ]);
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
                 'message' => $th->getMessage(),
-                'data' => []
+                'data' => [],
             ]);
         }
     }
@@ -246,12 +245,12 @@ class RegulerController extends Controller
 
             return response()->json([
                 'status' => true,
-                'message' => 'Status updated successfully'
+                'message' => 'Status updated successfully',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
@@ -287,9 +286,9 @@ class RegulerController extends Controller
             }
             if ($periode_awal && $periode_akhir) {
                 $query->where('tgl_faktur_pajak', '>=', $periode_awal)
-                      ->where('tgl_faktur_pajak', '<=', $periode_akhir);
+                    ->where('tgl_faktur_pajak', '<=', $periode_akhir);
             }
-            if($request->has('chstatus')) {
+            if ($request->has('chstatus')) {
                 switch ($request->chstatus) {
                     case 'checked-ready2download':
                         $query->where('is_checked', '1');
@@ -343,15 +342,16 @@ class RegulerController extends Controller
             }
             // Log::info('sql count: '.$query->toSql());
             $counts = $query->get();
+
             return response()->json([
                 'status' => true,
                 'message' => 'Counts retrieved successfully',
-                'data' => $counts
+                'data' => $counts,
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
-                'error' => $th->getMessage()
+                'error' => $th->getMessage(),
             ], 500);
         }
     }
@@ -365,11 +365,12 @@ class RegulerController extends Controller
                 'Content-Disposition' => 'attachment; filename="pajak_keluaran_'.$tipe.'.xlsx"',
             ];
             $writerType = 'Xlsx';
+
             return Excel::download(new PajakKeluaranDetailExport($tipe), 'pajak_keluaran_'.$tipe.'.xlsx', $writerType, $headers);
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => false,
-                'message' => $th->getMessage()
+                'message' => $th->getMessage(),
             ], 500);
         }
     }
@@ -378,15 +379,61 @@ class RegulerController extends Controller
     {
         try {
             $request->validate([
-                'file' => 'required|file|mimes:csv,txt,xlsx,xls'
+                'file' => 'required|file|mimes:csv,txt,xlsx,xls',
             ]);
+
             $file = $request->file('file');
             $path = $file->store('public/import');
-            Excel::import(new PajakMasukanCoretaxImport, $path);
-            LogController::createLog($request->user()->id, 'Import Pajak Masukan Coretax', 'Import Pajak Masukan Coretax', '-', 'pajak_masukan_coretax', 'info', $request);
-            return redirect()->back()->with('success', 'Data imported successfully');
+
+            // Create import instance
+            $import = new PajakMasukanCoretaxImport;
+
+            // Execute import
+            Excel::import($import, $path);
+
+            // Get import statistics
+            $insertedCount = $import->getInsertedCount();
+            $updatedCount = $import->getUpdatedCount();
+            $errorCount = $import->getErrorCount();
+            $errorMessages = $import->getErrorMessages();
+            $totalProcessed = $insertedCount + $updatedCount;
+
+            // Create log with statistics
+            LogController::createLog(
+                $request->user()->id,
+                'Import Pajak Masukan Coretax',
+                "Import Pajak Masukan Coretax - Inserted: {$insertedCount}, Updated: {$updatedCount}, Errors: {$errorCount}",
+                '-',
+                'pajak_masukan_coretax',
+                'info',
+                $request
+            );
+
+            // Create success message with details
+            $message = 'Data berhasil diimport! ';
+            $message .= "Berhasil insert: {$insertedCount}, ";
+            $message .= "Duplikat (diupdate): {$updatedCount}, ";
+            $message .= "Error: {$errorCount}, ";
+            $message .= "Total diproses: {$totalProcessed}";
+
+            $responseData = [
+                'success' => $message,
+                'stats' => [
+                    'inserted' => $insertedCount,
+                    'updated' => $updatedCount,
+                    'errors' => $errorCount,
+                    'total' => $totalProcessed,
+                ],
+            ];
+
+            if ($errorCount > 0) {
+                $responseData['error_messages'] = $errorMessages;
+            }
+
+            return redirect()->back()->with($responseData);
+
         } catch (\Throwable $th) {
-            return redirect()->back()->with('error', $th->getMessage());
+            return redirect()->back()->with('error', 'Import gagal: '.$th->getMessage());
         }
     }
 }
