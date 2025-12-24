@@ -17,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // $middleware->append(AuthnCheck::class);
         // $middleware->append(\App\Http\Middleware\SessionDebugMiddleware::class);
         // $middleware->prepend(\App\Http\Middleware\EncryptCookies::class);
+        
+        // Register middleware aliases
+        $middleware->alias([
+            'menu.access' => \App\Http\Middleware\CheckMenuAccess::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         Integration::handles($exceptions);

@@ -1,3 +1,8 @@
+@inject('accessControl', 'App\Services\AccessControlService')
+@php
+    $menuTree = $accessControl->getMenuHierarchy(Auth::user());
+@endphp
+
 <div class="sidebar" data-background-color="dark">
     <div class="sidebar-logo">
         <div class="logo-header" data-background-color="dark">
@@ -20,102 +25,61 @@
     <div class="sidebar-wrapper scrollbar scrollbar-inner">
         <div class="sidebar-content">
             <ul class="nav nav-secondary">
-                <li class="nav-item {{ Request::is('/') ? 'active' : '' }}">
-                    <a href="/" class="collapsed" aria-expanded="false">
-                        <i class="fas fa-home"></i>
-                        <p>Dashboard</p>
-                    </a>
-                </li>
-                <li class="nav-section">
-                    <span class="sidebar-mini-icon">
-                        <i class="fa fa-ellipsis-h"></i>
-                    </span>
-                    <h4 class="text-section">Pajak</h4>
-                </li>
-                <li class="nav-item {{ Request::is('pnl/reguler*') ? 'active' : '' }}">
-                    <a data-bs-toggle="collapse" href="#reguler">
-                        <i class="fas fa-layer-group"></i>
-                        <p>Reguler</p>
-                        <span class="caret"></span>
-                    </a>
-                    <div class="collapse {{ Request::is('pnl/reguler*') ? 'show' : '' }}" id="reguler">
-                        <ul class="nav nav-collapse">
-                            <li class="{{ Request::is('pnl/reguler/pajak-keluaran*') ? 'active' : '' }}">
-                                <a href="{{ route('pnl.reguler.pajak-keluaran.index') }}">
-                                    <span class="sub-item">Pajak Keluaran</span>
-                                </a>
-                            </li>
-                            <li class="{{ Request::is('pnl/reguler/pajak-masukan*') ? 'active' : '' }}">
-                                <a href="{{ route('pnl.reguler.pajak-masukan.index') }}">
-                                    <span class="sub-item">Pajak Masukan</span>
-                                </a>
-                            </li>
-                            <li class="{{ Request::is('pnl/reguler/uploadcsv*') ? 'active' : '' }}">
-                                <a href="{{ route('pnl.reguler.pajak-masukan.uploadcsv') }}">
-                                    <span class="sub-item">Upload CSV Coretax</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-                <li class="nav-item {{ Request::is('pnl/non-reguler*') ? 'active' : '' }}">
-                    <a data-bs-toggle="collapse" href="#nonreguler">
-                        <i class="fas fa-layer-group"></i>
-                        <p>Non-Reguler</p>
-                        <span class="caret"></span>
-                    </a>
-                    <div class="collapse {{ Request::is('pnl/non-reguler*') ? 'show' : '' }}" id="nonreguler">
-                        <ul class="nav nav-collapse">
-                            <li class="{{ Request::is('pnl/non-reguler/pajak-keluaran*') ? 'active' : '' }}">
-                                <a href="{{ route('pnl.non-reguler.pajak-keluaran.index') }}">
-                                    <span class="sub-item">Pajak Keluaran</span>
-                                </a>
-                            </li>
-                            <li class="{{ Request::is('pnl/non-reguler/pajak-masukan*') ? 'active' : '' }}">
-                                <a href="{{ route('pnl.non-reguler.pajak-masukan.index') }}">
-                                    <span class="sub-item">Pajak Masukan</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-                <li class="nav-section">
-                    <span class="sidebar-mini-icon">
-                        <i class="fa fa-ellipsis-h"></i>
-                    </span>
-                    <h4 class="text-section">Master</h4>
-                </li>
-                <li class="nav-item {{ Request::is('pnl/master-data*') ? 'active' : '' }}">
-                    <a data-bs-toggle="collapse" href="#import">
-                        <i class="fas fa-file-import"></i>
-                        <p>Import</p>
-                        <span class="caret"></span>
-                    </a>
-                    <div class="collapse {{ Request::is('pnl/master-data*') ? 'show' : '' }}" id="import">
-                        <ul class="nav nav-collapse">
-                            <li class="{{ Request::is('pnl/master-data/import*') ? 'active' : '' }}">
-                                <a href="{{ route('pnl.master-data.index.master-pkp') }}">
-                                    <span class="sub-item">PKP</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-                @if (Auth::user()->role == 'superuser')
-                <li class="nav-section">
-                    <span class="sidebar-mini-icon">
-                        <i class="fa fa-ellipsis-h"></i>
-                    </span>
-                    <h4 class="text-section">Settings</h4>
-                </li>
-                <li class="nav-item {{ Request::is('pnl/setting/userman') ? 'active' : '' }}">
-                    <a href="{{ route('pnl.setting.userman.index') }}" class="collapsed" aria-expanded="false">
-                        <i class="fas fa-users"></i>
-                        <p>User Manager</p>
-                    </a>
-                </li>
-                @endif
+                @foreach ($menuTree as $menu)
+                    @php
+                        $hasChildren = !empty($menu['children']);
+                        $isActive = false;
+                        
+                        // Check active state
+                        if ($menu['route_name'] && Request::routeIs($menu['route_name'])) {
+                            $isActive = true;
+                        } elseif ($hasChildren) {
+                            foreach ($menu['children'] as $child) {
+                                if ($child['route_name'] && Request::routeIs($child['route_name'])) {
+                                    $isActive = true;
+                                    break;
+                                }
+                            }
+                        }
+                    @endphp
+
+                    @if (isset($menu['type']) && $menu['type'] === 'section')
+                        <li class="nav-section">
+                            <span class="sidebar-mini-icon">
+                                <i class="fa fa-ellipsis-h"></i>
+                            </span>
+                            <h4 class="text-section">{{ $menu['name'] }}</h4>
+                        </li>
+                    @elseif ($hasChildren)
+                        <li class="nav-item {{ $isActive ? 'active submenu' : '' }}">
+                            <a data-bs-toggle="collapse" href="#{{ $menu['slug'] }}">
+                                <i class="{{ $menu['icon'] ?? 'fas fa-layer-group' }}"></i>
+                                <p>{{ $menu['name'] }}</p>
+                                <span class="caret"></span>
+                            </a>
+                            <div class="collapse {{ $isActive ? 'show' : '' }}" id="{{ $menu['slug'] }}">
+                                <ul class="nav nav-collapse">
+                                    @foreach ($menu['children'] as $child)
+                                        <li class="{{ $child['route_name'] && Request::routeIs($child['route_name']) ? 'active' : '' }}">
+                                            <a href="{{ $child['route_name'] ? route($child['route_name']) : '#' }}">
+                                                <span class="sub-item">{{ $child['name'] }}</span>
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </li>
+                    @else
+                        <li class="nav-item {{ $isActive ? 'active' : '' }}">
+                            <a href="{{ $menu['route_name'] ? route($menu['route_name']) : '#' }}" class="collapsed">
+                                <i class="{{ $menu['icon'] ?? 'fas fa-home' }}"></i>
+                                <p>{{ $menu['name'] }}</p>
+                            </a>
+                        </li>
+                    @endif
+                @endforeach
             </ul>
         </div>
     </div>
 </div>
+
