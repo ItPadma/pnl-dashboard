@@ -90,11 +90,13 @@ class RegulerController extends Controller
                 $depo = MasterDepo::where('code', $request->depo)->first();
                 $dbquery->whereRaw("depo = '$depo->name'");
             }
-            if ($request->has('periode')) {
+            if ($request->has('periode') && ! empty($request->periode)) {
                 $periode = explode(' - ', $request->periode);
-                $periode_awal = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[0])->format('Y-m-d');
-                $periode_akhir = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[1])->format('Y-m-d');
-                $dbquery->whereRaw("tgl_faktur_pajak >= '$periode_awal' AND tgl_faktur_pajak <= '$periode_akhir'");
+                if (count($periode) === 2) {
+                    $periode_awal = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[0])->format('Y-m-d');
+                    $periode_akhir = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[1])->format('Y-m-d');
+                    $dbquery->whereRaw("tgl_faktur_pajak >= '$periode_awal' AND tgl_faktur_pajak <= '$periode_akhir'");
+                }
             }
             if ($request->has('chstatus')) {
                 switch ($request->chstatus) {
@@ -371,6 +373,49 @@ class RegulerController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => $th->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getAvailableDates(Request $request)
+    {
+        try {
+            // Build query to get distinct dates
+            $query = DB::table('pajak_keluaran_details')
+                ->select(DB::raw('DISTINCT CAST(tgl_faktur_pajak AS DATE) as tanggal'))
+                ->whereNotNull('tgl_faktur_pajak');
+
+            // Apply filters
+            if ($request->has('pt') && ! in_array('all', $request->pt)) {
+                $query->whereRaw("company IN ('".implode("','", $request->pt)."')");
+            }
+
+            if ($request->has('brand') && ! in_array('all', $request->brand)) {
+                $query->whereRaw("brand IN ('".implode("','", $request->brand)."')");
+            }
+
+            if ($request->has('depo') && $request->depo != 'all') {
+                $depo = MasterDepo::where('code', $request->depo)->first();
+                if ($depo) {
+                    $query->whereRaw("depo = '$depo->name'");
+                }
+            }
+
+            // Get dates and format them
+            $dates = $query->orderBy('tanggal', 'asc')->get();
+            $formattedDates = $dates->map(function ($item) {
+                return \Carbon\Carbon::parse($item->tanggal)->format('Y-m-d');
+            })->toArray();
+
+            return response()->json([
+                'status' => true,
+                'data' => $formattedDates,
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage(),
+                'data' => [],
             ], 500);
         }
     }

@@ -73,6 +73,23 @@
             width: 100%;
             /* max-height: 600px; */
         }
+
+        /* Highlight for dates with data */
+        .daterangepicker td.has-data {
+            background-color: #d4edda;
+            color: #155724;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        
+        .daterangepicker td.has-data:hover {
+            background-color: #c3e6cb;
+        }
+
+        .daterangepicker td.active.has-data {
+            background-color: #357ebd;
+            color: #fff;
+        }
     </style>
 @endsection
 
@@ -131,7 +148,7 @@
                         <label for="filter_periode">PERIODE</label>
                         <div class="input-group">
                             <input type="text" class="form-control" name="filter_periode" id="filter_periode"
-                                placeholder="Pilih Periode" aria-label="Pilih Periode" value="01/01/2025 - 02/01/2025" />
+                                placeholder="Pilih Periode" aria-label="Pilih Periode" value="{{ date('d/m/Y') }}" />
                         </div>
                     </div>
                 </div>

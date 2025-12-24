@@ -112,6 +112,21 @@ return [
             'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'true'),
         ],
 
+        'sqlsrv-user' => [
+            'driver' => 'sqlsrv',
+            'url' => env('DB_USER_URL', ''),
+            'host' => env('DB_USER_HOST', 'localhost'),
+            'port' => env('DB_USER_PORT', '1433'),
+            'database' => env('DB_USER_DATABASE', 'laravel'),
+            'username' => env('DB_USER_USERNAME', 'root'),
+            'password' => env('DB_USER_PASSWORD', ''),
+            'charset' => env('DB_USER_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            // 'encrypt' => env('DB_ENCRYPT', 'yes'),
+            'trust_server_certificate' => env('DB_USER_TRUST_SERVER_CERTIFICATE', 'true'),
+        ],
+
         'bosnet_live' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_LIVE_URL'),

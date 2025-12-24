@@ -1511,14 +1511,89 @@
                 }
             });
 
-            // Configure daterangepicker
-            $('input[name="filter_periode"]').daterangepicker({
-                opens: 'left',
-                minDate: moment('2024-01-01'),
-                locale: {
-                    format: 'DD/MM/YYYY'
-                }
-            })
+            // Variable to store available dates
+            let availableDates = [];
+
+            // Function to fetch available dates from server
+            function fetchAvailableDates() {
+                $.ajax({
+                    url: "{{ route('pnl.reguler.pajak-keluaran.available-dates') }}",
+                    type: "POST",
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        pt: $('#filter_pt').val(),
+                        brand: $('#filter_brand').val(),
+                        depo: $('#filter_depo').val()
+                    },
+                    success: function(response) {
+                        if (response.status) {
+                            availableDates = response.data;
+                            // Reinitialize daterangepicker with new available dates
+                            initializeDateRangePicker();
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Error fetching available dates:', xhr.responseText);
+                    }
+                });
+            }
+
+            // Function to initialize daterangepicker
+            function initializeDateRangePicker() {
+                $('input[name="filter_periode"]').daterangepicker({
+                    singleDatePicker: true,
+                    showDropdowns: true,
+                    autoApply: true,
+                    opens: 'left',
+                    startDate: moment(),
+                    minDate: moment('2024-01-01'),
+                    maxDate: moment().add(1, 'year'),
+                    locale: {
+                        format: 'DD/MM/YYYY',
+                        daysOfWeek: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+                        monthNames: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+                    },
+                    isCustomDate: function(date) {
+                        // Check if this date has data
+                        const dateStr = date.format('YYYY-MM-DD');
+                        if (availableDates.includes(dateStr)) {
+                            return 'has-data';
+                        }
+                        return '';
+                    }
+                }, function(start, end, label) {
+                    // Callback when date is selected
+                    console.log('Date selected:', start.format('DD/MM/YYYY'));
+                });
+
+                // Add event listener for date change
+                $('input[name="filter_periode"]').on('apply.daterangepicker', function(ev, picker) {
+                    // Reload all tables when date changes
+                    if (tablePkp) tablePkp.ajax.reload();
+                    if (tablePkpNppn) tablePkpNppn.ajax.reload();
+                    if (tableNonPkp) tableNonPkp.ajax.reload();
+                    if (tableNonPkpNppn) tableNonPkpNppn.ajax.reload();
+                    if (tableRetur) tableRetur.ajax.reload();
+                    
+                    // Update counters
+                    setDownloadCounter('pkp');
+                    setDownloadCounter('pkpnppn');
+                    setDownloadCounter('npkp');
+                    setDownloadCounter('npkpnppn');
+                    setDownloadCounter('retur');
+                });
+            }
+
+            // Initialize daterangepicker on page load
+            initializeDateRangePicker();
+            
+            // Fetch available dates on page load
+            fetchAvailableDates();
+
+            // Update available dates when filters change
+            $('#filter_pt, #filter_brand, #filter_depo').on('change', function() {
+                fetchAvailableDates();
+            });
 
             /////// Checkbox PKP //////////
             // Event listener untuk checkbox select all
