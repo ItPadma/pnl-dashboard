@@ -1,4 +1,19 @@
 <script>
+    let tablePkp;
+    let tablePkpNppn;
+    let tableNonPkp;
+    let tableNonPkpNppn;
+    let tableRetur;
+
+    $.fn.dataTable.ext.errMode = 'none';
+
+    let pkp_data = [];
+    let pkpnppn_data = [];
+    let npkp_data = [];
+    let npkpnppn_data = [];
+    let retur_data = [];
+</script>
+<script>
     // Initialize new DataTable for PKP
     function initializeDataTablePkp() {
         if ($.fn.DataTable.isDataTable('#table-pkp')) {
@@ -54,13 +69,13 @@
                     render: function(data, type, row) {
                         const checked = row.is_checked == 1 ? '' : 'disabled';
                         return `<select id="move-to-${row.id}" class="form-select move-to" data-id="${row.id}" data-from="pkp" ${checked}>
-                                <option value="">Pilih...</option>
-                                <option value="pkp">PKP</option>
-                                <option value="pkpnppn">PKP Non-PPN</option>
-                                <option value="npkp">Non-PKP</option>
-                                <option value="npkpnppn">Non-PKP Non-PPN</option>
-                                <option value="retur">Retur</option>
-                                </select>`;
+                            <option value="">Pilih...</option>
+                            <option value="pkp">PKP</option>
+                            <option value="pkpnppn">PKP Non-PPN</option>
+                            <option value="npkp">Non-PKP</option>
+                            <option value="npkpnppn">Non-PKP Non-PPN</option>
+                            <option value="retur">Retur</option>
+                            </select>`;
                     }
                 },
                 {
