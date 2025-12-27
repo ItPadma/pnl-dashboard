@@ -73,7 +73,7 @@ Route::controller(MasterDataController::class)->group(function () {
 
 
 Route::controller(SettingController::class)->group(function () {
-    Route::middleware('menu.access:user-management')->group(function() {
+    Route::middleware('menu.access:user-manager')->group(function() {
         Route::get('/pnl/setting/userman', 'usermanIndex')->name('pnl.setting.userman.index')->middleware([AuthnCheck::class]);
         Route::post('/pnl/setting/userman/changepass', 'usermanChangePassword')->name('pnl.setting.userman.changepassword')->middleware([AuthnCheck::class]);
         Route::post('/pnl/setting/userman/show', 'usermanShow')->name('pnl.setting.userman.show')->middleware([AuthnCheck::class]);

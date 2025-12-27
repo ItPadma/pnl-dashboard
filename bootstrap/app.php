@@ -18,6 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // $middleware->append(\App\Http\Middleware\SessionDebugMiddleware::class);
         // $middleware->prepend(\App\Http\Middleware\EncryptCookies::class);
         
+        // Add CSRF protection to web middleware group
+        $middleware->web(append: [
+            \App\Http\Middleware\VerifyCsrfToken::class,
+        ]);
+        
         // Register middleware aliases
         $middleware->alias([
             'menu.access' => \App\Http\Middleware\CheckMenuAccess::class,

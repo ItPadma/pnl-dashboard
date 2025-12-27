@@ -292,12 +292,103 @@
 @section('script')
     <script src="{{ asset('assets/js/plugin/sweetalert/sweetalert.min.js') }}"></script>
     <script>
-        // Global AJAX setup for CSRF
+        // Global CSRF token management
+        let csrfToken = $('meta[name="csrf-token"]').attr('content');
+        
+        // Function to refresh CSRF token
+        function refreshCsrfToken() {
+            return $.ajax({
+                url: "{{ route('pnl.setting.generate.csrf.token') }}",
+                type: 'GET',
+                async: false,
+                success: function(data) {
+                    if (data.success && data.data.csrf_token) {
+                        csrfToken = data.data.csrf_token;
+                        $('meta[name="csrf-token"]').attr('content', csrfToken);
+                        // Update global AJAX setup
+                        $.ajaxSetup({
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        // Function to get current CSRF token
+        function getCsrfToken() {
+            return csrfToken;
+        }
+
+        // Global AJAX setup with error handling
         $.ajaxSetup({
             headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                'X-CSRF-TOKEN': getCsrfToken()
+            },
+            error: function(xhr, status, error) {
+                if (xhr.status === 419) {
+                    // CSRF token mismatch, refresh and retry
+                    refreshCsrfToken();
+                }
             }
         });
+
+        // Request throttling
+        let requestQueue = [];
+        let isProcessingQueue = false;
+        
+        function throttledAjax(options) {
+            return new Promise((resolve, reject) => {
+                requestQueue.push({ options, resolve, reject });
+                processQueue();
+            });
+        }
+        
+        function processQueue() {
+            if (isProcessingQueue || requestQueue.length === 0) return;
+            
+            isProcessingQueue = true;
+            const { options, resolve, reject } = requestQueue.shift();
+            
+            ajaxWithCsrfRetry(options)
+                .done(resolve)
+                .fail(reject)
+                .always(() => {
+                    setTimeout(() => {
+                        isProcessingQueue = false;
+                        processQueue();
+                    }, 100); // 100ms delay between requests
+                });
+        }
+
+        // Helper function for AJAX requests with CSRF retry
+        function ajaxWithCsrfRetry(options, retryCount = 0) {
+            const maxRetries = 2;
+            
+            return $.ajax($.extend({}, options, {
+                headers: $.extend({}, options.headers, {
+                    'X-CSRF-TOKEN': getCsrfToken()
+                }),
+                data: $.extend({}, options.data, {
+                    _token: getCsrfToken()
+                })
+            })).fail(function(xhr) {
+                if (xhr.status === 419 && retryCount < maxRetries) {
+                    // Refresh token and retry
+                    refreshCsrfToken();
+                    return ajaxWithCsrfRetry(options, retryCount + 1);
+                }
+                // If not CSRF error or max retries reached, call original error handler
+                if (options.error) {
+                    options.error(xhr);
+                }
+            });
+        }
+
+        // Cache for loaded data
+        let usersCache = null;
+        let menusCache = null;
 
         $(document).ready(function() {
             // Initialize DataTable
@@ -357,6 +448,7 @@
 
             // Initialize/Refresh Select2 when Manage Users modal is SHOWN
             $('#manageUsersModal').on('shown.bs.modal', function() {
+                loadUsers(); // Load users only when needed
                 $("#user_select").select2({
                     dropdownParent: $('#manageUsersModal'),
                     placeholder: 'Select User...',
@@ -364,31 +456,61 @@
                 });
             });
 
-            // Load users for select
-            $.ajax({
-                url: "{{ route('pnl.master-data.users') }}",
-                type: 'GET',
-                success: function(data) {
-                    if (data.data) {
-                        data.data.forEach(function(user) {
+            // Load users for select (lazy loading with caching)
+            function loadUsers() {
+                if (usersCache) {
+                    // Use cached data
+                    usersCache.forEach(function(user) {
+                        if ($("#user_select option[value='" + user.id + "']").length === 0) {
                             $("#user_select").append(new Option(user.name + ' (' + user.email + ')', user.id));
-                        });
-                    }
+                        }
+                    });
+                    return;
                 }
-            });
+                
+                if ($("#user_select option").length <= 1) {
+                    throttledAjax({
+                        url: "{{ route('pnl.master-data.users') }}",
+                        type: 'GET',
+                        success: function(data) {
+                            if (data.data) {
+                                usersCache = data.data; // Cache the data
+                                data.data.forEach(function(user) {
+                                    $("#user_select").append(new Option(user.name + ' (' + user.email + ')', user.id));
+                                });
+                            }
+                        }
+                    });
+                }
+            }
 
-            // Load menus for select
-            $.ajax({
-                url: "{{ route('admin.menus.index') }}",
-                type: 'GET',
-                success: function(data) {
-                    if (data.success && data.data) {
-                        data.data.forEach(function(menu) {
+            // Load menus for select (lazy loading with caching)
+            function loadMenus() {
+                if (menusCache) {
+                    // Use cached data
+                    menusCache.forEach(function(menu) {
+                        if ($("#menu_select option[value='" + menu.id + "']").length === 0) {
                             $("#menu_select").append(new Option(menu.name, menu.id));
-                        });
-                    }
+                        }
+                    });
+                    return;
                 }
-            });
+                
+                if ($("#menu_select option").length === 0) {
+                    throttledAjax({
+                        url: "{{ route('admin.menus.index') }}",
+                        type: 'GET',
+                        success: function(data) {
+                            if (data.success && data.data) {
+                                menusCache = data.data; // Cache the data
+                                data.data.forEach(function(menu) {
+                                    $("#menu_select").append(new Option(menu.name, menu.id));
+                                });
+                            }
+                        }
+                    });
+                }
+            }
 
             // Reset modal on hide
             $("#newGroupModal").on('hidden.bs.modal', function() {
@@ -422,7 +544,7 @@
 
                 button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
 
-                $.ajax({
+                ajaxWithCsrfRetry({
                     url: "{{ route('admin.access-groups.store') }}",
                     type: 'POST',
                     data: {
@@ -443,7 +565,13 @@
                     },
                     error: function(xhr) {
                         button.prop('disabled', false).html(originalText);
-                        swal("Error!", "Something went wrong", "error");
+                        let errorMessage = "Something went wrong";
+                        if (xhr.status === 419) {
+                            errorMessage = "CSRF token mismatch. Please refresh the page and try again.";
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        swal("Error!", errorMessage, "error");
                     }
                 });
             });
@@ -465,7 +593,7 @@
 
                 button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
 
-                $.ajax({
+                ajaxWithCsrfRetry({
                     url: "{{ route('admin.access-groups.update', '__id__') }}".replace('__id__', id),
                     type: 'PUT',
                     data: {
@@ -486,7 +614,7 @@
                     },
                     error: function(xhr) {
                         button.prop('disabled', false).html(originalText);
-                        swal("Error!", "Something went wrong", "error");
+                        swal("Error!", "Failed to update group", "error");
                     }
                 });
             });
@@ -511,7 +639,8 @@
                     type: 'POST',
                     data: {
                         user_id: userId,
-                        custom_access_level: customLevel || null
+                        custom_access_level: customLevel || null,
+                        _token: getCsrfToken()
                     },
                     success: function(data) {
                         button.prop('disabled', false).html(originalText);
@@ -528,7 +657,13 @@
                     },
                     error: function(xhr) {
                         button.prop('disabled', false).html(originalText);
-                        swal("Error!", "Something went wrong", "error");
+                        let errorMessage = "Something went wrong";
+                        if (xhr.status === 419) {
+                            errorMessage = "CSRF token mismatch. Please refresh the page and try again.";
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        swal("Error!", errorMessage, "error");
                     }
                 });
             });
@@ -551,7 +686,8 @@
                     url: "{{ route('admin.access-groups.assign-menu', '__id__') }}".replace('__id__', groupId),
                     type: 'POST',
                     data: {
-                        menu_ids: menuIds
+                        menu_ids: menuIds,
+                        _token: getCsrfToken()
                     },
                     success: function(data) {
                         button.prop('disabled', false).html(originalText);
@@ -567,7 +703,13 @@
                     },
                     error: function(xhr) {
                         button.prop('disabled', false).html(originalText);
-                        swal("Error!", "Something went wrong", "error");
+                        let errorMessage = "Something went wrong";
+                        if (xhr.status === 419) {
+                            errorMessage = "CSRF token mismatch. Please refresh the page and try again.";
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        swal("Error!", errorMessage, "error");
                     }
                 });
             });
@@ -577,6 +719,7 @@
 
         // Initialize/Refresh Select2 when manageMenusModal is SHOWN
         $('#manageMenusModal').on('shown.bs.modal', function() {
+            loadMenus(); // Load menus only when needed
             $("#menu_select").select2({
                 dropdownParent: $('#manageMenusModal'),
                 placeholder: 'Select Menus...',
@@ -645,7 +788,7 @@
                 dangerMode: true,
             }).then((willDelete) => {
                 if (willDelete) {
-                    $.ajax({
+                    ajaxWithCsrfRetry({
                         url: "{{ route('admin.access-groups.destroy', '__id__') }}".replace('__id__', id),
                         type: 'DELETE',
                         success: function(data) {
@@ -657,7 +800,7 @@
                             }
                         },
                         error: function(xhr) {
-                            swal("Error!", "Something went wrong", "error");
+                            swal("Error!", "Failed to delete group", "error");
                         }
                     });
                 }
@@ -728,6 +871,9 @@
                         url: "{{ route('admin.access-groups.remove-user', ['id' => '__g_id__', 'userId' => '__u_id__']) }}"
                             .replace('__g_id__', groupId).replace('__u_id__', userId),
                         type: 'DELETE',
+                        data: {
+                            _token: getCsrfToken()
+                        },
                         success: function(data) {
                             if (data.success) {
                                 swal("Success!", data.message, "success");
@@ -740,7 +886,13 @@
                             }
                         },
                         error: function(xhr) {
-                            swal("Error!", "Something went wrong", "error");
+                            let errorMessage = "Something went wrong";
+                            if (xhr.status === 419) {
+                                errorMessage = "CSRF token mismatch. Please refresh the page and try again.";
+                            } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
+                            swal("Error!", errorMessage, "error");
                             btn.prop('disabled', false).html(originalContent);
                         }
                     });
@@ -814,6 +966,9 @@
                         url: "{{ route('admin.access-groups.remove-menu', ['id' => '__g_id__', 'menuId' => '__m_id__']) }}"
                             .replace('__g_id__', groupId).replace('__m_id__', menuId),
                         type: 'DELETE',
+                        data: {
+                            _token: getCsrfToken()
+                        },
                         success: function(data) {
                             if (data.success) {
                                 swal("Success!", data.message, "success");
@@ -826,7 +981,13 @@
                             }
                         },
                          error: function(xhr) {
-                            swal("Error!", "Something went wrong", "error");
+                            let errorMessage = "Something went wrong";
+                            if (xhr.status === 419) {
+                                errorMessage = "CSRF token mismatch. Please refresh the page and try again.";
+                            } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            }
+                            swal("Error!", errorMessage, "error");
                             btn.prop('disabled', false).html(originalContent);
                         }
                     });

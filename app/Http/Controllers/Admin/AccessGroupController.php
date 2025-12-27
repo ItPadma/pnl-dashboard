@@ -163,7 +163,14 @@ class AccessGroupController extends Controller
             ], 422);
         }
 
-        $group->update($request->only(['name', 'description', 'default_access_level', 'is_active']));
+        $updateData = $request->only(['name', 'description', 'default_access_level', 'is_active']);
+        
+        // Convert is_active to boolean if present
+        if (isset($updateData['is_active'])) {
+            $updateData['is_active'] = (bool) $updateData['is_active'];
+        }
+
+        $group->update($updateData);
 
         return response()->json([
             'success' => true,
