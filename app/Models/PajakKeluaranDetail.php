@@ -46,7 +46,8 @@ class PajakKeluaranDetail extends Model
         'tipe_ppn',
         'company',
         'is_checked',
-        'is_downloaded'
+        'is_downloaded',
+        'status'
     ];
 
     protected $casts = [
@@ -177,7 +178,8 @@ class PajakKeluaranDetail extends Model
                     0 AS is_checked,
                     0 AS is_downloaded,
                     e.szTaxTypeId AS tipe_ppn,
-                    e.szCategory_9 AS company
+                    e.szCategory_9 AS company,
+                    '' AS 'status'
                 FROM
                     [padma_live].[dbo].[BOS_SD_FDo] a
                     LEFT JOIN BOS_SD_FDoItem b ON a.[szDoId] = b.[szDoId]

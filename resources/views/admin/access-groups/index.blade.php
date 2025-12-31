@@ -3,6 +3,46 @@
 @section('title', 'Access Groups | PNL')
 
 @section('style')
+<style>
+    /* Select2 Bootstrap 5 compatibility */
+    .select2-container--default .select2-selection--multiple {
+        min-height: 38px;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+        padding: 4px 8px;
+    }
+    .select2-container--default .select2-selection--multiple:focus,
+    .select2-container--default.select2-container--focus .select2-selection--multiple {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #0d6efd;
+        border: none;
+        color: #fff;
+        border-radius: 0.25rem;
+        padding: 2px 8px;
+        margin: 2px;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        color: #fff;
+        margin-right: 5px;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+        color: #fff;
+        background: transparent;
+    }
+    .select2-dropdown {
+        border-color: #ced4da;
+        z-index: 1060;
+    }
+    .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+        background-color: #0d6efd;
+    }
+    .select2-container--default .select2-search--inline .select2-search__field {
+        margin-top: 6px;
+    }
+</style>
 @endsection
 
 @section('content')
@@ -717,32 +757,58 @@
 
         });
 
+        // Cache for menus (moved outside document.ready for global access)
+        let menusLoaded = false;
+
+        // Load menus for select
+        function loadMenusForSelect() {
+            if (menusLoaded) return;
+            
+            $.ajax({
+                url: "{{ route('admin.menus.index') }}",
+                type: 'GET',
+                success: function(data) {
+                    if (data.success && data.data) {
+                        $("#menu_select").empty();
+                        data.data.forEach(function(menu) {
+                            const optionText = menu.name + ' (' + menu.slug + ')';
+                            $("#menu_select").append(new Option(optionText, menu.id, false, false));
+                        });
+                        menusLoaded = true;
+                    }
+                }
+            });
+        }
+
         // Initialize/Refresh Select2 when manageMenusModal is SHOWN
         $('#manageMenusModal').on('shown.bs.modal', function() {
-            loadMenus(); // Load menus only when needed
+            // Destroy existing Select2 instance if exists
+            if ($("#menu_select").hasClass('select2-hidden-accessible')) {
+                $("#menu_select").select2('destroy');
+            }
+            
+            // Initialize Select2
             $("#menu_select").select2({
                 dropdownParent: $('#manageMenusModal'),
                 placeholder: 'Select Menus...',
                 allowClear: true,
                 width: '100%'
             });
-        });
-
-        // Initialize/Refresh Select2 when Manage Users modal is SHOWN
-        $('#manageUsersModal').on('shown.bs.modal', function() {
-            $("#user_select").select2({
-                dropdownParent: $('#manageUsersModal'),
-                placeholder: 'Select User...',
-                width: '100%'
-            });
+            
+            // Load menus after Select2 is initialized
+            loadMenusForSelect();
         });
 
         // Clear selection on hide
         $("#manageMenusModal").on('hidden.bs.modal', function() {
-            $("#menu_select").val(null).trigger('change');
+            if ($("#menu_select").hasClass('select2-hidden-accessible')) {
+                $("#menu_select").val(null).trigger('change');
+            }
         });
         $("#manageUsersModal").on('hidden.bs.modal', function() {
-            $("#user_select").val(null).trigger('change');
+            if ($("#user_select").hasClass('select2-hidden-accessible')) {
+                $("#user_select").val(null).trigger('change');
+            }
         });
 
         // Show update modal
