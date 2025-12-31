@@ -2,6 +2,7 @@
 
 use App\Events\UserEvent;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PNL\NettInvoiceController;
 use App\Http\Controllers\PNL\DashboardController;
 use App\Http\Controllers\PNL\MasterDataController;
 use App\Http\Controllers\PNL\NonRegulerController;
@@ -46,6 +47,12 @@ Route::controller(RegulerController::class)->group(function () {
     Route::middleware('menu.access:reguler-upload-csv')->group(function() {
         Route::get('/pnl/reguler/uploadcsv', 'pmUploadCsvIndex')->name('pnl.reguler.pajak-masukan.uploadcsv')->middleware([AuthnCheck::class]);
         Route::post('/pnl/reguler/uploadcsv', 'uploadPMCoretax')->name('pnl.reguler.pajak-masukan.uploadcsv.process');
+    });
+});
+
+Route::controller(NettInvoiceController::class)->group(function () {
+    Route::middleware('menu.access:reguler-nett-invoice')->group(function() {
+        Route::get('/pnl/reguler/nett-invoice', 'index')->name('pnl.reguler.nett-invoice.index')->middleware([AuthnCheck::class]);
     });
 });
 
