@@ -105,7 +105,8 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="order">Order</label>
-                                        <input type="number" class="form-control" id="order" name="order" value="0">
+                                        <input type="number" class="form-control" id="order" name="order"
+                                            value="0">
                                     </div>
                                 </div>
                                 <div class="col-md-12">
@@ -130,7 +131,8 @@
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i
                                     class="fas fa-times fa-fw"></i> Close</button>
-                            <button type="button" class="btn btn-primary btn-sm btn-save"><i class="fas fa-save fa-fw"></i>
+                            <button type="button" class="btn btn-primary btn-sm btn-save"><i
+                                    class="fas fa-save fa-fw"></i>
                                 Save</button>
                         </div>
                     </div>
@@ -167,8 +169,8 @@
                                 <div class="col-md-12">
                                     <div class="form-group">
                                         <label for="update_route_name">Route Name</label>
-                                        <input type="text" class="form-control" id="update_route_name" name="update_route_name"
-                                            placeholder="e.g. dashboard.index">
+                                        <input type="text" class="form-control" id="update_route_name"
+                                            name="update_route_name" placeholder="e.g. dashboard.index">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -181,13 +183,15 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="update_order">Order</label>
-                                        <input type="number" class="form-control" id="update_order" name="update_order" value="0">
+                                        <input type="number" class="form-control" id="update_order" name="update_order"
+                                            value="0">
                                     </div>
                                 </div>
                                 <div class="col-md-12">
                                     <div class="form-group">
                                         <label for="update_parent_id">Parent Menu</label>
-                                        <select class="form-control" id="update_parent_id" name="update_parent_id" style="width: 100%">
+                                        <select class="form-control" id="update_parent_id" name="update_parent_id"
+                                            style="width: 100%">
                                             <option value="">No Parent (Root)</option>
                                         </select>
                                     </div>
@@ -220,10 +224,63 @@
 @section('script')
     <script src="{{ asset('assets/js/plugin/sweetalert/sweetalert.min.js') }}"></script>
     <script>
+        // Function to refresh CSRF token
+        function refreshCsrfToken() {
+            return $.ajax({
+                url: "{{ route('pnl.setting.generate.csrf.token') }}",
+                type: 'GET',
+                async: false,
+                success: function(response) {
+                    if (response.csrf_token) {
+                        // Update meta tag
+                        $('meta[name="csrf-token"]').attr('content', response.csrf_token);
+                        // Update AJAX setup
+                        $.ajaxSetup({
+                            headers: {
+                                'X-CSRF-TOKEN': response.csrf_token
+                            }
+                        });
+                        console.log('CSRF token refreshed successfully');
+                        return response.csrf_token;
+                    }
+                },
+                error: function() {
+                    console.error('Failed to refresh CSRF token');
+                }
+            });
+        }
+
         // Global AJAX setup for CSRF
         $.ajaxSetup({
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+
+        // Global AJAX error handler for CSRF token mismatch
+        $(document).ajaxError(function(event, jqxhr, settings, thrownError) {
+            // Check if error is 419 (CSRF token mismatch)
+            if (jqxhr.status === 419) {
+                console.warn('CSRF token mismatch detected, refreshing token...');
+
+                // Refresh the token
+                refreshCsrfToken();
+
+                // Show user-friendly message
+                swal({
+                    title: "Session Expired",
+                    text: "Your session has expired. Please try again.",
+                    icon: "warning",
+                    buttons: {
+                        confirm: {
+                            text: "OK",
+                            value: true,
+                            visible: true,
+                            className: "btn-primary",
+                            closeModal: true
+                        }
+                    }
+                });
             }
         });
 
@@ -286,7 +343,9 @@
                         }
                     }
                 ],
-                order: [[4, 'asc']] // Order by order column
+                order: [
+                    [4, 'asc']
+                ] // Order by order column
             });
 
             // Initialize Select2 for parent select
@@ -334,7 +393,7 @@
             loadParentMenus();
 
             // Refresh menus when modal opens
-            $('#newMenuModal').on('shown.bs.modal', function () {
+            $('#newMenuModal').on('shown.bs.modal', function() {
                 loadParentMenus();
             });
 
@@ -404,7 +463,8 @@
                     },
                     error: function(xhr) {
                         button.prop('disabled', false).html(originalText);
-                        const message = xhr.responseJSON ? xhr.responseJSON.message : "Something went wrong";
+                        const message = xhr.responseJSON ? xhr.responseJSON.message :
+                            "Something went wrong";
                         swal("Error!", message, "error");
                     }
                 });
@@ -455,7 +515,8 @@
                     },
                     error: function(xhr) {
                         button.prop('disabled', false).html(originalText);
-                        const message = xhr.responseJSON ? xhr.responseJSON.message : "Something went wrong";
+                        const message = xhr.responseJSON ? xhr.responseJSON.message :
+                            "Something went wrong";
                         swal("Error!", message, "error");
                     }
                 });
@@ -464,15 +525,15 @@
 
         // Show update modal
         function showUpdate(id) {
-             // RE-WRITING showUpdate to handle parent loading independently to be safe
-             $.ajax({
+            // RE-WRITING showUpdate to handle parent loading independently to be safe
+            $.ajax({
                 url: "{{ route('admin.menus.index') }}",
                 type: 'GET',
                 success: function(res) {
                     if (res.success && res.data) {
                         const options = '<option value="">No Parent (Root)</option>';
                         $("#update_parent_id").html(options);
-                        
+
                         // We need to fetch the specific menu details first
                         $.ajax({
                             url: "{{ route('admin.menus.show', '__id__') }}".replace('__id__', id),
@@ -480,12 +541,13 @@
                             success: function(data) {
                                 if (data.success) {
                                     const menu = data.data;
-                                    
+
                                     res.data.forEach(function(m) {
                                         if (m.id == id) return; // Exclude self
-                                        $("#update_parent_id").append(new Option(m.name, m.id));
+                                        $("#update_parent_id").append(new Option(m.name, m
+                                            .id));
                                     });
-                                    
+
                                     $("#update_id").val(menu.id);
                                     $("#update_name").val(menu.name);
                                     $("#update_slug").val(menu.slug);
@@ -493,7 +555,7 @@
                                     $("#update_icon").val(menu.icon);
                                     $("#update_order").val(menu.order);
                                     $("#update_is_active").val(menu.is_active ? '1' : '0');
-                                    
+
                                     $("#update_parent_id").val(menu.parent_id).trigger('change');
                                     $("#updateMenuModal").modal('show');
                                 }
