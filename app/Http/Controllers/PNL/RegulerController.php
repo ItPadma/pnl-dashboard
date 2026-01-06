@@ -12,6 +12,7 @@ use App\Models\MasterPkp;
 use App\Models\PajakKeluaranDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\AccessGroup;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
@@ -261,10 +262,15 @@ class RegulerController extends Controller
             $pt = $request->pt ?? 'all';
             $brand = $request->brand ?? 'all';
             $depo = $request->depo ?? 'all';
-            $periode = $request->periode ?? null;
-            $periode = explode(' - ', $periode);
-            $periode_awal = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[0])->format('Y-m-d');
-            $periode_akhir = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[1])->format('Y-m-d');
+            $periode_awal = null;
+            $periode_akhir = null;
+            if ($request->has('periode') && !empty($request->periode)) {
+                $periode_parts = explode(' - ', $request->periode);
+                if (count($periode_parts) === 2) {
+                    $periode_awal = \Carbon\Carbon::createFromFormat('d/m/Y', $periode_parts[0])->format('Y-m-d');
+                    $periode_akhir = \Carbon\Carbon::createFromFormat('d/m/Y', $periode_parts[1])->format('Y-m-d');
+                }
+            }
 
             // Base query
             $query = PajakKeluaranDetail::query();
@@ -358,6 +364,9 @@ class RegulerController extends Controller
     public function download(Request $request)
     {
         try {
+            if (!Auth::user()->canAccessMenu('reguler-pajak-keluaran', AccessGroup::LEVEL_READ_WRITE)) {
+                abort(403, 'Unauthorized action.');
+            }
             $tipe = $request->query('tipe');
             $headers = [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
