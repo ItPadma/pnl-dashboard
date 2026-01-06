@@ -671,11 +671,14 @@
             type: "GET",
             dataType: "json",
             success: function(data) {
-                let currentUserDepo = "{{ Auth::user()->depo }}";
-                currentUserDepo = currentUserDepo.split('|');
+                @php
+                    $userInfo = getLoggedInUserInfo();
+                    $userDepos = $userInfo ? $userInfo->depo : [];
+                    $hasAllAccess = in_array('all', $userDepos);
+                @endphp
 
-                // Check if user has 'all' access
-                let hasAllAccess = currentUserDepo.includes('all');
+                let hasAllAccess = {{ $hasAllAccess ? 'true' : 'false' }};
+                let currentUserDepo = @json($userDepos);
 
                 // If user doesn't have 'all' access, filter the depos
                 if (!hasAllAccess) {

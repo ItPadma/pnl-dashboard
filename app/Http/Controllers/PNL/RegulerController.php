@@ -77,13 +77,10 @@ class RegulerController extends Controller
                 $dbquery->whereRaw("brand IN ('".implode("','", $request->brand)."')");
             }
             if ($request->has('depo') && $request->depo == 'all') {
-                $currentUserDepo = Auth::user()->depo;
-                if (str_contains($currentUserDepo, '|')) {
-                    $currentUserDepo = explode('|', $currentUserDepo);
-                    if (! in_array('all', $currentUserDepo)) {
-                        $depo = MasterDepo::whereIn('code', $currentUserDepo)->get()->pluck('name')->toArray();
-                        $dbquery->whereIn('depo', $depo);
-                    }
+                $userInfo = getLoggedInUserInfo();
+                if ($userInfo && !in_array('all', $userInfo->depo)) {
+                    $depo = MasterDepo::whereIn('code', $userInfo->depo)->get()->pluck('name')->toArray();
+                    $dbquery->whereIn('depo', $depo);
                 }
             }
             if ($request->has('depo') && $request->depo != 'all') {
