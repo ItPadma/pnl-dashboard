@@ -162,34 +162,7 @@
         /////// Checkbox PKP //////////
         // Event listener untuk checkbox select all
         $('#select-all-pkp').on('change', function() {
-            const isChecked = $(this).is(':checked');
-            $('.row-checkbox-pkp').prop('checked', isChecked);
-            // Ambil semua ID dari checkbox
-            const ids = $('.row-checkbox-pkp').map(function() {
-                return $(this).data('id');
-            }).get();
-            // Class move-to dengan data-id bersangkutan berubah menjadi disabled
-            for (const id of ids) {
-                toggleMoveToSelect(id, isChecked);
-            }
-            // Kirim AJAX request untuk memperbarui semua status di database
-            $.ajax({
-                url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
-                type: "POST",
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    ids: ids,
-                    is_checked: isChecked
-                },
-                success: function(response) {
-                    setDownloadCounter('pkp');
-                },
-                error: function(xhr) {
-                    console.error(xhr.responseText);
-                    setDownloadCounter('pkp');
-                }
-            });
-            showCheckedSummary('pkp', pkp_data);
+            handleSelectAll('pkp', this);
         });
         // Event listener untuk checkbox individual
         $('#table-pkp tbody').on('change', '.row-checkbox-pkp', function() {
@@ -224,34 +197,7 @@
         //////// Checkbox PKP Non-PPN ////////
         // Event listener untuk checkbox select all
         $('#select-all-pkpnppn').on('change', function() {
-            const isChecked = $(this).is(':checked');
-            $('.row-checkbox-pkpnppn').prop('checked', isChecked);
-            // Ambil semua ID dari checkbox
-            const ids = $('.row-checkbox-pkpnppn').map(function() {
-                return $(this).data('id');
-            }).get();
-            // Class move-to dengan data-id bersangkutan berubah menjadi disabled
-            for (const id of ids) {
-                toggleMoveToSelect(id, isChecked);
-            }
-            // Kirim AJAX request untuk memperbarui semua status di database
-            $.ajax({
-                url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
-                type: "POST",
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    ids: ids,
-                    is_checked: isChecked
-                },
-                success: function(response) {
-                    setDownloadCounter('pkpnppn');
-                },
-                error: function(xhr) {
-                    console.error(xhr.responseText);
-                    setDownloadCounter('pkpnppn');
-                }
-            });
-            showCheckedSummary('pkpnppn', pkpnppn_data);
+            handleSelectAll('pkpnppn', this);
         });
         // Event listener untuk checkbox individual
         $('#table-pkpnppn tbody').on('change', '.row-checkbox-pkpnppn', function() {
@@ -285,34 +231,7 @@
         //////// Checkbox Non-PKP //////////
         // Event listener untuk checkbox select all
         $('#select-all-npkp').on('change', function() {
-            const isChecked = $(this).is(':checked');
-            $('.row-checkbox-npkp').prop('checked', isChecked);
-            // Ambil semua ID dari checkbox
-            const ids = $('.row-checkbox-npkp').map(function() {
-                return $(this).data('id');
-            }).get();
-            // Class move-to dengan data-id bersangkutan berubah menjadi disabled
-            for (const id of ids) {
-                toggleMoveToSelect(id, isChecked);
-            }
-            // Kirim AJAX request untuk memperbarui semua status di database
-            $.ajax({
-                url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
-                type: "POST",
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    ids: ids,
-                    is_checked: isChecked
-                },
-                success: function(response) {
-                    setDownloadCounter('npkp');
-                },
-                error: function(xhr) {
-                    console.error(xhr.responseText);
-                    setDownloadCounter('npkp');
-                }
-            });
-            showCheckedSummary('npkp', npkp_data);
+            handleSelectAll('npkp', this);
         });
         // Event listener untuk checkbox individual
         $('#table-npkp tbody').on('change', '.row-checkbox-npkp', function() {
@@ -346,34 +265,7 @@
         //////// Checkbox Non-PKP Non-PPN ////////
         // Event listener untuk checkbox select all
         $('#select-all-npkpnppn').on('change', function() {
-            const isChecked = $(this).is(':checked');
-            $('.row-checkbox-npkpnppn').prop('checked', isChecked);
-            // Ambil semua ID dari checkbox
-            const ids = $('.row-checkbox-npkpnppn').map(function() {
-                return $(this).data('id');
-            }).get();
-            // Class move-to dengan data-id bersangkutan berubah menjadi disabled
-            for (const id of ids) {
-                toggleMoveToSelect(id, isChecked);
-            }
-            // Kirim AJAX request untuk memperbarui semua status di database
-            $.ajax({
-                url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
-                type: "POST",
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    ids: ids,
-                    is_checked: isChecked
-                },
-                success: function(response) {
-                    setDownloadCounter('npkpnppn');
-                },
-                error: function(xhr) {
-                    console.error(xhr.responseText);
-                    setDownloadCounter('npkpnppn');
-                }
-            });
-            showCheckedSummary('npkpnppn', npkpnppn_data);
+            handleSelectAll('npkpnppn', this);
         });
         // Event listener untuk checkbox individual
         $('#table-npkpnppn tbody').on('change', '.row-checkbox-npkpnppn', function() {
@@ -407,34 +299,7 @@
         //////// Checkbox RETUR ////////
         // Event listener untuk checkbox select all
         $('#select-all-retur').on('change', function() {
-            const isChecked = $(this).is(':checked');
-            $('.row-checkbox-retur').prop('checked', isChecked);
-            // Ambil semua ID dari checkbox
-            const ids = $('.row-checkbox-retur').map(function() {
-                return $(this).data('id');
-            }).get();
-            // Class move-to dengan data-id bersangkutan berubah menjadi disabled
-            for (const id of ids) {
-                toggleMoveToSelect(id, isChecked);
-            }
-            // Kirim AJAX request untuk memperbarui semua status di database
-            $.ajax({
-                url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
-                type: "POST",
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    ids: ids,
-                    is_checked: isChecked
-                },
-                success: function(response) {
-                    setDownloadCounter('retur');
-                },
-                error: function(xhr) {
-                    console.error(xhr.responseText);
-                    setDownloadCounter('retur');
-                }
-            });
-            showCheckedSummary('retur', retur_data);
+            handleSelectAll('retur', this);
         });
         // Event listener untuk checkbox individual
         $('#table-retur tbody').on('change', '.row-checkbox-retur', function() {
@@ -780,5 +645,129 @@
         } else {
             toastr.warning('Silakan pilih tipe pajak dan tujuan pemindahan.');
         }
+    }
+
+    function handleSelectAll(tipe, element) {
+        const isChecked = $(element).is(':checked');
+        const tableDesc = {
+            'pkp': 'PKP',
+            'pkpnppn': 'PKP (Non-PPN)',
+            'npkp': 'Non-PKP',
+            'npkpnppn': 'Non-PKP (Non-PPN)',
+            'retur': 'Retur'
+        } [tipe];
+
+        // Update UI Visuals immediately
+        $(`.row-checkbox-${tipe}`).prop('checked', isChecked);
+        const ids = $(`.row-checkbox-${tipe}`).map(function() {
+            return $(this).data('id');
+        }).get();
+        for (const id of ids) {
+            toggleMoveToSelect(id, isChecked);
+        }
+
+        // Helper to update summary
+        const updateSummary = () => {
+            let dataSrc;
+            if (tipe == 'pkp') dataSrc = pkp_data;
+            else if (tipe == 'pkpnppn') dataSrc = pkpnppn_data;
+            else if (tipe == 'npkp') dataSrc = npkp_data;
+            else if (tipe == 'npkpnppn') dataSrc = npkpnppn_data;
+            else if (tipe == 'retur') dataSrc = retur_data;
+            if (typeof showCheckedSummary === 'function') {
+                showCheckedSummary(tipe, dataSrc);
+            }
+        };
+        updateSummary();
+
+        swal({
+            title: isChecked ? "Pilih Data" : "Hapus Pilihan",
+            text: isChecked ?
+                `Pilih semua data ${tableDesc} yang sesuai filter (Database) atau hanya halaman ini?` :
+                `Hapus pilihan semua data ${tableDesc} (Database) atau hanya halaman ini?`,
+            icon: isChecked ? "info" : "warning",
+            buttons: {
+                cancel: {
+                    text: "Batal",
+                    visible: true,
+                    closeModal: true,
+                    value: null
+                },
+                page: {
+                    text: "Halaman Ini",
+                    value: "page",
+                    visible: true,
+                    className: "btn-secondary",
+                    closeModal: true
+                },
+                all: {
+                    text: "Semua Data",
+                    value: "all",
+                    visible: true,
+                    className: isChecked ? "btn-primary" : "btn-danger",
+                    closeModal: true
+                }
+            }
+        }).then((value) => {
+            if (value === 'all') {
+                let table;
+                if (tipe == 'pkp') table = tablePkp;
+                else if (tipe == 'pkpnppn') table = tablePkpNppn;
+                else if (tipe == 'npkp') table = tableNonPkp;
+                else if (tipe == 'npkpnppn') table = tableNonPkpNppn;
+                else if (tipe == 'retur') table = tableRetur;
+
+                let params = table.ajax.params();
+                // Ensure params exist (might be null if no ajax made yet?)
+                if (!params) {
+                    toastr.error('Table not ready.');
+                    return;
+                }
+
+                params.is_checked = isChecked ? 1 : 0;
+                params.select_all = 1;
+                params._token = '{{ csrf_token() }}';
+
+                toastr.info('Sedang memproses...');
+
+                $.ajax({
+                    url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
+                    type: "POST",
+                    data: params,
+                    success: function(response) {
+                        table.ajax.reload();
+                        setDownloadCounter(tipe);
+                        toastr.success(response.message || 'Berhasil memperbarui data.');
+                    },
+                    error: function(xhr) {
+                        toastr.error('Gagal memproses data.');
+                    }
+                });
+
+            } else if (value === 'page') {
+                // IDs based update
+                $.ajax({
+                    url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
+                    type: "POST",
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        ids: ids,
+                        is_checked: isChecked ? 1 : 0
+                    },
+                    success: function() {
+                        setDownloadCounter(tipe);
+                    },
+                    error: function() {
+                        console.error('Error updating checked');
+                    }
+                });
+            } else {
+                // Cancelled - Revert
+                $(element).prop('checked', !isChecked);
+                $(`.row-checkbox-${tipe}`).prop('checked', !isChecked);
+                ids.forEach(id => toggleMoveToSelect(id, !isChecked));
+                updateSummary();
+            }
+        });
     }
 </script>

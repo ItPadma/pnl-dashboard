@@ -48,139 +48,14 @@ class RegulerController extends Controller
             $chstatus = '';
             $retrieve_count = 0;
             // Query base
-            $dbquery = DB::table('pajak_keluaran_details')
-                ->select('*');
-            // Column specific filters
-            foreach ($request->get('columns') as $column) {
-                if (! empty($column['search']['value'])) {
-                    $dbquery->where($column['data'], 'like', "%{$column['search']['value']}%");
-                }
-            }
-            // Filtering by search value
-            if (! empty($searchValue)) {
-                $dbquery->where(function ($q) use ($searchValue) {
-                    $q->where('no_invoice', 'like', "%{$searchValue}%")
-                        ->orWhere('no_do', 'like', "%{$searchValue}%")
-                        ->orWhere('kode_produk', 'like', "%{$searchValue}%")
-                        ->orWhere('nama_produk', 'like', "%{$searchValue}%")
-                        ->orWhere('brand', 'like', "%{$searchValue}%")
-                        ->orWhere('depo', 'like', "%{$searchValue}%")
-                        ->orWhere('customer_id', 'like', "%{$searchValue}%")
-                        ->orWhere('nik', 'like', "%{$searchValue}%")
-                        ->orWhere('nama_customer_sistem', 'like', "%{$searchValue}%");
-                });
-            }
-            // Additional filters
-            if ($request->has('pt') && ! in_array('all', $request->pt)) {
-                $dbquery->whereRaw("company IN ('".implode("','", $request->pt)."')");
-            }
-            if ($request->has('brand') && ! in_array('all', $request->brand)) {
-                $dbquery->whereRaw("brand IN ('".implode("','", $request->brand)."')");
-            }
-            if ($request->has('depo') && ! in_array('all', $request->depo)) {
-                $userInfo = getLoggedInUserInfo();
-                
-                // If user has specific depo access, intersect requested depos with allowed depos
-                if ($userInfo && !in_array('all', $userInfo->depo)) {
-                    // Filter requested depos that user actually has access to
-                    $allowedDepos = MasterDepo::whereIn('code', $userInfo->depo)->get()->pluck('name')->toArray();
-                    
-                    // Get names of requested depos
-                    $requestedDepos = MasterDepo::whereIn('code', $request->depo)->get()->pluck('name')->toArray();
-                    
-                    // Intersect to ensure user only accesses allowed depos
-                    $validDepos = array_intersect($requestedDepos, $allowedDepos);
-                    
-                    if (!empty($validDepos)) {
-                         $dbquery->whereIn('depo', $validDepos);
-                    } else {
-                        // If intersection is empty (user requesting access to unauthorized depos), return no results
-                         $dbquery->whereRaw("1 = 0");
-                    }
-                } else {
-                    // User has 'all' access, so just use requested depos
-                     $depos = MasterDepo::whereIn('code', $request->depo)->get()->pluck('name')->toArray();
-                     $dbquery->whereIn('depo', $depos);
-                }
-            } elseif ($request->has('depo') && in_array('all', $request->depo)) {
-                 // Logic for 'all' selection
-                 $userInfo = getLoggedInUserInfo();
-                 if ($userInfo && !in_array('all', $userInfo->depo)) {
-                    $depo = MasterDepo::whereIn('code', $userInfo->depo)->get()->pluck('name')->toArray();
-                    $dbquery->whereIn('depo', $depo);
-                 }
-            }
-            if ($request->has('periode') && ! empty($request->periode)) {
-                $periode = explode(' - ', $request->periode);
-                if (count($periode) === 2) {
-                    $periode_awal = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[0])->format('Y-m-d');
-                    $periode_akhir = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[1])->format('Y-m-d');
-                    $dbquery->whereRaw("tgl_faktur_pajak >= '$periode_awal' AND tgl_faktur_pajak <= '$periode_akhir'");
-                }
-            }
-            if ($request->has('chstatus')) {
-                switch ($request->chstatus) {
-                    case 'checked-ready2download':
-                        $dbquery->where('is_checked', 1);
-                        $chstatus = ' AND is_checked = 1';
-                        break;
+            $dbquery = DB::table('pajak_keluaran_details')->select('*');
+            $filters = $this->applyFilters($dbquery, $request);
 
-                    case 'unchecked':
-                        $dbquery->where('is_checked', 0);
-                        $chstatus = ' AND is_checked = 0';
-                        break;
-
-                    case 'checked-downloaded':
-                        $dbquery->where('is_checked', 1);
-                        $dbquery->where('is_downloaded', 1);
-                        $chstatus = ' AND is_checked = 1 AND is_downloaded = 1';
-                        break;
-
-                    default:
-                        break;
-                }
-            }
-            if ($request->has('tipe')) {
-                $pkp = MasterPkp::all()->pluck('IDPelanggan')->toArray();
-                if ($request->tipe == 'pkp') {
-                    $dbquery->whereRaw("
-                    (
-                        tipe_ppn = 'PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp)
-                    )
-                    OR
-                    (has_moved = 'y' AND moved_to = 'pkp')");
-                    $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId IN ('".implode("','", $pkp)."')";
-                }
-                if ($request->tipe == 'pkpnppn') {
-                    $dbquery->whereRaw("
-                    (
-                        tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp)
-                    ) OR (has_moved = 'y' AND moved_to = 'pkpnppn')");
-                    $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId IN ('".implode("','", $pkp)."')";
-                }
-                if ($request->tipe == 'npkp') {
-                    $dbquery->whereRaw("
-                    (
-                        tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000) AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
-                    ) OR (has_moved = 'y' AND moved_to = 'npkp')");
-                    $tipe = " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN ('".implode("','", $pkp)."')";
-                }
-                if ($request->tipe == 'npkpnppn') {
-                    $dbquery->whereRaw("
-                    (
-                        tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
-                    ) OR (has_moved = 'y' AND moved_to = 'npkpnppn')");
-                    $tipe = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId NOT IN ('".implode("','", $pkp)."')";
-                }
-                if ($request->tipe == 'retur') {
-                    $dbquery->whereRaw("qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000 AND has_moved = 'n' OR moved_to = 'retur'");
-                }
-            }
             // Retrieve from live if no records found
             while ($retrieve_count == 0 && $dbquery->count() == 0) {
                 Log::info('No records found in database, fetching from live');
                 broadcast(new UserEvent('info', 'Info', 'Record tidak ditemukan di database, mengambil data dari live...', Auth::user()->id));
-                PajakKeluaranDetail::getFromLive($request->pt, $request->brand, $request->depo, $periode_awal, $periode_akhir, $tipe, $chstatus);
+                PajakKeluaranDetail::getFromLive($request->pt, $request->brand, $request->depo, $filters['periode_awal'], $filters['periode_akhir'], $filters['tipe'], $filters['chstatus']);
                 $retrieve_count = 1;
             }
             // Total records
@@ -258,10 +133,18 @@ class RegulerController extends Controller
                 $item->is_checked = $isChecked;
                 $item->save();
             }
-            if ($request->has('ids')) {
-                $ids = $request->input('ids');
-                $isChecked = $request->input('is_checked');
+            if ($request->has('select_all') && $request->select_all == 1) {
+                // Determine scope: 'all' or 'ids'
+                // If ids are sent, it might be visible only, but if select_all is flagged, 
+                // we probably want to filter by query query params which should be passed.
+                // However, the standard DataTables params must be present.
+                
+                $dbquery = DB::table('pajak_keluaran_details');
+                $this->applyFilters($dbquery, $request);
+                $dbquery->update(['is_checked' => $isChecked]);
 
+            } elseif ($request->has('ids')) {
+                $ids = $request->input('ids');
                 PajakKeluaranDetail::whereIn('id', $ids)->update(['is_checked' => $isChecked]);
             }
 
@@ -514,5 +397,149 @@ class RegulerController extends Controller
         } catch (\Throwable $th) {
             return redirect()->back()->with('error', 'Import gagal: '.$th->getMessage());
         }
+    }
+
+    private function applyFilters($dbquery, Request $request)
+    {
+        $metadata = [
+            'periode_awal' => null,
+            'periode_akhir' => null,
+            'tipe' => '',
+            'chstatus' => ''
+        ];
+
+        $searchValue = $request->get('search')['value'] ?? '';
+
+        // Column specific filters
+        if ($request->has('columns')) {
+            foreach ($request->get('columns') as $column) {
+                if (! empty($column['search']['value'])) {
+                    $dbquery->where($column['data'], 'like', "%{$column['search']['value']}%");
+                }
+            }
+        }
+
+        // Filtering by search value
+        if (! empty($searchValue)) {
+            $dbquery->where(function ($q) use ($searchValue) {
+                $q->where('no_invoice', 'like', "%{$searchValue}%")
+                    ->orWhere('no_do', 'like', "%{$searchValue}%")
+                    ->orWhere('kode_produk', 'like', "%{$searchValue}%")
+                    ->orWhere('nama_produk', 'like', "%{$searchValue}%")
+                    ->orWhere('brand', 'like', "%{$searchValue}%")
+                    ->orWhere('depo', 'like', "%{$searchValue}%")
+                    ->orWhere('customer_id', 'like', "%{$searchValue}%")
+                    ->orWhere('nik', 'like', "%{$searchValue}%")
+                    ->orWhere('nama_customer_sistem', 'like', "%{$searchValue}%");
+            });
+        }
+        // Additional filters
+        if ($request->has('pt') && ! in_array('all', $request->pt ?? [])) {
+            $dbquery->whereRaw("company IN ('".implode("','", $request->pt)."')");
+        }
+        if ($request->has('brand') && ! in_array('all', $request->brand ?? [])) {
+            $dbquery->whereRaw("brand IN ('".implode("','", $request->brand)."')");
+        }
+        if ($request->has('depo') && ! in_array('all', $request->depo ?? [])) {
+            $userInfo = getLoggedInUserInfo();
+            
+            // If user has specific depo access, intersect requested depos with allowed depos
+            if ($userInfo && !in_array('all', $userInfo->depo)) {
+                // Filter requested depos that user actually has access to
+                $allowedDepos = MasterDepo::whereIn('code', $userInfo->depo)->get()->pluck('name')->toArray();
+                
+                // Get names of requested depos
+                $requestedDepos = MasterDepo::whereIn('code', $request->depo)->get()->pluck('name')->toArray();
+                
+                // Intersect to ensure user only accesses allowed depos
+                $validDepos = array_intersect($requestedDepos, $allowedDepos);
+                
+                if (!empty($validDepos)) {
+                     $dbquery->whereIn('depo', $validDepos);
+                } else {
+                    // If intersection is empty (user requesting access to unauthorized depos), return no results
+                     $dbquery->whereRaw("1 = 0");
+                }
+            } else {
+                // User has 'all' access, so just use requested depos
+                 $depos = MasterDepo::whereIn('code', $request->depo)->get()->pluck('name')->toArray();
+                 $dbquery->whereIn('depo', $depos);
+            }
+        } elseif ($request->has('depo') && in_array('all', $request->depo ?? [])) {
+             // Logic for 'all' selection
+             $userInfo = getLoggedInUserInfo();
+             if ($userInfo && !in_array('all', $userInfo->depo)) {
+                $depo = MasterDepo::whereIn('code', $userInfo->depo)->get()->pluck('name')->toArray();
+                $dbquery->whereIn('depo', $depo);
+             }
+        }
+        if ($request->has('periode') && ! empty($request->periode)) {
+            $periode = explode(' - ', $request->periode);
+            if (count($periode) === 2) {
+                $metadata['periode_awal'] = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[0])->format('Y-m-d');
+                $metadata['periode_akhir'] = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[1])->format('Y-m-d');
+                $dbquery->whereRaw("tgl_faktur_pajak >= '{$metadata['periode_awal']}' AND tgl_faktur_pajak <= '{$metadata['periode_akhir']}'");
+            }
+        }
+        if ($request->has('chstatus')) {
+            switch ($request->chstatus) {
+                case 'checked-ready2download':
+                    $dbquery->where('is_checked', 1);
+                    $metadata['chstatus'] = ' AND is_checked = 1';
+                    break;
+
+                case 'unchecked':
+                    $dbquery->where('is_checked', 0);
+                    $metadata['chstatus'] = ' AND is_checked = 0';
+                    break;
+
+                case 'checked-downloaded':
+                    $dbquery->where('is_checked', 1);
+                    $dbquery->where('is_downloaded', 1);
+                    $metadata['chstatus'] = ' AND is_checked = 1 AND is_downloaded = 1';
+                    break;
+
+                default:
+                    break;
+            }
+        }
+        if ($request->has('tipe')) {
+            $pkp = MasterPkp::all()->pluck('IDPelanggan')->toArray();
+            if ($request->tipe == 'pkp') {
+                $dbquery->whereRaw("
+                (
+                    tipe_ppn = 'PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp)
+                )
+                OR
+                (has_moved = 'y' AND moved_to = 'pkp')");
+                $metadata['tipe'] = " AND e.szTaxTypeId = 'PPN' AND a.szCustId IN ('".implode("','", $pkp)."')";
+            }
+            if ($request->tipe == 'pkpnppn') {
+                $dbquery->whereRaw("
+                (
+                    tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp)
+                ) OR (has_moved = 'y' AND moved_to = 'pkpnppn')");
+                $metadata['tipe'] = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId IN ('".implode("','", $pkp)."')";
+            }
+            if ($request->tipe == 'npkp') {
+                $dbquery->whereRaw("
+                (
+                    tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000) AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
+                ) OR (has_moved = 'y' AND moved_to = 'npkp')");
+                $metadata['tipe'] = " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN ('".implode("','", $pkp)."')";
+            }
+            if ($request->tipe == 'npkpnppn') {
+                $dbquery->whereRaw("
+                (
+                    tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp)
+                ) OR (has_moved = 'y' AND moved_to = 'npkpnppn')");
+                $metadata['tipe'] = " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId NOT IN ('".implode("','", $pkp)."')";
+            }
+            if ($request->tipe == 'retur') {
+                $dbquery->whereRaw("qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000 AND has_moved = 'n' OR moved_to = 'retur'");
+            }
+        }
+        
+        return $metadata;
     }
 }
