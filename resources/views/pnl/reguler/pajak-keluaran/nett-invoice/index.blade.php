@@ -10,7 +10,6 @@
                     <h6 class="op-7 mb-2"></h6>
                 </div>
             </div>
-
         </div>
     </div>
 @endsection

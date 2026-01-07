@@ -77,16 +77,38 @@ class RegulerController extends Controller
             if ($request->has('brand') && ! in_array('all', $request->brand)) {
                 $dbquery->whereRaw("brand IN ('".implode("','", $request->brand)."')");
             }
-            if ($request->has('depo') && $request->depo == 'all') {
+            if ($request->has('depo') && ! in_array('all', $request->depo)) {
                 $userInfo = getLoggedInUserInfo();
+                
+                // If user has specific depo access, intersect requested depos with allowed depos
                 if ($userInfo && !in_array('all', $userInfo->depo)) {
+                    // Filter requested depos that user actually has access to
+                    $allowedDepos = MasterDepo::whereIn('code', $userInfo->depo)->get()->pluck('name')->toArray();
+                    
+                    // Get names of requested depos
+                    $requestedDepos = MasterDepo::whereIn('code', $request->depo)->get()->pluck('name')->toArray();
+                    
+                    // Intersect to ensure user only accesses allowed depos
+                    $validDepos = array_intersect($requestedDepos, $allowedDepos);
+                    
+                    if (!empty($validDepos)) {
+                         $dbquery->whereIn('depo', $validDepos);
+                    } else {
+                        // If intersection is empty (user requesting access to unauthorized depos), return no results
+                         $dbquery->whereRaw("1 = 0");
+                    }
+                } else {
+                    // User has 'all' access, so just use requested depos
+                     $depos = MasterDepo::whereIn('code', $request->depo)->get()->pluck('name')->toArray();
+                     $dbquery->whereIn('depo', $depos);
+                }
+            } elseif ($request->has('depo') && in_array('all', $request->depo)) {
+                 // Logic for 'all' selection
+                 $userInfo = getLoggedInUserInfo();
+                 if ($userInfo && !in_array('all', $userInfo->depo)) {
                     $depo = MasterDepo::whereIn('code', $userInfo->depo)->get()->pluck('name')->toArray();
                     $dbquery->whereIn('depo', $depo);
-                }
-            }
-            if ($request->has('depo') && $request->depo != 'all') {
-                $depo = MasterDepo::where('code', $request->depo)->first();
-                $dbquery->whereRaw("depo = '$depo->name'");
+                 }
             }
             if ($request->has('periode') && ! empty($request->periode)) {
                 $periode = explode(' - ', $request->periode);
@@ -259,9 +281,14 @@ class RegulerController extends Controller
     {
         try {
             $tipe = $request->query('tipe') ?? 'all';
-            $pt = $request->pt ?? 'all';
-            $brand = $request->brand ?? 'all';
-            $depo = $request->depo ?? 'all';
+            $pt = $request->pt ?? ['all'];
+            $brand = $request->brand ?? ['all'];
+            $depo = $request->depo ?? ['all'];
+            
+            // Ensure inputs are arrays
+            if (!is_array($pt)) $pt = [$pt];
+            if (!is_array($brand)) $brand = [$brand];
+            if (!is_array($depo)) $depo = [$depo];
             $periode_awal = null;
             $periode_akhir = null;
             if ($request->has('periode') && !empty($request->periode)) {
@@ -280,14 +307,15 @@ class RegulerController extends Controller
             ');
 
             // Additional filters
-            if ($pt != 'all') {
-                $query->where('company', $pt);
+            if (!in_array('all', $pt)) {
+                $query->whereIn('company', $pt);
             }
-            if ($brand != 'all') {
-                $query->where('brand', $brand);
+            if (!in_array('all', $brand)) {
+               $query->whereIn('brand', $brand);
             }
-            if ($depo != 'all') {
-                $query->where('depo', $depo);
+            if (!in_array('all', $depo)) {
+                $depoNames = MasterDepo::whereIn('code', $depo)->get()->pluck('name')->toArray();
+                $query->whereIn('depo', $depoNames);
             }
             if ($periode_awal && $periode_akhir) {
                 $query->where('tgl_faktur_pajak', '>=', $periode_awal)
@@ -400,10 +428,10 @@ class RegulerController extends Controller
                 $query->whereRaw("brand IN ('".implode("','", $request->brand)."')");
             }
 
-            if ($request->has('depo') && $request->depo != 'all') {
-                $depo = MasterDepo::where('code', $request->depo)->first();
-                if ($depo) {
-                    $query->whereRaw("depo = '$depo->name'");
+            if ($request->has('depo') && ! in_array('all', $request->depo)) {
+                $depos = MasterDepo::whereIn('code', $request->depo)->get()->pluck('name')->toArray();
+                if (!empty($depos)) {
+                     $query->whereIn('depo', $depos);
                 }
             }
 
