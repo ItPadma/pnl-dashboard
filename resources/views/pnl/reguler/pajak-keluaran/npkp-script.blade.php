@@ -243,6 +243,7 @@
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
                 setDownloadCounter('npkp');
+                showCheckedSummary('npkp', npkp_data);
             }
         });
     }

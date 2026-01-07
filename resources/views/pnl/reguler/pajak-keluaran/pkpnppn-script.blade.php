@@ -244,6 +244,7 @@
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
                 setDownloadCounter('pkpnppn');
+                showCheckedSummary('pkpnppn', pkpnppn_data);
             }
         });
     }

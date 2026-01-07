@@ -1097,6 +1097,18 @@
                     </div>
                 </div>
             </div>
+            <div class="row mt-2" id="page-summary-section">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Summary Selection</div>
+                        </div>
+                        <div class="card-body" id="summary-content">
+                            <div class="alert alert-info">Belum ada data yang dipilih.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 @endsection

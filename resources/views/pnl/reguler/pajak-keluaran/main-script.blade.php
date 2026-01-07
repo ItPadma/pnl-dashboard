@@ -13,26 +13,31 @@
                 tablePkp.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
+                showCheckedSummary('pkp', pkp_data);
             }
             if (target === '#tabpanel-nonpkp') {
                 tableNonPkp.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
+                showCheckedSummary('npkp', npkp_data);
             }
             if (target === '#tabpanel-pkpnppn') {
                 tablePkpNppn.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
+                showCheckedSummary('pkpnppn', pkpnppn_data);
             }
             if (target === '#tabpanel-nonpkpnppn') {
                 tableNonPkpNppn.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
+                showCheckedSummary('npkpnppn', npkpnppn_data);
             }
             if (target === '#tabpanel-retur') {
                 tableRetur.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
+                showCheckedSummary('retur', retur_data);
             }
         });
 
@@ -460,191 +465,6 @@
             showCheckedSummary('retur', retur_data);
         });
 
-        function toDecimal4(num) {
-            if (isNaN(num) || num === null) return '0.0000';
-            let val = parseFloat(num);
-            // Jika hasilnya sangat kecil, set ke 0
-            if (Math.abs(val) < 0.00005) val = 0;
-            return val.toLocaleString('en-US', {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4
-            });
-        }
-
-        function showCheckedSummary(tipe, src_data) {
-            const checkedRows = $('#table-' + tipe + ' tbody .row-checkbox-' + tipe + ':checked');
-            // Hapus summary sebelumnya
-            $('#table-' + tipe + ' tbody tr.summary-row').remove();
-
-            if (checkedRows.length === 0) return;
-
-            // Summary harga_total, disc, dpp, dpp_lain, ppn by customer id
-            const summaryData = checkedRows.toArray().reduce((acc, row) => {
-                const customerId = src_data.find(item => item.id == $(row).data('id'))?.customer_id ||
-                    'Unknown';
-                const hargaTotal = parseFloat(src_data.find(item => item.id == $(row).data('id'))
-                    ?.hargatotal_sblm_ppn || 0);
-                const disc = parseFloat(src_data.find(item => item.id == $(row).data('id'))?.disc || 0);
-                const dpp = parseFloat(src_data.find(item => item.id == $(row).data('id'))?.dpp || 0);
-                const dppLain = parseFloat(src_data.find(item => item.id == $(row).data('id'))
-                    ?.dpp_lain || 0);
-                const ppn = parseFloat(src_data.find(item => item.id == $(row).data('id'))?.ppn || 0);
-
-                if (!acc[customerId]) {
-                    acc[customerId] = {
-                        total_harga: 0,
-                        total_disc: 0,
-                        total_dpp: 0,
-                        total_dpp_lain: 0,
-                        total_ppn: 0
-                    };
-                }
-
-                acc[customerId].total_harga += hargaTotal;
-                acc[customerId].total_disc += disc;
-                acc[customerId].total_dpp += dpp;
-                acc[customerId].total_dpp_lain += dppLain;
-                acc[customerId].total_ppn += ppn;
-
-                return acc;
-            }, {});
-
-            // generate table from summary
-            let summaryTable = '';
-            let summaryTableRows = '';
-            for (const [customerId, totals] of Object.entries(summaryData)) {
-                summaryTableRows += `
-                        <tr>
-                            <td>${customerId}</td>
-                            <td>${toDecimal4(totals.total_harga)}</td>
-                            <td>${toDecimal4(totals.total_disc)}</td>
-                            <td>${toDecimal4(totals.total_dpp)}</td>
-                            <td>${toDecimal4(totals.total_dpp_lain)}</td>
-                            <td>${toDecimal4(totals.total_ppn)}</td>
-                        </tr>
-                    `;
-            }
-            summaryTable += `
-                    <table class="table table-bordered table-sm bg-primary" style="width: 20%; font-size: 12px;">
-                        <thead>
-                            <th style="padding:2px;">Customer ID</th>
-                            <th style="padding:2px;">Total Harga</th>
-                            <th style="padding:2px;">Total Disc</th>
-                            <th style="padding:2px;">Total DPP</th>
-                            <th style="padding:2px;">Total DPP Lain</th>
-                            <th style="padding:2px;">Total PPN</th>
-                        </thead>
-                        <tbody>
-                            ${summaryTableRows}
-                        </tbody>
-                    </table>
-                `;
-
-            // Ambil baris terakhir yang dicheck
-            const lastChecked = checkedRows.last().closest('tr');
-            // Buat elemen summary, generate table
-            const summaryHtml = `
-                    <tr class="summary-row bg-light">
-                        <td colspan="33">
-                            <b>Summary:</b>
-                            ${summaryTable}
-                        </td>
-                    </tr>
-                `;
-            // Sisipkan summary setelah baris terakhir yang dicheck
-            lastChecked.after(summaryHtml);
-        }
-
-        function reloadTableMoveFromMove2(move_from, move_to) {
-            // Mapping tipe ke variabel DataTable
-            const tableMap = {
-                pkp: tablePkp,
-                pkpnppn: tablePkpNppn,
-                npkp: tableNonPkp,
-                npkpnppn: tableNonPkpNppn,
-                retur: tableRetur
-            };
-
-            // Reload tabel asal
-            if (tableMap[move_from]) {
-                tableMap[move_from].ajax.reload();
-                setDownloadCounter(move_from);
-            }
-            // Reload tabel tujuan jika berbeda
-            if (move_to && move_to !== move_from && tableMap[move_to]) {
-                tableMap[move_to].ajax.reload();
-                setDownloadCounter(move_to);
-            }
-        }
-
-        // Event listener untuk select class move-to
-        $(document).on('change', '.move-to', function() {
-            const id = $(this).data('id');
-            const move_from = $(this).data('from');
-            const move_to = $(this).val();
-            if (move_from && move_to) {
-                $('.apply-move-to[data-for="' + move_from + '"]').prop('disabled', false);
-            }
-        });
-
-        // Event listener untuk tombol apply move-to
-        $(document).on('click', '.apply-move-to', function() {
-            const move_from = $(this).data('for');
-            applyMoveTo(move_from);
-        });
-
-        // Fungsi untuk mengaktifkan/menonaktifkan select move-to
-        function toggleMoveToSelect(id, isChecked) {
-            const moveToSelect = $('.move-to[data-id="' + id + '"]');
-            if (isChecked) {
-                moveToSelect.prop('disabled', false);
-            } else {
-                moveToSelect.prop('disabled', true);
-            }
-        }
-
-        // Event listener untuk tombol apply move-to
-        function applyMoveTo(from) {
-            const move_from = from;
-            // ambil nilai dari select dengan id move-to yang saat ini aktif (tidak disabled)
-            const move_to = $('select[id*="move-to-"]:not([disabled]):visible').val();
-            if (move_from && move_to) {
-                // Ambil semua ID dari checkbox yang dicentang
-                const ids = $('.row-checkbox-' + move_from).filter(':checked').map(function() {
-                    return $(this).data('id');
-                }).get();
-
-                if (ids.length > 0) {
-                    // Kirim AJAX request untuk memperbarui status di database
-                    $.ajax({
-                        url: "{{ route('pnl.reguler.pajak-keluaran.updateMove2') }}",
-                        type: "POST",
-                        data: {
-                            _token: '{{ csrf_token() }}',
-                            ids: ids,
-                            move_from: move_from,
-                            move_to: move_to
-                        },
-                        success: function(response) {
-                            if (response.status) {
-                                reloadTableMoveFromMove2(move_from, move_to);
-                                toastr.success(response.message);
-                            } else {
-                                toastr.error(response.message);
-                            }
-                        },
-                        error: function(xhr) {
-                            toastr.error(xhr.responseText);
-                        }
-                    });
-                } else {
-                    toastr.warning('Tidak ada data yang dipilih untuk dipindahkan.');
-                }
-            } else {
-                toastr.warning('Silakan pilih tipe pajak dan tujuan pemindahan.');
-            }
-        }
-
         // AJAX request untuk filter brand
         $.ajax({
             url: "{{ route('pnl.master-data.brands') }}",
@@ -779,4 +599,186 @@
             }
         });
     });
+
+    function toDecimal4(num) {
+        if (isNaN(num) || num === null) return '0.0000';
+        let val = parseFloat(num);
+        // Jika hasilnya sangat kecil, set ke 0
+        if (Math.abs(val) < 0.00005) val = 0;
+        return val.toLocaleString('en-US', {
+            minimumFractionDigits: 4,
+            maximumFractionDigits: 4
+        });
+    }
+
+    function showCheckedSummary(tipe, src_data) {
+        const checkedRows = $('#table-' + tipe + ' tbody .row-checkbox-' + tipe + ':checked');
+        // Hapus summary row lama di table jika masih ada (cleanup)
+        $('#table-' + tipe + ' tbody tr.summary-row').remove();
+
+        const summaryContainer = $('#summary-content');
+
+        if (checkedRows.length === 0) {
+            summaryContainer.html('<div class="alert alert-info">Belum ada data yang dipilih.</div>');
+            return;
+        }
+
+        // Summary harga_total, disc, dpp, dpp_lain, ppn by customer id
+        const summaryData = checkedRows.toArray().reduce((acc, row) => {
+            const item = src_data.find(d => d.id == $(row).data('id'));
+            if (!item) return acc;
+
+            const customerId = item.customer_id || 'Unknown';
+            const hargaTotal = parseFloat(item.hargatotal_sblm_ppn || 0);
+            const disc = parseFloat(item.disc || 0);
+            const dpp = parseFloat(item.dpp || 0);
+            const dppLain = parseFloat(item.dpp_lain || 0);
+            const ppn = parseFloat(item.ppn || 0);
+
+            if (!acc[customerId]) {
+                acc[customerId] = {
+                    total_harga: 0,
+                    total_disc: 0,
+                    total_dpp: 0,
+                    total_dpp_lain: 0,
+                    total_ppn: 0
+                };
+            }
+
+            acc[customerId].total_harga += hargaTotal;
+            acc[customerId].total_disc += disc;
+            acc[customerId].total_dpp += dpp;
+            acc[customerId].total_dpp_lain += dppLain;
+            acc[customerId].total_ppn += ppn;
+
+            return acc;
+        }, {});
+
+        // generate table from summary
+        let summaryTableRows = '';
+        for (const [customerId, totals] of Object.entries(summaryData)) {
+            summaryTableRows += `
+                    <tr>
+                        <td>${customerId}</td>
+                        <td>${toDecimal4(totals.total_harga)}</td>
+                        <td>${toDecimal4(totals.total_disc)}</td>
+                        <td>${toDecimal4(totals.total_dpp)}</td>
+                        <td>${toDecimal4(totals.total_dpp_lain)}</td>
+                        <td>${toDecimal4(totals.total_ppn)}</td>
+                    </tr>
+                `;
+        }
+
+        const summaryTable = `
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm table-striped table-hover">
+                        <thead class="bg-primary text-white">
+                            <tr>
+                                <th>Customer ID</th>
+                                <th>Total Harga</th>
+                                <th>Total Disc</th>
+                                <th>Total DPP</th>
+                                <th>Total DPP Lain</th>
+                                <th>Total PPN</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${summaryTableRows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+        summaryContainer.html(summaryTable);
+    }
+
+    function reloadTableMoveFromMove2(move_from, move_to) {
+        // Mapping tipe ke variabel DataTable
+        const tableMap = {
+            pkp: tablePkp,
+            pkpnppn: tablePkpNppn,
+            npkp: tableNonPkp,
+            npkpnppn: tableNonPkpNppn,
+            retur: tableRetur
+        };
+
+        // Reload tabel asal
+        if (tableMap[move_from]) {
+            tableMap[move_from].ajax.reload();
+            setDownloadCounter(move_from);
+        }
+        // Reload tabel tujuan jika berbeda
+        if (move_to && move_to !== move_from && tableMap[move_to]) {
+            tableMap[move_to].ajax.reload();
+            setDownloadCounter(move_to);
+        }
+    }
+
+    // Event listener untuk select class move-to
+    $(document).on('change', '.move-to', function() {
+        const id = $(this).data('id');
+        const move_from = $(this).data('from');
+        const move_to = $(this).val();
+        if (move_from && move_to) {
+            $('.apply-move-to[data-for="' + move_from + '"]').prop('disabled', false);
+        }
+    });
+
+    // Event listener untuk tombol apply move-to
+    $(document).on('click', '.apply-move-to', function() {
+        const move_from = $(this).data('for');
+        applyMoveTo(move_from);
+    });
+
+    // Fungsi untuk mengaktifkan/menonaktifkan select move-to
+    function toggleMoveToSelect(id, isChecked) {
+        const moveToSelect = $('.move-to[data-id="' + id + '"]');
+        if (isChecked) {
+            moveToSelect.prop('disabled', false);
+        } else {
+            moveToSelect.prop('disabled', true);
+        }
+    }
+
+    // Event listener untuk tombol apply move-to
+    function applyMoveTo(from) {
+        const move_from = from;
+        // ambil nilai dari select dengan id move-to yang saat ini aktif (tidak disabled)
+        const move_to = $('select[id*="move-to-"]:not([disabled]):visible').val();
+        if (move_from && move_to) {
+            // Ambil semua ID dari checkbox yang dicentang
+            const ids = $('.row-checkbox-' + move_from).filter(':checked').map(function() {
+                return $(this).data('id');
+            }).get();
+
+            if (ids.length > 0) {
+                // Kirim AJAX request untuk memperbarui status di database
+                $.ajax({
+                    url: "{{ route('pnl.reguler.pajak-keluaran.updateMove2') }}",
+                    type: "POST",
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        ids: ids,
+                        move_from: move_from,
+                        move_to: move_to
+                    },
+                    success: function(response) {
+                        if (response.status) {
+                            reloadTableMoveFromMove2(move_from, move_to);
+                            toastr.success(response.message);
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        toastr.error(xhr.responseText);
+                    }
+                });
+            } else {
+                toastr.warning('Tidak ada data yang dipilih untuk dipindahkan.');
+            }
+        } else {
+            toastr.warning('Silakan pilih tipe pajak dan tujuan pemindahan.');
+        }
+    }
 </script>

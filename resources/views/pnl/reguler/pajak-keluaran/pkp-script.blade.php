@@ -392,6 +392,7 @@
                 $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
 
                 setDownloadCounter('pkp');
+                showCheckedSummary('pkp', pkp_data);
             },
         });
     }
