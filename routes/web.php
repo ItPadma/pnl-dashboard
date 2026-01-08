@@ -53,6 +53,11 @@ Route::controller(RegulerController::class)->group(function () {
 Route::controller(NettInvoiceController::class)->group(function () {
     Route::middleware('menu.access:reguler-nett-invoice')->group(function() {
         Route::get('/pnl/reguler/nett-invoice', 'index')->name('pnl.reguler.nett-invoice.index')->middleware([AuthnCheck::class]);
+        Route::post('/pnl/reguler/nett-invoice/data', 'getData')->name('pnl.reguler.nett-invoice.data');
+        Route::post('/pnl/reguler/nett-invoice/detail', 'getInvoiceDetail')->name('pnl.reguler.nett-invoice.detail');
+        Route::post('/pnl/reguler/nett-invoice/retur-list', 'getReturList')->name('pnl.reguler.nett-invoice.retur-list');
+        Route::post('/pnl/reguler/nett-invoice/process', 'processNett')->name('pnl.reguler.nett-invoice.process');
+        Route::get('/pnl/reguler/nett-invoice/export', 'exportData')->name('pnl.reguler.nett-invoice.export');
     });
 });
 

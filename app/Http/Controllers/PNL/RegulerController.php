@@ -50,6 +50,7 @@ class RegulerController extends Controller
             // Query base
             $dbquery = DB::table('pajak_keluaran_details')->select('*');
             $filters = $this->applyFilters($dbquery, $request);
+            Log::info('periode: '.$request->periode);
 
             // Retrieve from live if no records found
             while ($retrieve_count == 0 && $dbquery->count() == 0) {
@@ -478,6 +479,10 @@ class RegulerController extends Controller
             if (count($periode) === 2) {
                 $metadata['periode_awal'] = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[0])->format('Y-m-d');
                 $metadata['periode_akhir'] = \Carbon\Carbon::createFromFormat('d/m/Y', $periode[1])->format('Y-m-d');
+                $dbquery->whereRaw("tgl_faktur_pajak >= '{$metadata['periode_awal']}' AND tgl_faktur_pajak <= '{$metadata['periode_akhir']}'");
+            } else {
+                 $metadata['periode_awal'] = \Carbon\Carbon::createFromFormat('d/m/Y', $request->periode)->format('Y-m-d');
+                 $metadata['periode_akhir'] = \Carbon\Carbon::createFromFormat('d/m/Y', $request->periode)->format('Y-m-d');
                 $dbquery->whereRaw("tgl_faktur_pajak >= '{$metadata['periode_awal']}' AND tgl_faktur_pajak <= '{$metadata['periode_akhir']}'");
             }
         }

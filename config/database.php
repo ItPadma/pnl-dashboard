@@ -138,7 +138,7 @@ return [
             'charset' => env('DB_LIVE_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            // 'encrypt' => env('DB_ENCRYPT', 'yes'),
+            'encrypt' => 'no',
             'trust_server_certificate' => env('DB_LIVE_TRUST_SERVER_CERTIFICATE', 'true'),
         ],
 
