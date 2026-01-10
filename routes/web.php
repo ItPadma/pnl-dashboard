@@ -107,8 +107,10 @@ Route::controller(SettingController::class)->group(function () {
 });
 
 Route::controller(MailSenderController::class)->group(function () {
-    Route::get('/utilities/mail-sender', 'index')->name('utilities.mail-sender.index')->middleware([AuthnCheck::class]);
-    Route::post('/utilities/mail-sender', 'send')->name('utilities.mail-sender.send')->middleware([AuthnCheck::class]);
+    Route::middleware('menu.access:utilities-mail-sender')->group(function() {
+        Route::get('/utilities/mail-sender', 'index')->name('utilities.mail-sender.index')->middleware([AuthnCheck::class]);
+        Route::post('/utilities/mail-sender', 'send')->name('utilities.mail-sender.send')->middleware([AuthnCheck::class]);
+    });
 });
 
 
