@@ -9,6 +9,7 @@ use App\Http\Controllers\PNL\NonRegulerController;
 use App\Http\Controllers\PNL\RegulerController;
 use App\Http\Controllers\User\AuthController;
 use App\Http\Controllers\Utilities\SettingController;
+use App\Http\Controllers\Utilities\MailSenderController;
 use App\Http\Middleware\AuthnCheck;
 
 
@@ -101,7 +102,13 @@ Route::controller(SettingController::class)->group(function () {
         Route::get('/pnl/setting/coretax-captcha-preview', 'coretaxCaptchaPreview')->name('pnl.setting.coretax.captcha.preview')->middleware([AuthnCheck::class]);
     });
     
+
     Route::get('/pnl/setting/generate-csrf-token', 'generateCsrfToken')->name('pnl.setting.generate.csrf.token');
+});
+
+Route::controller(MailSenderController::class)->group(function () {
+    Route::get('/utilities/mail-sender', 'index')->name('utilities.mail-sender.index')->middleware([AuthnCheck::class]);
+    Route::post('/utilities/mail-sender', 'send')->name('utilities.mail-sender.send')->middleware([AuthnCheck::class]);
 });
 
 
