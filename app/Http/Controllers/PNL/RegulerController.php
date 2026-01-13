@@ -24,6 +24,11 @@ class RegulerController extends Controller
         return view('pnl.reguler.pajak-keluaran.index');
     }
 
+    public function pkDbIndex()
+    {
+        return view('pnl.reguler.pajak-keluaran.index_db');
+    }
+
     public function pmIndex()
     {
         return view('pnl.reguler.pajak-masukan.index');
@@ -59,6 +64,48 @@ class RegulerController extends Controller
                 PajakKeluaranDetail::getFromLive($request->pt, $request->brand, $request->depo, $filters['periode_awal'], $filters['periode_akhir'], $filters['tipe'], $filters['chstatus']);
                 $retrieve_count = 1;
             }
+            // Total records
+            $totalRecords = $dbquery->count();
+            $totalRecordswithFilter = $dbquery->count();
+            $records = $dbquery->orderBy($columnName)
+                ->skip($start)
+                ->take($rowperpage)
+                ->get();
+
+            return response()->json([
+                'draw' => intval($draw),
+                'iTotalRecords' => $totalRecords,
+                'iTotalDisplayRecords' => $totalRecordswithFilter,
+                'aaData' => $records,
+                'status' => true,
+            ]);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => false,
+                'message' => $th->getMessage(),
+                'data' => [],
+            ]);
+        }
+    }
+
+    public function dtPKDbGetData(Request $request)
+    {
+        try {
+            $draw = $request->get('draw');
+            $start = $request->get('start');
+            $rowperpage = $request->get('length');
+            $columnIndex = $request->get('order')[0]['column'] ?? 0;
+            $columnName = $request->get('columns')[$columnIndex]['data'] ?? 'created_at';
+            $columnSortOrder = $request->get('order')[0]['dir'] ?? 'desc';
+            $searchValue = $request->get('search')['value'] ?? '';
+            $tipe = '';
+            $chstatus = '';
+            
+            // Query base
+            $dbquery = DB::table('pajak_keluaran_details')->select('*');
+            $this->applyFilters($dbquery, $request);
+            Log::info('periode (DB only): '.$request->periode);
+
             // Total records
             $totalRecords = $dbquery->count();
             $totalRecordswithFilter = $dbquery->count();

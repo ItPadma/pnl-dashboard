@@ -62,6 +62,16 @@ class MenuSeeder extends Seeder
                 'type' => 'item',
             ],
             [
+                'name' => 'Pajak Keluaran (DB Only)',
+                'slug' => 'reguler-pajak-keluaran-db',
+                'route_name' => 'pnl.reguler.pajak-keluaran-db.index',
+                'icon' => 'far fa-file-alt',
+                'parent_id' => null, 
+                'order' => 2,
+                'is_active' => true,
+                'type' => 'item',
+            ],
+            [
                 'name' => 'Pajak Masukan',
                 'slug' => 'reguler-pajak-masukan',
                 'route_name' => 'pnl.reguler.pajak-masukan.index',
@@ -218,6 +228,7 @@ class MenuSeeder extends Seeder
         // Relationships Map (Child Slug => Parent Slug)
         $relationships = [
             'reguler-pajak-keluaran' => 'reguler',
+            'reguler-pajak-keluaran-db' => 'reguler',
             'reguler-pajak-masukan' => 'reguler',
             'reguler-upload-csv' => 'reguler',
             'non-reguler-pajak-keluaran' => 'non-reguler',

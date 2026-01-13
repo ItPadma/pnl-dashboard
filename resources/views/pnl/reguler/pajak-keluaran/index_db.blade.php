@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'Pajak Keluaran - Reguler | PNL')
+@section('title', 'Pajak Keluaran (DB) - Reguler | PNL')
 
 @section('style')
     <link rel="stylesheet" href="{{ asset('assets/css/daterangepicker.css') }}">
@@ -100,7 +100,7 @@
     <div class="container">
         <div class="page-inner">
             <div class="page-header">
-                <h3 class="fw-bold mb-3">Pajak Keluaran</h3>
+                <h3 class="fw-bold mb-3">Pajak Keluaran (DB)</h3>
                 <ul class="breadcrumbs mb-3">
                     <li class="nav-home">
                         <a href="/">
@@ -1114,6 +1114,6 @@
 @endsection
 
 @php
-    $dtDataRoute = route('pnl.reguler.pajak-keluaran.dtdata');
+    $dtDataRoute = route('pnl.reguler.pajak-keluaran-db.dtdata');
 @endphp
 @include('pnl.reguler.pajak-keluaran.script')

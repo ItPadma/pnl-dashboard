@@ -32,6 +32,8 @@ Route::controller(RegulerController::class)->group(function () {
     Route::middleware('menu.access:reguler-pajak-keluaran')->group(function() {
         Route::get('/pnl/reguler/pajak-keluaran', 'pkIndex')->name('pnl.reguler.pajak-keluaran.index')->middleware([AuthnCheck::class]);
         Route::post('/pnl/reguler/pajak-keluaran/dtdata', 'dtPKGetData')->name('pnl.reguler.pajak-keluaran.dtdata');
+        Route::get('/pnl/reguler/pajak-keluaran-db', 'pkDbIndex')->name('pnl.reguler.pajak-keluaran-db.index')->middleware([AuthnCheck::class]);
+        Route::post('/pnl/reguler/pajak-keluaran-db/dtdata', 'dtPKDbGetData')->name('pnl.reguler.pajak-keluaran-db.dtdata');
         Route::post('/pnl/reguler/pajak-keluaran/update-checked', 'updateChecked')->name('pnl.reguler.pajak-keluaran.updateChecked');
         Route::post('/pnl/reguler/pajak-keluaran/update-move2', 'updateMove2')->name('pnl.reguler.pajak-keluaran.updateMove2');
         Route::get('/pnl/reguler/pajak-keluaran/export', 'download')->name('pnl.reguler.pajak-keluaran.download');

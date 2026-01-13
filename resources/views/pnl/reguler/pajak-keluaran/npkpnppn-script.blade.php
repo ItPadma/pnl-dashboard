@@ -9,7 +9,7 @@
             processing: true,
             serverSide: true,
             ajax: {
-                url: "{{ route('pnl.reguler.pajak-keluaran.dtdata') }}",
+                url: "{{ $dtDataRoute }}",
                 type: "POST",
                 data: function(d) {
                     d.pt = $('#filter_pt').val();
