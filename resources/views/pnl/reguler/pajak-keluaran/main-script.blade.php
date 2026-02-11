@@ -1,39 +1,59 @@
 <script>
     $(document).ready(function() {
-        initializeDataTablePkp();
-        initializeDataTableNonPkp();
-        initializeDataTablePkpNppn();
-        initializeDataTableNonPkpNppn();
-        initializeDataTableRetur();
+        const tableInitialized = {
+            pkp: false,
+            pkpnppn: false,
+            npkp: false,
+            npkpnppn: false,
+            retur: false
+        };
+
+        const initTableIfNeeded = (tipe) => {
+            if (tableInitialized[tipe]) {
+                return;
+            }
+            if (tipe === 'pkp') {
+                initializeDataTablePkp();
+            } else if (tipe === 'pkpnppn') {
+                initializeDataTablePkpNppn();
+            } else if (tipe === 'npkp') {
+                initializeDataTableNonPkp();
+            } else if (tipe === 'npkpnppn') {
+                initializeDataTableNonPkpNppn();
+            } else if (tipe === 'retur') {
+                initializeDataTableRetur();
+            }
+            tableInitialized[tipe] = true;
+        };
 
         // Event listener untuk tab switching
         $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
             const target = $(e.target).attr('href');
-            if (target === '#tabpanel-pkp') {
+            if (target === '#tabpanel-pkp' && tableInitialized.pkp && tablePkp) {
                 tablePkp.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
                 showCheckedSummary('pkp', pkp_data);
             }
-            if (target === '#tabpanel-nonpkp') {
+            if (target === '#tabpanel-nonpkp' && tableInitialized.npkp && tableNonPkp) {
                 tableNonPkp.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
                 showCheckedSummary('npkp', npkp_data);
             }
-            if (target === '#tabpanel-pkpnppn') {
+            if (target === '#tabpanel-pkpnppn' && tableInitialized.pkpnppn && tablePkpNppn) {
                 tablePkpNppn.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
                 showCheckedSummary('pkpnppn', pkpnppn_data);
             }
-            if (target === '#tabpanel-nonpkpnppn') {
+            if (target === '#tabpanel-nonpkpnppn' && tableInitialized.npkpnppn && tableNonPkpNppn) {
                 tableNonPkpNppn.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
                 showCheckedSummary('npkpnppn', npkpnppn_data);
             }
-            if (target === '#tabpanel-retur') {
+            if (target === '#tabpanel-retur' && tableInitialized.retur && tableRetur) {
                 tableRetur.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
@@ -44,32 +64,38 @@
         // Add change event listeners to filters
         $('#btn-apply-filter').on('click', function() {
             let appllied_tab = $('#inputGroupFilter').val();
+
+            const reloadTable = (tipe) => {
+                initTableIfNeeded(tipe);
+                if (tipe === 'pkp' && tablePkp) {
+                    tablePkp.ajax.reload();
+                } else if (tipe === 'pkpnppn' && tablePkpNppn) {
+                    tablePkpNppn.ajax.reload();
+                } else if (tipe === 'npkp' && tableNonPkp) {
+                    tableNonPkp.ajax.reload();
+                } else if (tipe === 'npkpnppn' && tableNonPkpNppn) {
+                    tableNonPkpNppn.ajax.reload();
+                } else if (tipe === 'retur' && tableRetur) {
+                    tableRetur.ajax.reload();
+                }
+
+                if (tableInitialized[tipe]) {
+                    setDownloadCounter(tipe);
+                }
+            };
+
             if (appllied_tab == 'pkp') {
-                tablePkp.ajax.reload();
-                setDownloadCounter('pkp');
+                reloadTable('pkp');
             } else if (appllied_tab === 'pkpnppn') {
-                tablePkpNppn.ajax.reload();
-                setDownloadCounter('pkpnppn');
+                reloadTable('pkpnppn');
             } else if (appllied_tab === 'npkp') {
-                tableNonPkp.ajax.reload();
-                setDownloadCounter('npkp');
+                reloadTable('npkp');
             } else if (appllied_tab === 'npkpnppn') {
-                tableNonPkpNppn.ajax.reload();
-                setDownloadCounter('npkpnppn');
+                reloadTable('npkpnppn');
             } else if (appllied_tab === 'retur') {
-                tableRetur.ajax.reload();
-                setDownloadCounter('retur');
+                reloadTable('retur');
             } else {
-                tablePkp.ajax.reload();
-                tablePkpNppn.ajax.reload();
-                tableNonPkp.ajax.reload();
-                tableNonPkpNppn.ajax.reload();
-                tableRetur.ajax.reload();
-                setDownloadCounter('pkp');
-                setDownloadCounter('pkpnppn');
-                setDownloadCounter('npkp');
-                setDownloadCounter('npkpnppn');
-                setDownloadCounter('retur');
+                ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur'].forEach(reloadTable);
             }
         });
 
@@ -132,19 +158,27 @@
 
             // Add event listener for date change
             $('input[name="filter_periode"]').on('apply.daterangepicker', function(ev, picker) {
-                // Reload all tables when date changes
-                if (tablePkp) tablePkp.ajax.reload();
-                if (tablePkpNppn) tablePkpNppn.ajax.reload();
-                if (tableNonPkp) tableNonPkp.ajax.reload();
-                if (tableNonPkpNppn) tableNonPkpNppn.ajax.reload();
-                if (tableRetur) tableRetur.ajax.reload();
-
-                // Update counters
-                setDownloadCounter('pkp');
-                setDownloadCounter('pkpnppn');
-                setDownloadCounter('npkp');
-                setDownloadCounter('npkpnppn');
-                setDownloadCounter('retur');
+                // Reload tables only if they've been initialized
+                if (tableInitialized.pkp && tablePkp) {
+                    tablePkp.ajax.reload();
+                    setDownloadCounter('pkp');
+                }
+                if (tableInitialized.pkpnppn && tablePkpNppn) {
+                    tablePkpNppn.ajax.reload();
+                    setDownloadCounter('pkpnppn');
+                }
+                if (tableInitialized.npkp && tableNonPkp) {
+                    tableNonPkp.ajax.reload();
+                    setDownloadCounter('npkp');
+                }
+                if (tableInitialized.npkpnppn && tableNonPkpNppn) {
+                    tableNonPkpNppn.ajax.reload();
+                    setDownloadCounter('npkpnppn');
+                }
+                if (tableInitialized.retur && tableRetur) {
+                    tableRetur.ajax.reload();
+                    setDownloadCounter('retur');
+                }
             });
         }
 

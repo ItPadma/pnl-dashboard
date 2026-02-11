@@ -28,7 +28,7 @@
     <div class="container">
         <div class="page-inner">
             <div class="page-header">
-                <h3 class="fw-bold mb-3">Nett Invoice</h3>
+                <h3 class="fw-bold mb-3">Nett Invoice Non-PKP</h3>
                 <ul class="breadcrumbs mb-3">
                     <li class="nav-home">
                         <a href="/">
@@ -93,14 +93,10 @@
             <div class="row mb-3">
                 <div class="col-md-3 col-sm-12">
                     <div class="form-group form-group-default">
-                        <label for="filter_tipe">TIPE</label>
+                        <label for="filter_tipe">TIPE (Fokus Netting)</label>
                         <select class="form-select" id="filter_tipe">
-                            <option value="all" selected>--ALL--</option>
-                            <option value="pkp">PKP</option>
-                            <option value="pkpnppn">PKP (Non-PPN)</option>
-                            <option value="npkp">Non-PKP</option>
-                            <option value="npkpnppn">Non-PKP (Non-PPN)</option>
-                            <option value="retur">Retur</option>
+                            <option value="npkp" selected>Invoice Non-PKP</option>
+                            <option value="retur">Invoice Retur (Bebas)</option>
                         </select>
                     </div>
                 </div>
@@ -186,7 +182,7 @@
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalReturLabel">Pilih Invoice Retur</h5>
+                    <h5 class="modal-title" id="modalReturLabel">Pilih Invoice Retur (Bebas)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -197,7 +193,7 @@
                                 <th><input type="checkbox" id="select-all-retur"></th>
                                 <th>Kode Pelanggan</th>
                                 <th>Nama Pelanggan</th>
-                                <th>No Invoice Retur</th>
+                                <th>No Invoice Retur (Bebas)</th>
                                 <th>Nilai Retur</th>
                             </tr>
                         </thead>
