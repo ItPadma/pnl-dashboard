@@ -4,12 +4,14 @@ namespace App\Http\Controllers\PNL;
 
 use App\Events\UserEvent;
 use App\Exports\PajakKeluaranDetailExport;
+use App\Exports\PajakKeluaranTemplateExport;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Utilities\LogController;
 use App\Imports\PajakMasukanCoretaxImport;
 use App\Models\MasterDepo;
 use App\Models\MasterPkp;
 use App\Models\PajakKeluaranDetail;
+use App\Models\NettInvoiceHeader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\AccessGroup;
@@ -110,22 +112,117 @@ class RegulerController extends Controller
                 $request->get("columns")[$columnIndex]["data"] ?? "created_at";
             $columnSortOrder = $request->get("order")[0]["dir"] ?? "desc";
             $searchValue = $request->get("search")["value"] ?? "";
-            $tipe = "";
-            $chstatus = "";
+            $grouped = $request->get("grouped") ?? false;
 
             // Query base
             $dbquery = DB::table("pajak_keluaran_details")->select("*");
             $this->applyFilters($dbquery, $request);
             Log::info("periode (DB only): " . $request->periode);
 
-            // Total records
-            $totalRecords = $dbquery->count();
-            $totalRecordswithFilter = $dbquery->count();
-            $records = $dbquery
-                ->orderBy($columnName)
-                ->skip($start)
-                ->take($rowperpage)
-                ->get();
+            if ($grouped) {
+                // Get all records for grouping
+                $allRecords = $dbquery->orderBy($columnName, $columnSortOrder)->get();
+                
+                // Group by invoice
+                $groupedData = [];
+                foreach ($allRecords as $record) {
+                    $invoiceKey = $record->no_invoice;
+                    
+                    if (!isset($groupedData[$invoiceKey])) {
+                        // Create invoice-level record
+                        $groupedData[$invoiceKey] = [
+                            'no_invoice' => $record->no_invoice,
+                            'customer_id' => $record->customer_id,
+                            'nik' => $record->nik,
+                            'nama_customer_sistem' => $record->nama_customer_sistem,
+                            'npwp_customer' => $record->npwp_customer,
+                            'no_do' => $record->no_do,
+                            'tgl_faktur_pajak' => $record->tgl_faktur_pajak,
+                            'alamat_sistem' => $record->alamat_sistem,
+                            'type_pajak' => $record->type_pajak,
+                            'nama_sesuai_npwp' => $record->nama_sesuai_npwp,
+                            'alamat_npwp_lengkap' => $record->alamat_npwp_lengkap,
+                            'no_telepon' => $record->no_telepon,
+                            'no_fp' => $record->no_fp,
+                            'brand' => $record->brand,
+                            'depo' => $record->depo,
+                            'area' => $record->area,
+                            'type_jual' => $record->type_jual,
+                            'kode_jenis_fp' => $record->kode_jenis_fp,
+                            'fp_normal_pengganti' => $record->fp_normal_pengganti,
+                            'id_tku_pembeli' => $record->id_tku_pembeli,
+                            'barang_jasa' => $record->barang_jasa,
+                            'is_checked' => $record->is_checked,
+                            'is_downloaded' => $record->is_downloaded,
+                            'total_hargatotal' => 0,
+                            'total_disc' => 0,
+                            'total_dpp' => 0,
+                            'total_dpp_lain' => 0,
+                            'total_ppn' => 0,
+                            'products' => []
+                        ];
+                    }
+                    
+                    // Add product to invoice
+                    $groupedData[$invoiceKey]['products'][] = [
+                        'kode_produk' => $record->kode_produk,
+                        'nama_produk' => $record->nama_produk,
+                        'satuan' => $record->satuan,
+                        'qty_pcs' => $record->qty_pcs,
+                        'hargasatuan_sblm_ppn' => $record->hargasatuan_sblm_ppn,
+                        'hargatotal_sblm_ppn' => $record->hargatotal_sblm_ppn,
+                        'disc' => $record->disc,
+                        'dpp' => $record->dpp,
+                        'dpp_lain' => $record->dpp_lain,
+                        'ppn' => $record->ppn
+                    ];
+                    
+                    // Accumulate totals
+                    $groupedData[$invoiceKey]['total_hargatotal'] += floatval($record->hargatotal_sblm_ppn ?? 0);
+                    $groupedData[$invoiceKey]['total_disc'] += floatval($record->disc ?? 0);
+                    $groupedData[$invoiceKey]['total_dpp'] += floatval($record->dpp ?? 0);
+                    $groupedData[$invoiceKey]['total_dpp_lain'] += floatval($record->dpp_lain ?? 0);
+                    $groupedData[$invoiceKey]['total_ppn'] += floatval($record->ppn ?? 0);
+                }
+                
+                // Convert to indexed array
+                $records = array_values($groupedData);
+
+                // Enrich with nett invoice data for Non-PKP tab
+                if ($request->tipe == 'npkp') {
+                    $invoiceNumbers = array_column($records, 'no_invoice');
+                    $nettHeaders = NettInvoiceHeader::whereIn('no_invoice', $invoiceNumbers)
+                        ->pluck('invoice_value_nett', 'no_invoice')
+                        ->toArray();
+
+                    foreach ($records as &$record) {
+                        if (isset($nettHeaders[$record['no_invoice']])) {
+                            $record['nett_dpp_ppn'] = floatval($nettHeaders[$record['no_invoice']]);
+                            $record['is_netted'] = true;
+                        } else {
+                            $record['nett_dpp_ppn'] = null;
+                            $record['is_netted'] = false;
+                        }
+                    }
+                    unset($record);
+                }
+
+                $totalRecords = count($records);
+                $totalRecordswithFilter = count($records);
+                
+                // Apply pagination
+                $records = array_slice($records, $start, $rowperpage);
+                
+            } else {
+                // Original ungrouped logic
+                $totalRecords = $dbquery->count();
+                $totalRecordswithFilter = $dbquery->count();
+                $records = $dbquery
+                    ->orderBy($columnName)
+                    ->skip($start)
+                    ->take($rowperpage)
+                    ->get();
+            }
 
             return response()->json([
                 "draw" => intval($draw),
@@ -157,6 +254,7 @@ class RegulerController extends Controller
                 $item->has_moved = "y";
                 $item->moved_to = $request->input("move_to");
                 $item->moved_at = now();
+                /** @var \App\Models\PajakKeluaranDetail $item */
                 $item->save();
                 LogController::createLog(
                     Auth::user()->id,
@@ -202,25 +300,40 @@ class RegulerController extends Controller
     {
         try {
             $isChecked = $request->input("is_checked");
+            
+            // Handle single ID update
             if ($request->has("id")) {
                 $id = $request->input("id");
-
                 $item = PajakKeluaranDetail::findOrFail($id);
                 $item->is_checked = $isChecked;
                 $item->save();
             }
+            
+            // Handle single invoice update
+            if ($request->has("invoice")) {
+                $invoice = $request->input("invoice");
+                PajakKeluaranDetail::where("no_invoice", $invoice)->update([
+                    "is_checked" => $isChecked,
+                ]);
+            }
+            
+            // Handle bulk select all (filters applied)
             if ($request->has("select_all") && $request->select_all == 1) {
-                // Determine scope: 'all' or 'ids'
-                // If ids are sent, it might be visible only, but if select_all is flagged,
-                // we probably want to filter by query query params which should be passed.
-                // However, the standard DataTables params must be present.
-
                 $dbquery = DB::table("pajak_keluaran_details");
                 $this->applyFilters($dbquery, $request);
                 $dbquery->update(["is_checked" => $isChecked]);
-            } elseif ($request->has("ids")) {
+            }
+            // Handle bulk IDs update
+            elseif ($request->has("ids")) {
                 $ids = $request->input("ids");
                 PajakKeluaranDetail::whereIn("id", $ids)->update([
+                    "is_checked" => $isChecked,
+                ]);
+            }
+            // Handle bulk invoices update
+            elseif ($request->has("invoices")) {
+                $invoices = $request->input("invoices");
+                PajakKeluaranDetail::whereIn("no_invoice", $invoices)->update([
                     "is_checked" => $isChecked,
                 ]);
             }
@@ -400,6 +513,42 @@ class RegulerController extends Controller
                 new PajakKeluaranDetailExport($tipe),
                 "pajak_keluaran_" . $tipe . ".xlsx",
                 $writerType,
+                $headers,
+            );
+        } catch (\Throwable $th) {
+            return response()->json(
+                [
+                    "status" => false,
+                    "message" => $th->getMessage(),
+                ],
+                500,
+            );
+        }
+    }
+
+    public function downloadDb(Request $request)
+    {
+        try {
+            if (
+                !Auth::user()->canAccessMenu(
+                    "reguler-pajak-keluaran",
+                    AccessGroup::LEVEL_READ_WRITE,
+                )
+            ) {
+                abort(403, "Unauthorized action.");
+            }
+            $tipe = $request->query("tipe");
+            $headers = [
+                "Content-Type" =>
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "Content-Disposition" =>
+                    'attachment; filename="pajak_keluaran_' . $tipe . '.xlsx"',
+            ];
+
+            return Excel::download(
+                new PajakKeluaranTemplateExport($tipe),
+                "pajak_keluaran_" . $tipe . ".xlsx",
+                "Xlsx",
                 $headers,
             );
         } catch (\Throwable $th) {
