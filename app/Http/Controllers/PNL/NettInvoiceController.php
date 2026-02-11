@@ -39,7 +39,7 @@ class NettInvoiceController extends Controller
                     DB::raw("SUM(dpp + ppn) as nilai_invoice"),
                     DB::raw("0 as nett_invoice"),
                 )
-                ->where("is_checked", 1)
+                // ->where("is_checked", 1)
                 ->where("is_downloaded", 0);
 
             // Apply filters
@@ -140,6 +140,12 @@ class NettInvoiceController extends Controller
                     ->orWhere("hargatotal_sblm_ppn", "<=", -1000000);
             });
 
+            // Exclude invoices that have already been netted
+            $nettedInvoices = NettInvoiceHeader::pluck("no_invoice")->toArray();
+            if (!empty($nettedInvoices)) {
+                $query->whereNotIn("no_invoice", $nettedInvoices);
+            }
+
             // Group by invoice
             $query->groupBy(
                 "customer_id",
@@ -147,8 +153,11 @@ class NettInvoiceController extends Controller
                 "no_invoice",
             );
 
-            // Get total records
-            $totalRecords = $query->count();
+            // Get total records (use subquery because of groupBy)
+            $countQuery = clone $query;
+            $totalRecords = DB::table(DB::raw("({$countQuery->toSql()}) as sub"))
+                ->mergeBindings($countQuery)
+                ->count();
 
             // log the query
             Log::info("Query: " . $query->toSql());
@@ -235,8 +244,8 @@ class NettInvoiceController extends Controller
                     "no_invoice",
                     DB::raw("ABS(SUM(dpp + ppn)) as nilai_retur"),
                 )
-                ->where("is_checked", 1)
                 ->where("is_downloaded", 0)
+                // ->where("is_checked", 1)
                 ->where(function ($subQuery) {
                     $subQuery
                         ->where(function ($innerQuery) {
@@ -581,15 +590,6 @@ class NettInvoiceController extends Controller
             }
 
             DB::commit();
-
-            broadcast(
-                new UserEvent(
-                    "success",
-                    "Nett Invoice",
-                    "Berhasil melakukan proses netting untuk invoice {$noInvoice}",
-                    Auth::user(),
-                ),
-            );
 
             return response()->json([
                 "status" => true,

@@ -186,7 +186,26 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Invoice: <strong id="selected-invoice"></strong></p>
+                    <div class="card bg-light mb-3">
+                        <div class="card-body py-2">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <small class="text-muted">No Invoice</small>
+                                    <p class="mb-0 fw-bold" id="selected-invoice"></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Pelanggan</small>
+                                    <p class="mb-0" id="selected-pelanggan"><span id="selected-kode-pelanggan"></span>
+                                        - <span id="selected-nama-pelanggan"></span></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Nilai Invoice (DPP+PPN)</small>
+                                    <p class="mb-0 fw-bold text-primary" id="selected-nilai-invoice"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <h6 class="mb-2">Daftar Invoice Retur (Bebas)</h6>
                     <table class="table table-sm table-bordered">
                         <thead>
                             <tr>

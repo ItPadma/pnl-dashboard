@@ -268,7 +268,11 @@
                         // Only show "Pilih Retur" button if nett_invoice is 0 (not yet netted)
                         if (row.nett_invoice == 0) {
                             buttons += `
-                                <button class="btn btn-sm btn-success btn-pilih-retur" data-invoice="${row.no_invoice}">
+                                <button class="btn btn-sm btn-success btn-pilih-retur" 
+                                    data-invoice="${row.no_invoice}"
+                                    data-kode="${row.kode_pelanggan}"
+                                    data-nama="${row.nama_pelanggan}"
+                                    data-nilai="${row.nilai_invoice}">
                                     <i class="fas fa-exchange-alt"></i> Pilih Retur
                                 </button>
                             `;
@@ -296,7 +300,12 @@
         // Event delegation for pilih retur button
         $('#table-nett-invoice tbody').on('click', '.btn-pilih-retur', function() {
             const noInvoice = $(this).data('invoice');
-            showReturModal(noInvoice);
+            const rowData = {
+                kode_pelanggan: $(this).data('kode'),
+                nama_pelanggan: $(this).data('nama'),
+                nilai_invoice: $(this).data('nilai')
+            };
+            showReturModal(noInvoice, rowData);
         });
     }
 
@@ -336,9 +345,17 @@
         });
     }
 
-    function showReturModal(noInvoice) {
+    function showReturModal(noInvoice, rowData) {
         currentInvoiceForNett = noInvoice;
         $('#selected-invoice').text(noInvoice);
+        $('#selected-kode-pelanggan').text(rowData.kode_pelanggan);
+        $('#selected-nama-pelanggan').text(rowData.nama_pelanggan);
+        $('#selected-nilai-invoice').text(
+            new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR'
+            }).format(rowData.nilai_invoice)
+        );
 
         $.ajax({
             url: '{{ route('pnl.reguler.nett-invoice.retur-list') }}',
