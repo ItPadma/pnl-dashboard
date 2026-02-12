@@ -138,4 +138,60 @@
             icon.show();
         }
     }
+
+    function downloadFilteredData() {
+        const tipe = $('#inputGroupFilter').val() || 'all';
+        const params = {
+            tipe: tipe,
+            pt: $('#filter_pt').val(),
+            brand: $('#filter_brand').val(),
+            depo: $('#filter_depo').val(),
+            periode: $('#filter_periode').val(),
+            chstatus: $('#filter_chstatus').val()
+        };
+
+        $.ajax({
+            url: "{{ route('pnl.reguler.pajak-keluaran.download') }}",
+            method: 'GET',
+            data: params,
+            xhrFields: {
+                responseType: 'blob'
+            },
+            beforeSend: function() {
+                $('#btn-download-filtered').prop('disabled', true);
+                $('#sp-download-filtered').prop('hidden', false);
+            },
+            success: function(response, status, xhr) {
+                const blob = new Blob([response], {
+                    type: xhr.getResponseHeader('Content-Type')
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+
+                let filename = 'pajak_keluaran_filtered.xlsx';
+                const contentDisposition = xhr.getResponseHeader('Content-Disposition');
+                if (contentDisposition && contentDisposition.indexOf('attachment') !== -1) {
+                    const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+                a.download = filename;
+
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            },
+            error: function(error) {
+                console.error('Error:', error);
+                toastr.error('Gagal mendownload data. Silakan coba lagi.', 'Error');
+            },
+            complete: function() {
+                $('#btn-download-filtered').prop('disabled', false);
+                $('#sp-download-filtered').prop('hidden', true);
+            }
+        });
+    }
 </script>

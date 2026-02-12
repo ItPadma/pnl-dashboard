@@ -291,7 +291,8 @@
                         <label for="filter_periode">PERIODE</label>
                         <div class="input-group">
                             <input type="text" class="form-control" name="filter_periode" id="filter_periode"
-                                placeholder="Pilih Periode" aria-label="Pilih Periode" value="{{ date('d/m/Y') }}" />
+                                placeholder="Pilih Periode" aria-label="Pilih Periode"
+                                value="{{ date('d/m/Y') }} - {{ date('d/m/Y') }}" />
                         </div>
                     </div>
                 </div>
@@ -319,6 +320,15 @@
                         </select>
                         <button class="btn btn-outline-primary" id="btn-apply-filter"><i class="fas fa-check"></i>
                             Filter</button>
+                        @if (Auth::user()->canAccessMenu('reguler-pajak-keluaran', \App\Models\AccessGroup::LEVEL_READ_WRITE))
+                            <button class="btn btn-outline-success ms-2" id="btn-download-filtered"
+                                onclick="downloadFilteredData()">
+                                <i class="fas fa-download"></i>
+                                <div class="spinner-border spinner-border-sm ms-1" id="sp-download-filtered"
+                                    role="status" hidden><span class="visually-hidden">Loading...</span></div>
+                                Download
+                            </button>
+                        @endif
                     </div>
                 </div>
                 <div class="row">

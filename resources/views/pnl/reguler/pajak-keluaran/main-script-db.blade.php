@@ -134,12 +134,19 @@
 
         // Function to initialize daterangepicker
         function initializeDateRangePicker() {
-            $('input[name="filter_periode"]').daterangepicker({
-                singleDatePicker: true,
+            const $periodeInput = $('input[name="filter_periode"]');
+
+            if ($periodeInput.data('daterangepicker')) {
+                $periodeInput.off('apply.daterangepicker');
+                $periodeInput.data('daterangepicker').remove();
+            }
+
+            $periodeInput.daterangepicker({
                 showDropdowns: true,
                 autoApply: true,
                 opens: 'left',
                 startDate: moment(),
+                endDate: moment(),
                 minDate: moment('2024-01-01'),
                 maxDate: moment().add(1, 'year'),
                 locale: {
@@ -161,7 +168,7 @@
             });
 
             // Add event listener for date change
-            $('input[name="filter_periode"]').on('apply.daterangepicker', function(ev, picker) {
+            $periodeInput.on('apply.daterangepicker', function(ev, picker) {
                 if (tableInitialized.pkp && tablePkpDb) {
                     tablePkpDb.ajax.reload();
                     setDownloadCounter('pkp');

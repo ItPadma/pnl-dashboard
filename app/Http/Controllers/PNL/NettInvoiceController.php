@@ -5,7 +5,6 @@ namespace App\Http\Controllers\PNL;
 use App\Events\UserEvent;
 use App\Exports\NettInvoiceExport;
 use App\Http\Controllers\Controller;
-use App\Models\MasterDepo;
 use App\Models\MasterPkp;
 use App\Models\NettInvoiceDetail;
 use App\Models\NettInvoiceDetailItem;
@@ -22,7 +21,7 @@ class NettInvoiceController extends Controller
 {
     public function index()
     {
-        return view("pnl.reguler.pajak-keluaran.nett-invoice.index");
+        return view('pnl.reguler.pajak-keluaran.nett-invoice.index');
     }
 
     /**
@@ -31,126 +30,127 @@ class NettInvoiceController extends Controller
     public function getData(Request $request)
     {
         try {
-            $query = DB::table("pajak_keluaran_details")
+            $query = DB::table('pajak_keluaran_details')
                 ->select(
-                    "customer_id as kode_pelanggan",
-                    "nama_customer_sistem as nama_pelanggan",
-                    "no_invoice",
-                    DB::raw("SUM(dpp + ppn) as nilai_invoice"),
-                    DB::raw("0 as nett_invoice"),
+                    'customer_id as kode_pelanggan',
+                    'nama_customer_sistem as nama_pelanggan',
+                    'no_invoice',
+                    DB::raw('SUM(dpp + ppn) as nilai_invoice'),
+                    DB::raw('0 as nett_invoice'),
                 )
                 // ->where("is_checked", 1)
-                ->where("is_downloaded", 0);
+                ->where('is_downloaded', 0);
 
             // Apply filters
-            if ($request->has("pt") && !in_array("all", $request->pt ?? [])) {
-                $query->whereIn("company", $request->pt);
+            if ($request->has('pt') && ! in_array('all', $request->pt ?? [])) {
+                $query->whereIn('company', $request->pt);
             }
 
             if (
-                $request->has("brand") &&
-                !in_array("all", $request->brand ?? [])
+                $request->has('brand') &&
+                ! in_array('all', $request->brand ?? [])
             ) {
-                $query->whereIn("brand", $request->brand);
+                $query->whereIn('brand', $request->brand);
             }
 
             if (
-                $request->has("depo") &&
-                !in_array("all", $request->depo ?? [])
+                $request->has('depo') &&
+                ! in_array('all', $request->depo ?? [])
             ) {
                 $userInfo = getLoggedInUserInfo();
 
-                if ($userInfo && !in_array("all", $userInfo->depo)) {
+                if ($userInfo && ! in_array('all', $userInfo->depo)) {
                     $allowedDepos = \App\Models\MasterDepo::whereIn(
-                        "code",
+                        'code',
                         $userInfo->depo,
                     )
                         ->get()
-                        ->pluck("name")
+                        ->pluck('name')
                         ->toArray();
                     $requestedDepos = \App\Models\MasterDepo::whereIn(
-                        "code",
+                        'code',
                         $request->depo,
                     )
                         ->get()
-                        ->pluck("name")
+                        ->pluck('name')
                         ->toArray();
                     $validDepos = array_intersect(
                         $requestedDepos,
                         $allowedDepos,
                     );
 
-                    if (!empty($validDepos)) {
-                        $query->whereIn("depo", $validDepos);
+                    if (! empty($validDepos)) {
+                        $query->whereIn('depo', $validDepos);
                     } else {
-                        $query->whereRaw("1 = 0");
+                        $query->whereRaw('1 = 0');
                     }
                 } else {
                     $depos = \App\Models\MasterDepo::whereIn(
-                        "code",
+                        'code',
                         $request->depo,
                     )
                         ->get()
-                        ->pluck("name")
+                        ->pluck('name')
                         ->toArray();
-                    $query->whereIn("depo", $depos);
+                    $query->whereIn('depo', $depos);
                 }
             } elseif (
-                $request->has("depo") &&
-                in_array("all", $request->depo ?? [])
+                $request->has('depo') &&
+                in_array('all', $request->depo ?? [])
             ) {
                 $userInfo = getLoggedInUserInfo();
-                if ($userInfo && !in_array("all", $userInfo->depo)) {
+                if ($userInfo && ! in_array('all', $userInfo->depo)) {
                     $depo = \App\Models\MasterDepo::whereIn(
-                        "code",
+                        'code',
                         $userInfo->depo,
                     )
                         ->get()
-                        ->pluck("name")
+                        ->pluck('name')
                         ->toArray();
-                    $query->whereIn("depo", $depo);
+                    $query->whereIn('depo', $depo);
                 }
             }
 
-            if ($request->has("periode") && !empty($request->periode)) {
-                $periode = explode(" - ", $request->periode);
+            if ($request->has('periode') && ! empty($request->periode)) {
+                $periode = explode(' - ', $request->periode);
                 if (count($periode) === 2) {
                     $periodeAwal = \Carbon\Carbon::createFromFormat(
-                        "d/m/Y",
+                        'd/m/Y',
                         $periode[0],
-                    )->format("Y-m-d");
+                    )->format('Y-m-d');
                     $periodeAkhir = \Carbon\Carbon::createFromFormat(
-                        "d/m/Y",
+                        'd/m/Y',
                         $periode[1],
-                    )->format("Y-m-d");
-                    $query->whereRaw(
-                        "tgl_faktur_pajak >= '{$periodeAwal}' AND tgl_faktur_pajak <= '{$periodeAkhir}'",
-                    );
+                    )->format('Y-m-d');
+                    $query->whereBetween('tgl_faktur_pajak', [
+                        $periodeAwal,
+                        $periodeAkhir,
+                    ]);
                 }
             }
 
             // Force Nett Invoice to only use Non-PKP invoices
-            $pkp = MasterPkp::all()->pluck("IDPelanggan")->toArray();
-            $query->whereNotIn("customer_id", $pkp);
-            $query->where("tipe_ppn", "PPN");
-            $query->where("qty_pcs", ">", 0);
+            $pkp = MasterPkp::where('is_active', true)->pluck('IDPelanggan')->toArray();
+            $query->whereNotIn('customer_id', $pkp);
+            $query->where('tipe_ppn', 'PPN');
+            $query->where('qty_pcs', '>', 0);
             $query->where(function ($subQuery) {
                 $subQuery
-                    ->where("hargatotal_sblm_ppn", ">", 0)
-                    ->orWhere("hargatotal_sblm_ppn", "<=", -1000000);
+                    ->where('hargatotal_sblm_ppn', '>', 0)
+                    ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
             });
 
             // Exclude invoices that have already been netted
-            $nettedInvoices = NettInvoiceHeader::pluck("no_invoice")->toArray();
-            if (!empty($nettedInvoices)) {
-                $query->whereNotIn("no_invoice", $nettedInvoices);
+            $nettedInvoices = NettInvoiceHeader::pluck('no_invoice')->toArray();
+            if (! empty($nettedInvoices)) {
+                $query->whereNotIn('no_invoice', $nettedInvoices);
             }
 
             // Group by invoice
             $query->groupBy(
-                "customer_id",
-                "nama_customer_sistem",
-                "no_invoice",
+                'customer_id',
+                'nama_customer_sistem',
+                'no_invoice',
             );
 
             // Get total records (use subquery because of groupBy)
@@ -160,18 +160,18 @@ class NettInvoiceController extends Controller
                 ->count();
 
             // log the query
-            Log::info("Query: " . $query->toSql());
+            Log::info('Query: '.$query->toSql());
 
             // Pagination
-            $start = $request->get("start", 0);
-            $length = $request->get("length", 10);
+            $start = $request->get('start', 0);
+            $length = $request->get('length', 10);
 
             $records = $query->offset($start)->limit($length)->get();
 
             // Check if any invoice has been netted
             foreach ($records as &$record) {
                 $nettHeader = NettInvoiceHeader::where(
-                    "no_invoice",
+                    'no_invoice',
                     $record->no_invoice,
                 )->first();
                 if ($nettHeader) {
@@ -180,20 +180,21 @@ class NettInvoiceController extends Controller
             }
 
             return response()->json([
-                "draw" => intval($request->get("draw")),
-                "recordsTotal" => $totalRecords,
-                "recordsFiltered" => $totalRecords,
-                "data" => $records,
+                'draw' => intval($request->get('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $totalRecords,
+                'data' => $records,
             ]);
         } catch (\Throwable $th) {
             Log::error(
-                "Error in NettInvoiceController@getData: " . $th->getMessage(),
+                'Error in NettInvoiceController@getData: '.$th->getMessage(),
             );
+
             return response()->json(
                 [
-                    "status" => false,
-                    "message" => $th->getMessage(),
-                    "data" => [],
+                    'status' => false,
+                    'message' => $th->getMessage(),
+                    'data' => [],
                 ],
                 500,
             );
@@ -208,23 +209,24 @@ class NettInvoiceController extends Controller
         try {
             $noInvoice = $request->no_invoice;
 
-            $items = PajakKeluaranDetail::where("no_invoice", $noInvoice)
-                ->select("kode_produk", "qty_pcs", "dpp", "ppn", "disc")
+            $items = PajakKeluaranDetail::where('no_invoice', $noInvoice)
+                ->select('kode_produk', 'qty_pcs', 'dpp', 'ppn', 'disc')
                 ->get();
 
             return response()->json([
-                "status" => true,
-                "data" => $items,
+                'status' => true,
+                'data' => $items,
             ]);
         } catch (\Throwable $th) {
             Log::error(
-                "Error in NettInvoiceController@getInvoiceDetail: " .
+                'Error in NettInvoiceController@getInvoiceDetail: '.
                     $th->getMessage(),
             );
+
             return response()->json(
                 [
-                    "status" => false,
-                    "message" => $th->getMessage(),
+                    'status' => false,
+                    'message' => $th->getMessage(),
                 ],
                 500,
             );
@@ -237,128 +239,130 @@ class NettInvoiceController extends Controller
     public function getReturList(Request $request)
     {
         try {
-            $query = DB::table("pajak_keluaran_details")
+            $query = DB::table('pajak_keluaran_details')
                 ->select(
-                    "customer_id as kode_pelanggan",
-                    "nama_customer_sistem as nama_pelanggan",
-                    "no_invoice",
-                    DB::raw("ABS(SUM(dpp + ppn)) as nilai_retur"),
+                    'customer_id as kode_pelanggan',
+                    'nama_customer_sistem as nama_pelanggan',
+                    'no_invoice',
+                    DB::raw('ABS(SUM(dpp + ppn)) as nilai_retur'),
                 )
-                ->where("is_downloaded", 0)
+                ->where('is_downloaded', 0)
                 // ->where("is_checked", 1)
                 ->where(function ($subQuery) {
                     $subQuery
                         ->where(function ($innerQuery) {
                             $innerQuery
-                                ->where("qty_pcs", "<", 0)
-                                ->where("hargatotal_sblm_ppn", ">=", -1000000)
-                                ->where("has_moved", "n");
+                                ->where('qty_pcs', '<', 0)
+                                ->where('hargatotal_sblm_ppn', '>=', -1000000)
+                                ->where('has_moved', 'n');
                         })
-                        ->orWhere("moved_to", "retur");
+                        ->orWhere('moved_to', 'retur');
                 });
 
             // Apply same filters as getData
-            if ($request->has("pt") && !in_array("all", $request->pt ?? [])) {
-                $query->whereIn("company", $request->pt);
+            if ($request->has('pt') && ! in_array('all', $request->pt ?? [])) {
+                $query->whereIn('company', $request->pt);
             }
 
             if (
-                $request->has("brand") &&
-                !in_array("all", $request->brand ?? [])
+                $request->has('brand') &&
+                ! in_array('all', $request->brand ?? [])
             ) {
-                $query->whereIn("brand", $request->brand);
+                $query->whereIn('brand', $request->brand);
             }
 
             if (
-                $request->has("depo") &&
-                !in_array("all", $request->depo ?? [])
+                $request->has('depo') &&
+                ! in_array('all', $request->depo ?? [])
             ) {
                 $userInfo = getLoggedInUserInfo();
 
-                if ($userInfo && !in_array("all", $userInfo->depo)) {
+                if ($userInfo && ! in_array('all', $userInfo->depo)) {
                     $allowedDepos = \App\Models\MasterDepo::whereIn(
-                        "code",
+                        'code',
                         $userInfo->depo,
                     )
                         ->get()
-                        ->pluck("name")
+                        ->pluck('name')
                         ->toArray();
                     $requestedDepos = \App\Models\MasterDepo::whereIn(
-                        "code",
+                        'code',
                         $request->depo,
                     )
                         ->get()
-                        ->pluck("name")
+                        ->pluck('name')
                         ->toArray();
                     $validDepos = array_intersect(
                         $requestedDepos,
                         $allowedDepos,
                     );
 
-                    if (!empty($validDepos)) {
-                        $query->whereIn("depo", $validDepos);
+                    if (! empty($validDepos)) {
+                        $query->whereIn('depo', $validDepos);
                     } else {
-                        $query->whereRaw("1 = 0");
+                        $query->whereRaw('1 = 0');
                     }
                 } else {
                     $depos = \App\Models\MasterDepo::whereIn(
-                        "code",
+                        'code',
                         $request->depo,
                     )
                         ->get()
-                        ->pluck("name")
+                        ->pluck('name')
                         ->toArray();
-                    $query->whereIn("depo", $depos);
+                    $query->whereIn('depo', $depos);
                 }
             }
 
-            if ($request->has("periode") && !empty($request->periode)) {
-                $periode = explode(" - ", $request->periode);
+            if ($request->has('periode') && ! empty($request->periode)) {
+                $periode = explode(' - ', $request->periode);
                 if (count($periode) === 2) {
                     $periodeAwal = \Carbon\Carbon::createFromFormat(
-                        "d/m/Y",
+                        'd/m/Y',
                         $periode[0],
-                    )->format("Y-m-d");
+                    )->format('Y-m-d');
                     $periodeAkhir = \Carbon\Carbon::createFromFormat(
-                        "d/m/Y",
+                        'd/m/Y',
                         $periode[1],
-                    )->format("Y-m-d");
-                    $query->whereRaw(
-                        "tgl_faktur_pajak >= '{$periodeAwal}' AND tgl_faktur_pajak <= '{$periodeAkhir}'",
-                    );
+                    )->format('Y-m-d');
+                    $query->whereBetween('tgl_faktur_pajak', [
+                        $periodeAwal,
+                        $periodeAkhir,
+                    ]);
                 }
             }
 
             // Exclude retur that have been used in netting process
             $usedReturs = NettInvoiceDetail::pluck(
-                "no_invoice_retur",
+                'no_invoice_retur',
             )->toArray();
-            if (!empty($usedReturs)) {
-                $query->whereNotIn("no_invoice", $usedReturs);
+            if (! empty($usedReturs)) {
+                $query->whereNotIn('no_invoice', $usedReturs);
             }
 
             // Group by invoice
             $query->groupBy(
-                "customer_id",
-                "nama_customer_sistem",
-                "no_invoice",
+                'customer_id',
+                'nama_customer_sistem',
+                'no_invoice',
             );
 
             $returs = $query->get();
 
             return response()->json([
-                "status" => true,
-                "data" => $returs,
+                'status' => true,
+                'data' => $returs,
             ]);
         } catch (\Throwable $th) {
             Log::error(
-                "Error in NettInvoiceController@getReturList: " .
+                'Error in NettInvoiceController@getReturList: '.
                     $th->getMessage(),
             );
+
             return response()->json(
                 [
-                    "status" => false,
-                    "message" => $th->getMessage(),
+                    'status' => false,
+                    'message' => $th->getMessage(),
                 ],
                 500,
             );
@@ -379,8 +383,8 @@ class NettInvoiceController extends Controller
             if (empty($returInvoices)) {
                 return response()->json(
                     [
-                        "status" => false,
-                        "message" => "Pilih minimal satu invoice retur",
+                        'status' => false,
+                        'message' => 'Pilih minimal satu invoice retur',
                     ],
                     400,
                 );
@@ -388,19 +392,19 @@ class NettInvoiceController extends Controller
 
             // Check if any retur has been used before
             $usedReturs = NettInvoiceDetail::whereIn(
-                "no_invoice_retur",
+                'no_invoice_retur',
                 $returInvoices,
             )
-                ->pluck("no_invoice_retur")
+                ->pluck('no_invoice_retur')
                 ->toArray();
-            if (!empty($usedReturs)) {
+            if (! empty($usedReturs)) {
                 DB::rollBack();
+
                 return response()->json(
                     [
-                        "status" => false,
-                        "message" =>
-                            "Invoice retur berikut sudah pernah digunakan: " .
-                            implode(", ", $usedReturs),
+                        'status' => false,
+                        'message' => 'Invoice retur berikut sudah pernah digunakan: '.
+                            implode(', ', $usedReturs),
                     ],
                     400,
                 );
@@ -408,32 +412,33 @@ class NettInvoiceController extends Controller
 
             // Get invoice data
             $invoiceItems = PajakKeluaranDetail::where(
-                "no_invoice",
+                'no_invoice',
                 $noInvoice,
             )->get();
             if ($invoiceItems->isEmpty()) {
                 DB::rollBack();
+
                 return response()->json(
                     [
-                        "status" => false,
-                        "message" => "Invoice tidak ditemukan",
+                        'status' => false,
+                        'message' => 'Invoice tidak ditemukan',
                     ],
                     404,
                 );
             }
 
-            $pkp = MasterPkp::all()->pluck("IDPelanggan")->toArray();
+            $pkp = MasterPkp::where('is_active', true)->pluck('IDPelanggan')->toArray();
             $invalidInvoice = $invoiceItems->contains(function ($item) use (
                 $pkp,
             ) {
-                $isNonPkpCustomer = !in_array($item->customer_id, $pkp);
+                $isNonPkpCustomer = ! in_array($item->customer_id, $pkp);
                 $isValidValue =
                     $item->hargatotal_sblm_ppn > 0 ||
                     $item->hargatotal_sblm_ppn <= -1000000;
 
-                return !(
+                return ! (
                     $isNonPkpCustomer &&
-                    $item->tipe_ppn === "PPN" &&
+                    $item->tipe_ppn === 'PPN' &&
                     $item->qty_pcs > 0 &&
                     $isValidValue
                 );
@@ -441,11 +446,11 @@ class NettInvoiceController extends Controller
 
             if ($invalidInvoice) {
                 DB::rollBack();
+
                 return response()->json(
                     [
-                        "status" => false,
-                        "message" =>
-                            "Invoice harus Non-PKP (PPN) dan bukan retur/bebas yang tidak valid",
+                        'status' => false,
+                        'message' => 'Invoice harus Non-PKP (PPN) dan bukan retur/bebas yang tidak valid',
                     ],
                     400,
                 );
@@ -459,37 +464,39 @@ class NettInvoiceController extends Controller
             $totalReturValue = 0;
             foreach ($returInvoices as $returInvoice) {
                 $returItems = PajakKeluaranDetail::where(
-                    "no_invoice",
+                    'no_invoice',
                     $returInvoice,
                 )->get();
 
                 if ($returItems->isEmpty()) {
                     DB::rollBack();
+
                     return response()->json(
                         [
-                            "status" => false,
-                            "message" => "Invoice retur {$returInvoice} tidak ditemukan",
+                            'status' => false,
+                            'message' => "Invoice retur {$returInvoice} tidak ditemukan",
                         ],
                         404,
                     );
                 }
 
                 $invalidRetur = $returItems->contains(function ($item) {
-                    $isReturMoved = $item->moved_to === "retur";
+                    $isReturMoved = $item->moved_to === 'retur';
                     $isReturBebas =
                         $item->qty_pcs < 0 &&
                         $item->hargatotal_sblm_ppn >= -1000000 &&
-                        $item->has_moved === "n";
+                        $item->has_moved === 'n';
 
-                    return !($isReturMoved || $isReturBebas);
+                    return ! ($isReturMoved || $isReturBebas);
                 });
 
                 if ($invalidRetur) {
                     DB::rollBack();
+
                     return response()->json(
                         [
-                            "status" => false,
-                            "message" => "Invoice retur {$returInvoice} bukan retur bebas Non-PKP",
+                            'status' => false,
+                            'message' => "Invoice retur {$returInvoice} bukan retur bebas Non-PKP",
                         ],
                         400,
                     );
@@ -507,45 +514,45 @@ class NettInvoiceController extends Controller
             $invoiceValueNett = $invoiceValueOriginal - $totalReturValue;
 
             // Generate unique transaction ID
-            $idTransaksi = "NETT-" . date("YmdHis") . "-" . uniqid();
+            $idTransaksi = 'NETT-'.date('YmdHis').'-'.uniqid();
 
             $firstItem = $invoiceItems->first();
 
             // Save to nett_invoice_headers
             $nettHeader = NettInvoiceHeader::create([
-                "id_transaksi" => $idTransaksi,
-                "pt" => $firstItem->company,
-                "principal" => $firstItem->brand,
-                "depo" => $firstItem->depo,
-                "no_invoice" => $noInvoice,
-                "invoice_value_original" => $invoiceValueOriginal,
-                "invoice_value_nett" => $invoiceValueNett,
-                "mp_bulan" => date("m"),
-                "mp_tahun" => date("Y"),
-                "is_checked" => 1,
-                "is_downloaded" => 0,
-                "status" => "netted",
-                "created_at" => now(),
+                'id_transaksi' => $idTransaksi,
+                'pt' => $firstItem->company,
+                'principal' => $firstItem->brand,
+                'depo' => $firstItem->depo,
+                'no_invoice' => $noInvoice,
+                'invoice_value_original' => $invoiceValueOriginal,
+                'invoice_value_nett' => $invoiceValueNett,
+                'mp_bulan' => date('m'),
+                'mp_tahun' => date('Y'),
+                'is_checked' => 1,
+                'is_downloaded' => 0,
+                'status' => 'netted',
+                'created_at' => now(),
             ]);
 
             // Save invoice items to nett_invoice_header_items
             foreach ($invoiceItems as $item) {
                 NettInvoiceHeaderItem::create([
-                    "id_transaksi" => $idTransaksi,
-                    "no_invoice" => $noInvoice,
-                    "kode_barang" => $item->kode_produk,
-                    "satuan" => $item->satuan,
-                    "qty" => $item->qty_pcs,
-                    "harga_satuan" => $item->hargasatuan_sblm_ppn,
-                    "harga_total" => $item->hargatotal_sblm_ppn,
-                    "created_at" => now(),
+                    'id_transaksi' => $idTransaksi,
+                    'no_invoice' => $noInvoice,
+                    'kode_barang' => $item->kode_produk,
+                    'satuan' => $item->satuan,
+                    'qty' => $item->qty_pcs,
+                    'harga_satuan' => $item->hargasatuan_sblm_ppn,
+                    'harga_total' => $item->hargatotal_sblm_ppn,
+                    'created_at' => now(),
                 ]);
             }
 
             // Save retur data to nett_invoice_details and items
             foreach ($returInvoices as $returInvoice) {
                 $returItems = PajakKeluaranDetail::where(
-                    "no_invoice",
+                    'no_invoice',
                     $returInvoice,
                 )->get();
                 $returValue = abs(
@@ -557,34 +564,34 @@ class NettInvoiceController extends Controller
                 $firstReturItem = $returItems->first();
 
                 NettInvoiceDetail::create([
-                    "id_transaksi" => $idTransaksi,
-                    "pt" => $firstReturItem->company,
-                    "principal" => $firstReturItem->brand,
-                    "depo" => $firstReturItem->depo,
-                    "no_invoice_retur" => $returInvoice,
-                    "invoice_retur_value" => $returValue,
-                    "mp_bulan" => date("m"),
-                    "mp_tahun" => date("Y"),
-                    "is_checked" => 1,
-                    "is_downloaded" => 0,
-                    "status" => "used",
-                    "created_at" => now(),
+                    'id_transaksi' => $idTransaksi,
+                    'pt' => $firstReturItem->company,
+                    'principal' => $firstReturItem->brand,
+                    'depo' => $firstReturItem->depo,
+                    'no_invoice_retur' => $returInvoice,
+                    'invoice_retur_value' => $returValue,
+                    'mp_bulan' => date('m'),
+                    'mp_tahun' => date('Y'),
+                    'is_checked' => 1,
+                    'is_downloaded' => 0,
+                    'status' => 'used',
+                    'created_at' => now(),
                 ]);
 
                 foreach ($returItems as $item) {
                     NettInvoiceDetailItem::create([
-                        "id_transaksi" => $idTransaksi,
-                        "no_invoice_retur" => $returInvoice,
-                        "kode_barang" => $item->kode_produk,
-                        "satuan" => $item->satuan,
-                        "qty" => abs((float) $item->qty_pcs),
-                        "harga_satuan" => abs(
+                        'id_transaksi' => $idTransaksi,
+                        'no_invoice_retur' => $returInvoice,
+                        'kode_barang' => $item->kode_produk,
+                        'satuan' => $item->satuan,
+                        'qty' => abs((float) $item->qty_pcs),
+                        'harga_satuan' => abs(
                             (float) $item->hargasatuan_sblm_ppn,
                         ),
-                        "harga_total" => abs(
+                        'harga_total' => abs(
                             (float) $item->hargatotal_sblm_ppn,
                         ),
-                        "created_at" => now(),
+                        'created_at' => now(),
                     ]);
                 }
             }
@@ -592,33 +599,33 @@ class NettInvoiceController extends Controller
             DB::commit();
 
             return response()->json([
-                "status" => true,
-                "message" => "Proses netting berhasil",
-                "data" => [
-                    "id_transaksi" => $idTransaksi,
-                    "nett_value" => $invoiceValueNett,
+                'status' => true,
+                'message' => 'Proses netting berhasil',
+                'data' => [
+                    'id_transaksi' => $idTransaksi,
+                    'nett_value' => $invoiceValueNett,
                 ],
             ]);
         } catch (\Throwable $th) {
             DB::rollBack();
             Log::error(
-                "Error in NettInvoiceController@processNett: " .
+                'Error in NettInvoiceController@processNett: '.
                     $th->getMessage(),
             );
 
             broadcast(
                 new UserEvent(
-                    "error",
-                    "Nett Invoice",
-                    "Gagal melakukan proses netting: " . $th->getMessage(),
+                    'error',
+                    'Nett Invoice',
+                    'Gagal melakukan proses netting: '.$th->getMessage(),
                     Auth::user(),
                 ),
             );
 
             return response()->json(
                 [
-                    "status" => false,
-                    "message" => $th->getMessage(),
+                    'status' => false,
+                    'message' => $th->getMessage(),
                 ],
                 500,
             );
@@ -631,44 +638,43 @@ class NettInvoiceController extends Controller
     public function exportData(Request $request)
     {
         try {
-            $format = $request->get("format", "xlsx");
+            $format = $request->get('format', 'xlsx');
 
             $writerType =
-                $format === "csv"
+                $format === 'csv'
                     ? \Maatwebsite\Excel\Excel::CSV
                     : \Maatwebsite\Excel\Excel::XLSX;
 
             $headers = [
-                "Content-Type" =>
-                    $format === "csv"
-                        ? "text/csv"
-                        : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                'Content-Type' => $format === 'csv'
+                        ? 'text/csv'
+                        : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             ];
 
-            $filename = "nett_invoice_" . date("Ymd_His") . "." . $format;
+            $filename = 'nett_invoice_'.date('Ymd_His').'.'.$format;
 
             return Excel::download(
-                new NettInvoiceExport(),
+                new NettInvoiceExport,
                 $filename,
                 $writerType,
                 $headers,
             );
         } catch (\Throwable $th) {
             Log::error(
-                "Error in NettInvoiceController@exportData: " .
+                'Error in NettInvoiceController@exportData: '.
                     $th->getMessage(),
             );
 
             broadcast(
                 new UserEvent(
-                    "error",
-                    "Nett Invoice Export",
-                    "Gagal export data: " . $th->getMessage(),
+                    'error',
+                    'Nett Invoice Export',
+                    'Gagal export data: '.$th->getMessage(),
                     Auth::user(),
                 ),
             );
 
-            return redirect()->back()->with("error", "Gagal export data");
+            return redirect()->back()->with('error', 'Gagal export data');
         }
     }
 }
