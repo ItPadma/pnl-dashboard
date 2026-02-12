@@ -7,6 +7,7 @@
     @include('pnl.reguler.pajak-keluaran.npkp-script-db')
     @include('pnl.reguler.pajak-keluaran.npkpnppn-script-db')
     @include('pnl.reguler.pajak-keluaran.retur-script-db')
+    @include('pnl.reguler.pajak-keluaran.nonstandar-script-db')
     @include('pnl.reguler.pajak-keluaran.main-script-db')
     @include('pnl.reguler.pajak-keluaran.download-script-db')
 @endsection

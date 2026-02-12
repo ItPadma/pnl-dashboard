@@ -81,6 +81,13 @@
                         setDownloadCounter('retur');
                         break;
 
+                    case 'nonstandar':
+                        if (typeof tableNonStandarDb !== 'undefined' && tableNonStandarDb) {
+                            tableNonStandarDb.ajax.reload();
+                        }
+                        setDownloadCounter('nonstandar');
+                        break;
+
                     default:
                         if (typeof tablePkpDb !== 'undefined' && tablePkpDb) tablePkpDb.ajax.reload();
                         setDownloadCounter('pkp');
@@ -95,6 +102,9 @@
                         setDownloadCounter('npkpnppn');
                         if (typeof tableReturDb !== 'undefined' && tableReturDb) tableReturDb.ajax.reload();
                         setDownloadCounter('retur');
+                        if (typeof tableNonStandarDb !== 'undefined' && tableNonStandarDb) tableNonStandarDb.ajax
+                            .reload();
+                        setDownloadCounter('nonstandar');
                         break;
                 }
             },

@@ -246,8 +246,8 @@ class RegulerController extends Controller
         try {
             $request->validate([
                 'ids' => 'required',
-                'move_from' => 'required|in:pkp,pkpnppn,npkp,npkpnppn,retur',
-                'move_to' => 'required|in:pkp,pkpnppn,npkp,npkpnppn,retur',
+                'move_from' => 'required|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar',
+                'move_to' => 'required|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar',
             ]);
             $ids = $request->input('ids');
             $items = PajakKeluaranDetail::whereIn('id', $ids)->get();
@@ -499,6 +499,11 @@ class RegulerController extends Controller
                         "qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000 AND has_moved = 'n' OR moved_to = 'retur'",
                     );
                     break;
+                case 'nonstandar':
+                    $query->whereRaw(
+                        "(jenis = 'non-standar' AND has_moved = 'n') OR (has_moved = 'y' AND moved_to = 'nonstandar')",
+                    );
+                    break;
             }
             // Log::info('sql count: '.$query->toSql());
             $counts = $query->get();
@@ -526,7 +531,7 @@ class RegulerController extends Controller
     {
         try {
             $request->validate([
-                'tipe' => 'nullable|in:pkp,pkpnppn,npkp,npkpnppn,retur,all',
+                'tipe' => 'nullable|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar,all',
                 'chstatus' => 'nullable|in:checked-ready2download,checked-downloaded,unchecked,all',
                 'periode' => ['nullable', 'regex:/^\d{2}\/\d{2}\/\d{4}( - \d{2}\/\d{2}\/\d{4})?$/'],
             ]);
@@ -571,7 +576,7 @@ class RegulerController extends Controller
     {
         try {
             $request->validate([
-                'tipe' => 'nullable|in:pkp,pkpnppn,npkp,npkpnppn,retur,all',
+                'tipe' => 'nullable|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar,all',
                 'chstatus' => 'nullable|in:checked-ready2download,checked-downloaded,unchecked,all',
                 'periode' => ['nullable', 'regex:/^\d{2}\/\d{2}\/\d{4}( - \d{2}\/\d{2}\/\d{4})?$/'],
             ]);
@@ -1021,6 +1026,11 @@ class RegulerController extends Controller
             if ($request->tipe == 'retur') {
                 $dbquery->whereRaw(
                     "qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000 AND has_moved = 'n' OR moved_to = 'retur'",
+                );
+            }
+            if ($request->tipe == 'nonstandar') {
+                $dbquery->whereRaw(
+                    "(jenis = 'non-standar' AND has_moved = 'n') OR (has_moved = 'y' AND moved_to = 'nonstandar')",
                 );
             }
         }

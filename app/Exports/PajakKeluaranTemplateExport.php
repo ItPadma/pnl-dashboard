@@ -154,6 +154,11 @@ class PajakKeluaranTemplateExport implements WithMultipleSheets
                     "qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000 AND has_moved = 'n' OR moved_to = 'retur'"
                 );
                 break;
+            case 'nonstandar':
+                $query->whereRaw(
+                    "(jenis = 'non-standar' AND has_moved = 'n') OR (has_moved = 'y' AND moved_to = 'nonstandar')"
+                );
+                break;
         }
     }
 

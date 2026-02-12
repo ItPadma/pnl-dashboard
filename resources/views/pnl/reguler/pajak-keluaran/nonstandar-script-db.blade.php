@@ -1,22 +1,6 @@
 <script>
-    let tablePkpDb;
-    let tablePkpDbNppn;
-    let tableNonPkpDb;
-    let tableNonPkpDbNppn;
-    let tableReturDb;
-    let tableNonStandarDb;
-
-    $.fn.dataTable.ext.errMode = 'none';
-
-    let pkp_data_db = [];
-    let pkpnppn_data_db = [];
-    let npkp_data_db = [];
-    let npkpnppn_data_db = [];
-    let retur_data_db = [];
-    let nonstandar_data_db = [];
-
-    // Function to format child row (product details)
-    function formatChildRowPkp(d) {
+    // Function to format child row for Non Standar (product details)
+    function formatChildRowNonStandar(d) {
         if (!d.products || d.products.length === 0) {
             return '<div style="padding:6px 12px;font-size:0.72rem;color:#6b7280;">Tidak ada detail produk</div>';
         }
@@ -51,13 +35,13 @@
     }
 </script>
 <script>
-    // Initialize new DataTable for PKP (DB - Grouped by Invoice)
-    function initializeDataTablePkpDb() {
-        if ($.fn.DataTable.isDataTable('#table-pkp')) {
-            $('#table-pkp').DataTable().destroy();
+    // Initialize DataTable for Non Standar (DB - Grouped by Invoice)
+    function initializeDataTableNonStandarDb() {
+        if ($.fn.DataTable.isDataTable('#table-nonstandar')) {
+            $('#table-nonstandar').DataTable().destroy();
         }
 
-        tablePkpDb = $('#table-pkp').DataTable({
+        tableNonStandarDb = $('#table-nonstandar').DataTable({
             processing: true,
             serverSide: true,
             ajax: {
@@ -68,13 +52,13 @@
                     d.brand = $('#filter_brand').val();
                     d.depo = $('#filter_depo').val();
                     d.periode = $('#filter_periode').val();
-                    d.tipe = 'pkp';
+                    d.tipe = 'nonstandar';
                     d.chstatus = $('#filter_chstatus').val();
-                    d.grouped = true; // Flag for grouped data
+                    d.grouped = true;
                     return d;
                 },
                 dataSrc: function(json) {
-                    pkp_data_db = json.aaData;
+                    nonstandar_data_db = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -103,7 +87,16 @@
                         if (row.is_downloaded == 1 && data == 1) {
                             return '<div style="display: flex; align-items: center; gap: 5px;"><i class="fas fa-fw fa-check text-secondary"></i><i class="fas fa-fw fa-download text-secondary"></i></div>';
                         }
-                        return `<input type="checkbox" class="row-checkbox-pkp" data-invoice="${row.no_invoice}" ${checked}>`;
+                        return `<input type="checkbox" class="row-checkbox-nonstandar" data-invoice="${row.no_invoice}" ${checked}>`;
+                    }
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center',
+                    render: function() {
+                        return '-';
                     }
                 },
                 {
@@ -194,10 +187,6 @@
                     name: 'no_fp'
                 },
                 {
-                    data: 'brand',
-                    name: 'brand'
-                },
-                {
                     data: 'depo',
                     name: 'depo'
                 },
@@ -205,7 +194,10 @@
                     data: 'area',
                     name: 'area'
                 },
-
+                {
+                    data: 'brand',
+                    name: 'brand'
+                },
                 {
                     data: 'type_jual',
                     name: 'type_jual'
@@ -239,7 +231,7 @@
                 }
             ],
             order: [
-                [2, 'desc']
+                [9, 'desc']
             ],
             lengthMenu: [
                 [10, 25, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 1000, -1],
@@ -262,15 +254,10 @@
                 '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
             initComplete: function() {
                 var api = this.api();
-
-                // Remove thead and tfoot from scrollBody
                 $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
-
-                // Apply the search for each column
                 api.columns().every(function() {
                     var column = this;
-                    var input = $('.column-filter-pkp[data-column="' + (column.index()) + '"]');
-
+                    var input = $('.column-filter-nonstandar[data-column="' + (column.index()) + '"]');
                     input.on('keyup change clear', function() {
                         if (column.search() !== this.value) {
                             column.search(this.value).draw();
@@ -280,29 +267,23 @@
                 api.columns.adjust();
             },
             drawCallback: function(settings) {
-                var api = this.api();
-
-                // Remove thead and tfoot from scrollBody
                 $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
-
-                setDownloadCounter('pkp');
-                showCheckedSummaryDb('pkp', pkp_data_db);
+                setDownloadCounter('nonstandar');
+                showCheckedSummaryDb('nonstandar', nonstandar_data_db);
             },
         });
 
         // Add event listener for opening and closing details
-        $('#table-pkp tbody').on('click', 'td.dt-control', function() {
+        $('#table-nonstandar tbody').on('click', 'td.dt-control', function() {
             var tr = $(this).closest('tr');
-            var row = tablePkpDb.row(tr);
+            var row = tableNonStandarDb.row(tr);
 
             if (row.child.isShown()) {
-                // This row is already open - close it
                 row.child.hide();
                 tr.removeClass('shown');
                 $(this).html('<i class="fas fa-plus-circle"></i>');
             } else {
-                // Open this row
-                row.child(formatChildRowPkp(row.data())).show();
+                row.child(formatChildRowNonStandar(row.data())).show();
                 tr.addClass('shown');
                 $(this).html('<i class="fas fa-minus-circle"></i>');
             }

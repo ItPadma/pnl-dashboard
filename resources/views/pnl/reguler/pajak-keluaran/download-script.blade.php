@@ -70,17 +70,28 @@
                         setDownloadCounter('retur');
                         break;
 
+                    case 'nonstandar':
+                        if (typeof tableNonStandar !== 'undefined' && tableNonStandar) {
+                            tableNonStandar.ajax.reload();
+                        }
+                        setDownloadCounter('nonstandar');
+                        break;
+
                     default:
                         tablePkp.ajax.reload();
                         setDownloadCounter('pkp');
                         tablePkpNppn.ajax.reload();
                         setDownloadCounter('pkpnppn');
                         tableNonPkp.ajax.reload();
-                        setDownloadCounter('npkp');
+                        setDownloadCounter('nonpkp');
                         tableNonPkpNppn.ajax.reload();
-                        setDownloadCounter('npkpnppn');
+                        setDownloadCounter('nonpkpnppn');
                         tableRetur.ajax.reload();
                         setDownloadCounter('retur');
+                        if (typeof tableNonStandar !== 'undefined' && tableNonStandar) {
+                            tableNonStandar.ajax.reload();
+                        }
+                        setDownloadCounter('nonstandar');
                         break;
                 }
             },

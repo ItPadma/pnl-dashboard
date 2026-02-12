@@ -4,12 +4,21 @@ namespace App\Http\Controllers\PNL;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Utilities\LogController;
+use App\Jobs\ImportReferensiJob;
 use App\Models\AccessGroup;
 use App\Models\MasterPkp;
+use App\Models\MasterRefIdPembeli;
+use App\Models\MasterRefKeteranganTambahan;
+use App\Models\MasterRefKodeNegara;
+use App\Models\MasterRefKodeTransaksi;
+use App\Models\MasterRefSatuanUkur;
+use App\Models\MasterRefTipe;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
 class MasterDataController extends Controller
@@ -237,10 +246,15 @@ class MasterDataController extends Controller
                 ->route('pnl.master-data.index.master-pkp')
                 ->with('success', 'Data PKP berhasil diperbarui.');
         } catch (\Throwable $th) {
+            Log::error('Update master PKP failed', [
+                'id' => $id,
+                'error' => $th->getMessage(),
+            ]);
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', $th->getMessage());
+                ->with('error', 'Terjadi kesalahan. Silakan coba lagi.');
         }
     }
 
@@ -275,9 +289,14 @@ class MasterDataController extends Controller
                 ->route('pnl.master-data.index.master-pkp')
                 ->with('success', 'Data PKP berhasil dinonaktifkan.');
         } catch (\Throwable $th) {
+            Log::error('Disable master PKP failed', [
+                'id' => $id,
+                'error' => $th->getMessage(),
+            ]);
+
             return redirect()
                 ->back()
-                ->with('error', $th->getMessage());
+                ->with('error', 'Terjadi kesalahan. Silakan coba lagi.');
         }
     }
 
@@ -354,6 +373,277 @@ class MasterDataController extends Controller
         }
     }
 
+    public function indexReferensi()
+    {
+        if (
+            ! Auth::user()?->canAccessMenu(
+                'master-data-referensi',
+                AccessGroup::LEVEL_READ_WRITE,
+            )
+            && ! Auth::user()?->canAccessMenu(
+                'master-data-referensi',
+                AccessGroup::LEVEL_READ,
+            )
+        ) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        return view('pnl.import.referensi', [
+            'refTipe' => MasterRefTipe::orderByDesc('is_active')->orderBy('kode')->get(),
+            'refKodeTransaksi' => MasterRefKodeTransaksi::orderByDesc('is_active')->orderBy('kode')->get(),
+            'refKeteranganTambahan' => MasterRefKeteranganTambahan::with('kodeTransaksi')
+                ->orderByDesc('is_active')
+                ->orderBy('kode')
+                ->get(),
+            'refIdPembeli' => MasterRefIdPembeli::orderByDesc('is_active')->orderBy('kode')->get(),
+            'refSatuanUkur' => MasterRefSatuanUkur::orderByDesc('is_active')->orderBy('kode')->get(),
+            'refKodeNegara' => MasterRefKodeNegara::orderByDesc('is_active')->orderBy('kode')->get(),
+            'canEdit' => Auth::user()?->canAccessMenu(
+                'master-data-referensi',
+                AccessGroup::LEVEL_READ_WRITE,
+            ) ?? false,
+        ]);
+    }
+
+    public function showReferensi(string $type, $id)
+    {
+        $this->assertReferensiType($type);
+
+        if (
+            ! Auth::user()?->canAccessMenu(
+                'master-data-referensi',
+                AccessGroup::LEVEL_READ_WRITE,
+            )
+            && ! Auth::user()?->canAccessMenu(
+                'master-data-referensi',
+                AccessGroup::LEVEL_READ,
+            )
+        ) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $model = $this->resolveReferensiModel($type);
+        $query = $model->newQuery();
+
+        if ($type === 'keterangan-tambahan') {
+            $query->with('kodeTransaksi');
+        }
+
+        $item = $query->findOrFail($id);
+
+        return response()->json([
+            'status' => true,
+            'data' => $item,
+        ]);
+    }
+
+    public function updateReferensi(Request $request, string $type, $id)
+    {
+        $this->assertReferensiType($type);
+
+        if (
+            ! Auth::user()?->canAccessMenu(
+                'master-data-referensi',
+                AccessGroup::LEVEL_READ_WRITE,
+            )
+        ) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+
+            $validated = $this->validateReferensi($request, $type);
+            $model = $this->resolveReferensiModel($type);
+            $item = $model->findOrFail($id);
+            $item->update($validated);
+
+            LogController::createLog(
+                Auth::user()->id,
+                'Update Master Referensi',
+                'Update Master Referensi',
+                '{id: '.$item->id.', tipe: '.$type.'}',
+                'master_referensi',
+                'info',
+                $request,
+            );
+
+            return redirect()
+                ->route('pnl.master-data.index.referensi')
+                ->with('success', 'Data referensi berhasil diperbarui.');
+        } catch (\Throwable $th) {
+            Log::error('Update referensi failed', [
+                'type' => $type,
+                'id' => $id,
+                'exception' => $th,
+            ]);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Terjadi kesalahan. Silakan coba lagi.');
+        }
+    }
+
+    public function toggleReferensi(Request $request, string $type, $id)
+    {
+        $this->assertReferensiType($type);
+
+        if (
+            ! Auth::user()?->canAccessMenu(
+                'master-data-referensi',
+                AccessGroup::LEVEL_READ_WRITE,
+            )
+        ) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        try {
+
+            $request->validate([
+                'is_active' => 'required|boolean',
+            ]);
+
+            $model = $this->resolveReferensiModel($type);
+            $item = $model->findOrFail($id);
+            $item->update(['is_active' => (bool) $request->is_active]);
+
+            $actionLabel = $item->is_active ? 'Enable' : 'Disable';
+
+            LogController::createLog(
+                Auth::user()->id,
+                $actionLabel.' Master Referensi',
+                $actionLabel.' Master Referensi',
+                '{id: '.$item->id.', tipe: '.$type.'}',
+                'master_referensi',
+                'info',
+                $request,
+            );
+
+            return redirect()
+                ->route('pnl.master-data.index.referensi')
+                ->with(
+                    'success',
+                    $item->is_active ? 'Data referensi berhasil diaktifkan.' : 'Data referensi berhasil dinonaktifkan.',
+                );
+        } catch (\Throwable $th) {
+            Log::error('Toggle referensi failed', [
+                'type' => $type,
+                'id' => $id,
+                'exception' => $th,
+            ]);
+
+            return redirect()
+                ->back()
+                ->with('error', 'Terjadi kesalahan. Silakan coba lagi.');
+        }
+    }
+
+    public function importReferensi(Request $request, string $type)
+    {
+        if (
+            ! Auth::user()?->canAccessMenu(
+                'master-data-referensi',
+                AccessGroup::LEVEL_READ_WRITE,
+            )
+        ) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $this->assertReferensiType($type);
+
+        try {
+            Log::info('Import referensi started', [
+                'type' => $type,
+                'user_id' => $request->user()?->id,
+            ]);
+
+            $request->validate([
+                'file' => 'required|file|mimes:xlsx,xls|max:5120',
+            ]);
+
+            $file = $request->file('file');
+            $path = $file->store('import', ['disk' => 'local']);
+            if (! $path) {
+                Log::error('Import referensi store failed', [
+                    'type' => $type,
+                    'disk' => 'local',
+                ]);
+
+                return redirect()->back()->with('error', 'Gagal menyimpan file import.');
+            }
+
+            $absolutePath = Storage::disk('local')->path($path);
+            $importDir = dirname($absolutePath);
+            if (! chmod($importDir, 0755)) {
+                Log::error('Import referensi chmod failed', [
+                    'type' => $type,
+                    'path' => $importDir,
+                    'target' => 'dir',
+                    'error' => error_get_last(),
+                ]);
+            }
+
+            if (! chmod($absolutePath, 0644)) {
+                Log::error('Import referensi chmod failed', [
+                    'type' => $type,
+                    'path' => $absolutePath,
+                    'target' => 'file',
+                    'error' => error_get_last(),
+                ]);
+            }
+
+            if (! is_readable($absolutePath)) {
+                Log::error('Import referensi file not readable', [
+                    'type' => $type,
+                    'path' => $absolutePath,
+                ]);
+
+                return redirect()->back()->with('error', 'File import tidak dapat dibaca.');
+            }
+            Log::info('Import referensi file received', [
+                'type' => $type,
+                'stored_path' => $path,
+                'disk' => 'local',
+            ]);
+
+            if (! Storage::disk('local')->exists($path)) {
+                Log::error('Import referensi stored file missing', [
+                    'type' => $type,
+                    'stored_path' => $path,
+                    'disk' => 'local',
+                ]);
+
+                return redirect()->back()->with('error', 'File import tidak ditemukan setelah diunggah.');
+            }
+
+            LogController::createLog(
+                $request->user()->id,
+                'Queue Import Master Referensi',
+                'Queue Import Master Referensi',
+                '{tipe: '.$type.'}',
+                'master_referensi',
+                'info',
+                $request,
+            );
+
+            ImportReferensiJob::dispatch(
+                $type,
+                $path,
+                $request->user()?->id,
+                $file?->getClientOriginalName(),
+            );
+
+            return redirect()->back()->with('success', 'Import sedang diproses di background.');
+        } catch (\Throwable $th) {
+            Log::error('Import referensi failed', [
+                'type' => $type,
+                'exception' => $th,
+            ]);
+
+            return redirect()->back()->with('error', 'Terjadi kesalahan. Silakan coba lagi.');
+        }
+    }
+
     private function applyPkpDepoFilter($query): void
     {
         $userInfo = getLoggedInUserInfo();
@@ -384,5 +674,49 @@ class MasterDataController extends Controller
         }
 
         return $value;
+    }
+
+    private function resolveReferensiModel(string $type)
+    {
+        return match ($type) {
+            'tipe' => new MasterRefTipe,
+            'kode-transaksi' => new MasterRefKodeTransaksi,
+            'keterangan-tambahan' => new MasterRefKeteranganTambahan,
+            'id-pembeli' => new MasterRefIdPembeli,
+            'satuan-ukur' => new MasterRefSatuanUkur,
+            'kode-negara' => new MasterRefKodeNegara,
+            default => abort(404, 'Tipe referensi tidak ditemukan.'),
+        };
+    }
+
+    private function assertReferensiType(string $type): void
+    {
+        abort_unless(in_array($type, $this->allowedReferensiTypes(), true), 404, 'Tipe referensi tidak ditemukan.');
+    }
+
+    private function allowedReferensiTypes(): array
+    {
+        return [
+            'tipe',
+            'kode-transaksi',
+            'keterangan-tambahan',
+            'id-pembeli',
+            'satuan-ukur',
+            'kode-negara',
+        ];
+    }
+
+    private function validateReferensi(Request $request, string $type): array
+    {
+        $rules = [
+            'kode' => 'required|string|max:255',
+            'keterangan' => 'nullable|string|max:255',
+        ];
+
+        if ($type === 'keterangan-tambahan') {
+            $rules['kode_transaksi_id'] = 'nullable|string|max:255|exists:master_ref_kode_transaksi,kode';
+        }
+
+        return $request->validate($rules);
     }
 }

@@ -180,6 +180,7 @@
                             <option value="npkp">Non-PKP</option>
                             <option value="npkpnppn">Non-PKP (Non-PPN)</option>
                             <option value="retur">Retur</option>
+                            <option value="nonstandar">Non Standar</option>
                         </select>
                         <button class="btn btn-outline-primary" id="btn-apply-filter"><i class="fas fa-check"></i>
                             Filter</button>
@@ -218,6 +219,11 @@
                             <li class="nav-item" role="presentation">
                                 <a class="nav-link" id="simple-tab-4" data-bs-toggle="tab" href="#tabpanel-retur"
                                     role="tab" aria-controls="tabpanel-retur" aria-selected="false">Retur</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="simple-tab-5" data-bs-toggle="tab"
+                                    href="#tabpanel-nonstandar" role="tab" aria-controls="tabpanel-nonstandar"
+                                    aria-selected="false">Non Standar</a>
                             </li>
                         </ul>
                         <div class="tab-content pt-3" id="tab-content">
@@ -1095,6 +1101,182 @@
                                                         placeholder="ID TKU Pembeli" data-column="31"></th>
                                                 <th><input type="text"
                                                         class="form-control form-control-sm column-filter-retur"
+                                                        placeholder="Jenis" data-column="32"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="tab-pane" id="tabpanel-nonstandar" role="tabpanel"
+                                aria-labelledby="tabpanel-nonstandar">
+                                <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
+                                    <table>
+                                        <tr>
+                                            <td><i class="fas fa-info-circle icon-counter-nonstandar"></i>
+                                                <div class="spinner-border spinner-border-sm spinner-counter-nonstandar"
+                                                    role="status" style="display: none;"><span
+                                                        class="visually-hidden">Loading...</span></div> Terdapat:
+                                            </td>
+                                            <td id="total_ready2download_nonstandar">0</td>
+                                            <td>data siap&nbsp;&nbsp; di-download</td>
+                                            <td rowspan="2">
+                                                @if (Auth::user()->canAccessMenu('reguler-pajak-keluaran', \App\Models\AccessGroup::LEVEL_READ_WRITE))
+                                                    <button class="btn btn-sm btn-primary ms-3 btn-download"
+                                                        id="btn-download-nonstandar"
+                                                        onclick="downloadCheckedData('nonstandar')" hidden>
+                                                        <i class="fas fa-download"></i>
+                                                        <div class="spinner-border spinner-border-sm" id="sp-nonstandar"
+                                                            role="status" hidden><span
+                                                                class="visually-hidden">Loading...</span></div> Download
+                                                    </button>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td id="total_downloaded_nonstandar">0</td>
+                                            <td>data telah di-download</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="tbl-container">
+                                    <table class="table table-sm table-striped table-bordered table-hover"
+                                        id="table-nonstandar">
+                                        <thead>
+                                            <tr>
+                                                <th><input type="checkbox" id="select-all-nonstandar"></th>
+                                                <th>UBAH TIPE</th>
+                                                <th>CUSTOMER ID</th>
+                                                <th>NIK</th>
+                                                <th>NAMA CUSTOMER</th>
+                                                <th>NPWP CUSTOMER</th>
+                                                <th>NO DO</th>
+                                                <th>NO INVOICE</th>
+                                                <th>KODE PRODUK</th>
+                                                <th>NAMA PRODUK</th>
+                                                <th>SATUAN</th>
+                                                <th>QTY (PCS)</th>
+                                                <th>HARGA SATUAN</th>
+                                                <th>HARGA TOTAL</th>
+                                                <th>DISC</th>
+                                                <th>DPP</th>
+                                                <th>DPP LAIN</th>
+                                                <th>PPN 11%</th>
+                                                <th>TGL FAKTUR PAJAK</th>
+                                                <th>ALAMAT</th>
+                                                <th>TYPE PAJAK</th>
+                                                <th>NAMA SESUAI NPWP</th>
+                                                <th>ALAMAT NPWP</th>
+                                                <th>NO TELEPON</th>
+                                                <th>NO FP</th>
+                                                <th>DEPO</th>
+                                                <th>AREA</th>
+                                                <th>BRAND</th>
+                                                <th>TYPE JUAL</th>
+                                                <th>KODE JENIS FP</th>
+                                                <th>STATUS FP</th>
+                                                <th>ID TKU PEMBELI</th>
+                                                <th>JENIS</th>
+                                            </tr>
+                                            <tr>
+                                                <th></th>
+                                                <th><button class="btn btn-sm btn-primary apply-move-to"
+                                                        data-for="nonstandar" disabled>
+                                                        <i class="fas fa-check fa-fw"></i> Terapkan</button></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Customer ID" data-column="2"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="NIK" data-column="3"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Nama Customer" data-column="4"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="NPWP Customer" data-column="5"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="No DO" data-column="6"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="No Invoice" data-column="7"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Kode Produk" data-column="8"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Nama Produk" data-column="9"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Satuan" data-column="10"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Qty" data-column="11"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Harga Satuan" data-column="12"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Harga Total" data-column="13"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Disc" data-column="14"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="DPP" data-column="15"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="DPP Lain" data-column="16"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="PPN" data-column="17"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Tgl Faktur Pajak" data-column="18"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Alamat" data-column="19"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Tipe Pajak" data-column="20"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Nama Sesuai NPWP" data-column="21"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Alamat NPWP" data-column="22"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="No Telepon" data-column="23"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="No FP" data-column="24"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Depo" data-column="25"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Area" data-column="26"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Brand" data-column="27"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Type Jual" data-column="28"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Kode Jenis FP" data-column="29"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Status FP" data-column="30"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="ID TKU Pembeli" data-column="31"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
                                                         placeholder="Jenis" data-column="32"></th>
                                             </tr>
                                         </thead>

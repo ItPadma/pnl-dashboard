@@ -87,6 +87,25 @@ Route::controller(MasterDataController::class)->group(function () {
         Route::delete('/pnl/master-data/import/master-pkp/{id}', 'deleteMasterPKP')->name('pnl.master-data.delete.master-pkp');
         Route::patch('/pnl/master-data/import/master-pkp/{id}/toggle', 'toggleMasterPKP')->name('pnl.master-data.toggle.master-pkp');
     });
+
+    Route::middleware('menu.access:master-data-referensi')->group(function () {
+        Route::get('/pnl/master-data/referensi', 'indexReferensi')->name('pnl.master-data.index.referensi');
+        Route::post('/pnl/master-data/referensi/{type}/import', 'importReferensi')
+            ->whereIn('type', ['tipe', 'kode-transaksi', 'keterangan-tambahan', 'id-pembeli', 'satuan-ukur', 'kode-negara'])
+            ->name('pnl.master-data.import.referensi');
+        Route::get('/pnl/master-data/referensi/{type}/{id}', 'showReferensi')
+            ->whereIn('type', ['tipe', 'kode-transaksi', 'keterangan-tambahan', 'id-pembeli', 'satuan-ukur', 'kode-negara'])
+            ->whereNumber('id')
+            ->name('pnl.master-data.show.referensi');
+        Route::put('/pnl/master-data/referensi/{type}/{id}', 'updateReferensi')
+            ->whereIn('type', ['tipe', 'kode-transaksi', 'keterangan-tambahan', 'id-pembeli', 'satuan-ukur', 'kode-negara'])
+            ->whereNumber('id')
+            ->name('pnl.master-data.update.referensi');
+        Route::patch('/pnl/master-data/referensi/{type}/{id}/toggle', 'toggleReferensi')
+            ->whereIn('type', ['tipe', 'kode-transaksi', 'keterangan-tambahan', 'id-pembeli', 'satuan-ukur', 'kode-negara'])
+            ->whereNumber('id')
+            ->name('pnl.master-data.toggle.referensi');
+    });
 });
 
 Route::controller(SettingController::class)->group(function () {

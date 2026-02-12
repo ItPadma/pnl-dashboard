@@ -60,6 +60,7 @@
                                 <option value="npkp">Non-PKP</option>
                                 <option value="npkpnppn">Non-PKP Non-PPN</option>
                                 <option value="retur">Retur</option>
+                                <option value="nonstandar">Non Standar</option>
                             </select>`;
                     }
                 },

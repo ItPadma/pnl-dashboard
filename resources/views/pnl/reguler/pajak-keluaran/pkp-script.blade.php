@@ -4,6 +4,7 @@
     let tableNonPkp;
     let tableNonPkpNppn;
     let tableRetur;
+    let tableNonStandar;
 
     $.fn.dataTable.ext.errMode = 'none';
 
@@ -12,6 +13,7 @@
     let npkp_data = [];
     let npkpnppn_data = [];
     let retur_data = [];
+    let nonstandar_data = [];
 </script>
 <script>
     // Initialize new DataTable for PKP
@@ -75,6 +77,7 @@
                             <option value="npkp">Non-PKP</option>
                             <option value="npkpnppn">Non-PKP Non-PPN</option>
                             <option value="retur">Retur</option>
+                            <option value="nonstandar">Non Standar</option>
                             </select>`;
                     }
                 },

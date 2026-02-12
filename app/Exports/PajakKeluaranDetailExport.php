@@ -91,6 +91,9 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
         if ($this->tipe == 'retur') {
             $query->where('qty_pcs', '<', 0);
         }
+        if ($this->tipe == 'nonstandar') {
+            $query->where('jenis', 'non-standar');
+        }
         $data = $query
             ->select(
                 array_diff(
@@ -127,6 +130,9 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
             }
             if ($this->tipe == 'retur') {
                 $updateQuery->where('qty_pcs', '<', 0);
+            }
+            if ($this->tipe == 'nonstandar') {
+                $updateQuery->where('jenis', 'non-standar');
             }
             $updateQuery->update(['is_downloaded' => 1]);
         }

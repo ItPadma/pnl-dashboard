@@ -5,7 +5,8 @@
             pkpnppn: false,
             npkp: false,
             npkpnppn: false,
-            retur: false
+            retur: false,
+            nonstandar: false
         };
 
         const initTableIfNeeded = (tipe) => {
@@ -22,6 +23,8 @@
                 initializeDataTableNonPkpNppn();
             } else if (tipe === 'retur') {
                 initializeDataTableRetur();
+            } else if (tipe === 'nonstandar') {
+                initializeDataTableNonStandar();
             }
             tableInitialized[tipe] = true;
         };
@@ -59,6 +62,12 @@
                 $('.dataTables_scrollBody tfoot').remove();
                 showCheckedSummary('retur', retur_data);
             }
+            if (target === '#tabpanel-nonstandar' && tableInitialized.nonstandar && tableNonStandar) {
+                tableNonStandar.columns.adjust();
+                $('.dataTables_scrollBody thead').remove();
+                $('.dataTables_scrollBody tfoot').remove();
+                showCheckedSummary('nonstandar', nonstandar_data);
+            }
         });
 
         // Add change event listeners to filters
@@ -77,6 +86,8 @@
                     tableNonPkpNppn.ajax.reload();
                 } else if (tipe === 'retur' && tableRetur) {
                     tableRetur.ajax.reload();
+                } else if (tipe === 'nonstandar' && tableNonStandar) {
+                    tableNonStandar.ajax.reload();
                 }
 
                 if (tableInitialized[tipe]) {
@@ -94,8 +105,10 @@
                 reloadTable('npkpnppn');
             } else if (appllied_tab === 'retur') {
                 reloadTable('retur');
+            } else if (appllied_tab === 'nonstandar') {
+                reloadTable('nonstandar');
             } else {
-                ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur'].forEach(reloadTable);
+                ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar'].forEach(reloadTable);
             }
         });
 
@@ -185,6 +198,10 @@
                 if (tableInitialized.retur && tableRetur) {
                     tableRetur.ajax.reload();
                     setDownloadCounter('retur');
+                }
+                if (tableInitialized.nonstandar && tableNonStandar) {
+                    tableNonStandar.ajax.reload();
+                    setDownloadCounter('nonstandar');
                 }
             });
         }
@@ -369,6 +386,36 @@
                 }
             });
             showCheckedSummary('retur', retur_data);
+        });
+
+        //////// Checkbox Non Standar ////////
+        $('#select-all-nonstandar').on('change', function() {
+            handleSelectAll('nonstandar', this);
+        });
+        $('#table-nonstandar tbody').on('change', '.row-checkbox-nonstandar', function() {
+            const isChecked = $(this).is(':checked') ? 1 : 0;
+            const id = $(this).data('id');
+            const allChecked = $('.row-checkbox-nonstandar').length === $('.row-checkbox-nonstandar:checked')
+                .length;
+            $('#select-all-nonstandar').prop('checked', allChecked);
+            toggleMoveToSelect(id, isChecked);
+            $.ajax({
+                url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
+                type: "POST",
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    id: id,
+                    is_checked: isChecked
+                },
+                success: function(response) {
+                    setDownloadCounter('nonstandar');
+                },
+                error: function(xhr) {
+                    console.error(xhr.responseText);
+                    setDownloadCounter('nonstandar');
+                }
+            });
+            showCheckedSummary('nonstandar', nonstandar_data);
         });
 
         // AJAX request untuk filter brand
@@ -605,7 +652,8 @@
             pkpnppn: tablePkpNppn,
             npkp: tableNonPkp,
             npkpnppn: tableNonPkpNppn,
-            retur: tableRetur
+            retur: tableRetur,
+            nonstandar: tableNonStandar
         };
 
         // Reload tabel asal
@@ -695,7 +743,8 @@
             'pkpnppn': 'PKP (Non-PPN)',
             'npkp': 'Non-PKP',
             'npkpnppn': 'Non-PKP (Non-PPN)',
-            'retur': 'Retur'
+            'retur': 'Retur',
+            'nonstandar': 'Non Standar'
         } [tipe];
 
         // Update UI Visuals immediately
@@ -715,6 +764,7 @@
             else if (tipe == 'npkp') dataSrc = npkp_data;
             else if (tipe == 'npkpnppn') dataSrc = npkpnppn_data;
             else if (tipe == 'retur') dataSrc = retur_data;
+            else if (tipe == 'nonstandar') dataSrc = nonstandar_data;
             if (typeof showCheckedSummary === 'function') {
                 showCheckedSummary(tipe, dataSrc);
             }
@@ -756,7 +806,8 @@
                 else if (tipe == 'pkpnppn') table = tablePkpNppn;
                 else if (tipe == 'npkp') table = tableNonPkp;
                 else if (tipe == 'npkpnppn') table = tableNonPkpNppn;
-                else if (tipe == 'retur') table = tableRetur;
+            else if (tipe == 'retur') table = tableRetur;
+            else if (tipe == 'nonstandar') table = tableNonStandar;
 
                 let params = table.ajax.params();
                 // Ensure params exist (might be null if no ajax made yet?)
