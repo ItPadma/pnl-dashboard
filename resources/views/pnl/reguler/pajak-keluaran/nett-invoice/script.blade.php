@@ -5,36 +5,39 @@
 
 <script>
     let table;
-    let currentInvoiceForNett = null;
+    let historyTable;
+    let selectedReturData = [];
+    let npkpInvoiceData = []; // Store loaded Non-PKP data for preview calculations
+
+    const formatCurrency = (value) => new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0
+    }).format(value);
 
     $(document).ready(function() {
-        // Initialize filters
         initializeFilters();
-
-        // Initialize DataTable
         initializeDataTable();
+        initializeHistoryTable();
 
-        // Event handlers
+        // Apply filter
         $('#btn-apply-filter').on('click', function() {
-            console.log('Apply filter button clicked');
-            console.log('Table object:', table);
-
             if (table) {
-                table.ajax.reload(null, false); // false = keep current page
+                clearReturSelection();
+                table.ajax.reload(null, false);
                 swal('Filter Applied', 'Data sedang dimuat ulang...', 'info', {
                     buttons: false,
                     timer: 1500
                 });
             } else {
-                console.error('Table not initialized');
                 swal('Error', 'Table belum diinisialisasi', 'error');
             }
         });
 
+        // Export buttons
         $('#btn-export-xlsx').on('click', function() {
             exportData('xlsx');
         });
-
         $('#btn-export-csv').on('click', function() {
             exportData('csv');
         });
@@ -42,6 +45,36 @@
         // Select all retur checkbox
         $('#select-all-retur').on('change', function() {
             $('.retur-checkbox').prop('checked', $(this).prop('checked'));
+            updateReturSelection();
+        });
+
+        // Individual retur checkbox
+        $('#table-nett-invoice tbody').on('change', '.retur-checkbox', function() {
+            updateReturSelection();
+        });
+
+        // Pilih Invoice Non-PKP button
+        $('#btn-pilih-invoice').on('click', function() {
+            showNpkpModal();
+        });
+
+        // Filter Non-PKP in modal
+        $('#btn-filter-npkp').on('click', function() {
+            fetchNonPkpInvoices();
+        });
+
+        // Non-PKP checkbox selection
+        $(document).on('change', '.npkp-checkbox', function() {
+            updateNettingPreview();
+        });
+
+        // Non-PKP search filter
+        $(document).on('keyup', '#npkp-search', function() {
+            const keyword = $(this).val().toLowerCase();
+            $('#npkp-tbody tr').each(function() {
+                const text = $(this).text().toLowerCase();
+                $(this).toggle(text.indexOf(keyword) > -1);
+            });
         });
 
         // Process nett button
@@ -51,7 +84,7 @@
     });
 
     function initializeFilters() {
-        // Initialize Select2 for PT
+        // PT
         $('#sp-filter-pt').show();
         $.ajax({
             url: '{{ route('pnl.master-data.companies') }}',
@@ -66,13 +99,12 @@
                 });
                 $('#sp-filter-pt').hide();
             },
-            error: function(xhr) {
-                console.error(xhr.responseText);
+            error: function() {
                 $('#sp-filter-pt').hide();
             }
         });
 
-        // Initialize Select2 for BRAND
+        // BRAND
         $('#sp-filter-brand').show();
         $.ajax({
             url: '{{ route('pnl.master-data.brands') }}',
@@ -87,13 +119,12 @@
                 });
                 $('#sp-filter-brand').hide();
             },
-            error: function(xhr) {
-                console.error(xhr.responseText);
+            error: function() {
                 $('#sp-filter-brand').hide();
             }
         });
 
-        // Initialize Select2 for DEPO with user access filtering
+        // DEPO
         $('#sp-filter-depo').show();
         $.ajax({
             url: '{{ route('pnl.master-data.depos') }}',
@@ -105,13 +136,10 @@
                     $userDepos = $userInfo ? $userInfo->depo : [];
                     $hasAllAccess = in_array('all', $userDepos);
                 @endphp
-
                 let hasAllAccess = {{ $hasAllAccess ? 'true' : 'false' }};
                 let currentUserDepo = @json($userDepos);
 
-                // If user doesn't have 'all' access, filter the depos
                 if (!hasAllAccess) {
-                    // Filter data to only show depos the user has access to
                     $.each(data.data, function(index, depo) {
                         if (currentUserDepo.includes(depo.code)) {
                             $('#filter_depo').append($('<option>', {
@@ -121,7 +149,6 @@
                         }
                     });
                 } else {
-                    // User has 'all' access, show all depos
                     $.each(data.data, function(index, depo) {
                         $('#filter_depo').append($('<option>', {
                             value: depo.code,
@@ -129,23 +156,21 @@
                         }));
                     });
                 }
-
                 $('#sp-filter-depo').hide();
             },
-            error: function(xhr) {
-                console.error(xhr.responseText);
+            error: function() {
                 $('#sp-filter-depo').hide();
             }
         });
 
-        // Initialize Select2
+        // Select2
         $('#filter_brand, #filter_depo, #filter_pt').select2({
             allowClear: true,
             width: '100%',
             placeholder: 'Pilih..',
         });
 
-        // Dynamic brand loading when PT changes
+        // Brand reload on PT change
         $('#filter_pt').on('change', function() {
             let selectedPt = $(this).val();
             if (selectedPt && selectedPt.length > 0) {
@@ -174,8 +199,7 @@
                         $('#filter_brand').val(null).trigger('change');
                         $('#sp-filter-brand').hide();
                     },
-                    error: function(xhr) {
-                        console.error(xhr.responseText);
+                    error: function() {
                         $('#sp-filter-brand').hide();
                     }
                 });
@@ -184,7 +208,7 @@
             }
         });
 
-        // Initialize daterangepicker for PERIODE
+        // Daterangepickers
         $('#filter_periode').daterangepicker({
             locale: {
                 format: 'DD/MM/YYYY'
@@ -192,6 +216,15 @@
             autoUpdateInput: true,
             startDate: moment(),
             endDate: moment()
+        });
+        $('#modal_filter_periode').daterangepicker({
+            locale: {
+                format: 'DD/MM/YYYY'
+            },
+            autoUpdateInput: true,
+            startDate: moment(),
+            endDate: moment(),
+            parentEl: '#modal-npkp'
         });
     }
 
@@ -209,17 +242,27 @@
                     let ptVal = $('#filter_pt').val();
                     let brandVal = $('#filter_brand').val();
                     let depoVal = $('#filter_depo').val();
-
                     d.pt = (ptVal && ptVal.length > 0) ? ptVal : ['all'];
                     d.brand = (brandVal && brandVal.length > 0) ? brandVal : ['all'];
                     d.depo = (depoVal && depoVal.length > 0) ? depoVal : ['all'];
                     d.periode = $('#filter_periode').val();
-                    d.tipe = $('#filter_tipe').val();
-
-                    console.log('Filter data:', d);
                 }
             },
             columns: [{
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    render: function(data, type, row) {
+                        return `<input type="checkbox" class="retur-checkbox"
+                            value="${row.no_invoice}"
+                            data-kode="${row.kode_pelanggan}"
+                            data-nama="${row.nama_pelanggan}"
+                            data-tanggal="${row.tgl_faktur_pajak}"
+                            data-nilai="${row.nilai_retur}"
+                            data-partial="${row.is_partial ? '1' : '0'}">`;
+                    }
+                },
+                {
                     data: 'kode_pelanggan',
                     name: 'kode_pelanggan'
                 },
@@ -232,26 +275,26 @@
                     name: 'no_invoice'
                 },
                 {
-                    data: 'nilai_invoice',
-                    name: 'nilai_invoice',
-                    render: function(data, type, row) {
-                        return new Intl.NumberFormat('id-ID', {
-                            style: 'currency',
-                            currency: 'IDR'
-                        }).format(data);
+                    data: 'tgl_faktur_pajak',
+                    name: 'tgl_faktur_pajak',
+                    render: function(data) {
+                        return data ? moment(data).format('DD/MM/YYYY') : '-';
                     }
                 },
                 {
-                    data: 'nett_invoice',
-                    name: 'nett_invoice',
-                    render: function(data, type, row) {
-                        if (data == 0) {
-                            return '-';
-                        }
-                        return new Intl.NumberFormat('id-ID', {
-                            style: 'currency',
-                            currency: 'IDR'
-                        }).format(data);
+                    data: 'nilai_retur',
+                    name: 'nilai_retur',
+                    render: function(data) {
+                        return formatCurrency(data);
+                    }
+                },
+                {
+                    data: 'is_partial',
+                    name: 'is_partial',
+                    render: function(data) {
+                        return data ?
+                            '<span class="badge bg-warning text-dark">Sisa Partial</span>' :
+                            '<span class="badge bg-success">Tersedia</span>';
                     }
                 },
                 {
@@ -259,26 +302,9 @@
                     orderable: false,
                     searchable: false,
                     render: function(data, type, row) {
-                        let buttons = `
-                            <button class="btn btn-sm btn-info btn-detail" data-invoice="${row.no_invoice}">
-                                <i class="fas fa-eye"></i> Detail
-                            </button>
-                        `;
-
-                        // Only show "Pilih Retur" button if nett_invoice is 0 (not yet netted)
-                        if (row.nett_invoice == 0) {
-                            buttons += `
-                                <button class="btn btn-sm btn-success btn-pilih-retur" 
-                                    data-invoice="${row.no_invoice}"
-                                    data-kode="${row.kode_pelanggan}"
-                                    data-nama="${row.nama_pelanggan}"
-                                    data-nilai="${row.nilai_invoice}">
-                                    <i class="fas fa-exchange-alt"></i> Pilih Retur
-                                </button>
-                            `;
-                        }
-
-                        return buttons;
+                        return `<button class="btn btn-sm btn-info btn-detail" data-invoice="${row.no_invoice}">
+                            <i class="fas fa-eye"></i> Detail
+                        </button>`;
                     }
                 }
             ],
@@ -287,27 +313,132 @@
             },
             pageLength: 10,
             order: [
-                [2, 'desc']
-            ] // Order by no_invoice desc
+                [4, 'asc']
+            ]
         });
 
-        // Event delegation for detail button
         $('#table-nett-invoice tbody').on('click', '.btn-detail', function() {
-            const noInvoice = $(this).data('invoice');
-            showDetail(noInvoice);
-        });
-
-        // Event delegation for pilih retur button
-        $('#table-nett-invoice tbody').on('click', '.btn-pilih-retur', function() {
-            const noInvoice = $(this).data('invoice');
-            const rowData = {
-                kode_pelanggan: $(this).data('kode'),
-                nama_pelanggan: $(this).data('nama'),
-                nilai_invoice: $(this).data('nilai')
-            };
-            showReturModal(noInvoice, rowData);
+            showDetail($(this).data('invoice'));
         });
     }
+
+    function initializeHistoryTable() {
+        historyTable = $('#table-nett-history').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '{{ route('pnl.reguler.nett-invoice.history') }}',
+                type: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                }
+            },
+            columns: [{
+                    data: 'id_transaksi',
+                    name: 'id_transaksi',
+                    render: function(data) {
+                        return data ? `<span title="${data}">${data.substring(0, 20)}…</span>` : '-';
+                    }
+                },
+                {
+                    data: 'no_invoice_npkp',
+                    name: 'no_invoice_npkp'
+                },
+                {
+                    data: 'no_invoice_retur',
+                    name: 'no_invoice_retur'
+                },
+                {
+                    data: 'nilai_invoice_npkp',
+                    name: 'nilai_invoice_npkp',
+                    render: function(data) {
+                        return formatCurrency(data);
+                    }
+                },
+                {
+                    data: 'nilai_retur_used',
+                    name: 'nilai_retur_used',
+                    render: function(data) {
+                        return formatCurrency(data);
+                    }
+                },
+                {
+                    data: 'nilai_nett',
+                    name: 'nilai_nett',
+                    render: function(data) {
+                        return formatCurrency(data);
+                    }
+                },
+                {
+                    data: 'remaining_value',
+                    name: 'remaining_value',
+                    render: function(data) {
+                        return parseFloat(data) > 0 ?
+                            `<span class="text-warning fw-bold">${formatCurrency(data)}</span>` :
+                            formatCurrency(data);
+                    }
+                },
+                {
+                    data: 'status',
+                    name: 'status',
+                    render: function(data) {
+                        return `<span class="badge bg-info">${data}</span>`;
+                    }
+                },
+                {
+                    data: 'created_by',
+                    name: 'created_by',
+                    render: function(data) {
+                        return data || '-';
+                    }
+                },
+                {
+                    data: 'created_at',
+                    name: 'created_at',
+                    render: function(data) {
+                        return data ? moment(data).format('DD/MM/YYYY HH:mm') : '-';
+                    }
+                }
+            ],
+            language: {
+                processing: '<div><i class="fas fa-spinner fa-spin fa-2x"></i><div>Memuat data...</div></div>'
+            },
+            pageLength: 10,
+            order: [
+                [9, 'desc']
+            ]
+        });
+    }
+
+    // ── Selection management ──
+
+    function updateReturSelection() {
+        selectedReturData = [];
+        $('.retur-checkbox:checked').each(function() {
+            selectedReturData.push({
+                no_invoice: $(this).val(),
+                kode_pelanggan: $(this).data('kode'),
+                nama_pelanggan: $(this).data('nama'),
+                tgl_faktur_pajak: $(this).data('tanggal'),
+                nilai_retur: parseFloat($(this).data('nilai')),
+                is_partial: $(this).data('partial') === '1' || $(this).data('partial') === 1
+            });
+        });
+
+        const count = selectedReturData.length;
+        $('#selected-count').text(count);
+        count > 0 ? $('.btn-pilih-invoice').fadeIn(200) : $('.btn-pilih-invoice').fadeOut(200);
+    }
+
+    function clearReturSelection() {
+        selectedReturData = [];
+        $('#select-all-retur').prop('checked', false);
+        $('.retur-checkbox').prop('checked', false);
+        $('#selected-count').text('0');
+        $('.btn-pilih-invoice').fadeOut(200);
+    }
+
+    // ── Detail modal ──
 
     function showDetail(noInvoice) {
         $.ajax({
@@ -323,15 +454,13 @@
                 if (response.status) {
                     let html = '';
                     response.data.forEach(function(item) {
-                        html += `
-                            <tr>
-                                <td>${item.kode_produk}</td>
-                                <td>${item.qty_pcs}</td>
-                                <td>${new Intl.NumberFormat('id-ID', {style: 'currency', currency: 'IDR'}).format(item.dpp)}</td>
-                                <td>${new Intl.NumberFormat('id-ID', {style: 'currency', currency: 'IDR'}).format(item.ppn)}</td>
-                                <td>${new Intl.NumberFormat('id-ID', {style: 'currency', currency: 'IDR'}).format(item.disc)}</td>
-                            </tr>
-                        `;
+                        html += `<tr>
+                            <td>${item.kode_produk}</td>
+                            <td>${item.qty_pcs}</td>
+                            <td>${formatCurrency(item.dpp)}</td>
+                            <td>${formatCurrency(item.ppn)}</td>
+                            <td>${formatCurrency(item.disc)}</td>
+                        </tr>`;
                     });
                     $('#detail-items-tbody').html(html);
                     $('#modal-detail').modal('show');
@@ -339,81 +468,217 @@
                     swal('Error', response.message, 'error');
                 }
             },
-            error: function(xhr) {
+            error: function() {
                 swal('Error', 'Gagal mengambil detail invoice', 'error');
             }
         });
     }
 
-    function showReturModal(noInvoice, rowData) {
-        currentInvoiceForNett = noInvoice;
-        $('#selected-invoice').text(noInvoice);
-        $('#selected-kode-pelanggan').text(rowData.kode_pelanggan);
-        $('#selected-nama-pelanggan').text(rowData.nama_pelanggan);
-        $('#selected-nilai-invoice').text(
-            new Intl.NumberFormat('id-ID', {
-                style: 'currency',
-                currency: 'IDR'
-            }).format(rowData.nilai_invoice)
-        );
+    // ── Non-PKP modal ──
+
+    function showNpkpModal() {
+        if (selectedReturData.length === 0) {
+            swal('Peringatan', 'Pilih minimal satu invoice retur', 'warning');
+            return;
+        }
+
+        // Populate retur summary table
+        let summaryHtml = '';
+        let totalRetur = 0;
+        selectedReturData.forEach(function(item) {
+            totalRetur += item.nilai_retur;
+            const dateFormatted = item.tgl_faktur_pajak ? moment(item.tgl_faktur_pajak).format('DD/MM/YYYY') :
+                '-';
+            const partialBadge = item.is_partial ?
+                ' <span class="badge bg-warning text-dark" style="font-size:.65rem;">Partial</span>' : '';
+            summaryHtml += `<tr>
+                <td>${item.no_invoice}${partialBadge}</td>
+                <td>${item.kode_pelanggan}</td>
+                <td>${item.nama_pelanggan}</td>
+                <td>${dateFormatted}</td>
+                <td class="text-end">${formatCurrency(item.nilai_retur)}</td>
+            </tr>`;
+        });
+
+        $('#selected-retur-summary').html(summaryHtml);
+        $('#total-retur-value').text(formatCurrency(totalRetur));
+
+        // Reset Non-PKP section
+        npkpInvoiceData = [];
+        $('#npkp-tbody').html('');
+        $('#npkp-table-wrapper').hide();
+        $('#npkp-empty').show();
+        $('#npkp-loading').hide();
+        $('#netting-preview').removeClass('active');
+        $('#btn-process-nett').prop('disabled', true);
+
+        $('#modal-npkp').modal('show');
+    }
+
+    function fetchNonPkpInvoices() {
+        let brandVal = $('#filter_brand').val(); // use main-page brand filter
+        let periode = $('#modal_filter_periode').val();
+
+        // Get unique customer IDs from selected retur
+        let returCustomerIds = [...new Set(selectedReturData.map(r => r.kode_pelanggan))];
+
+        $('#npkp-empty').hide();
+        $('#npkp-table-wrapper').hide();
+        $('#npkp-loading').show();
+        $('#netting-preview').removeClass('active');
 
         $.ajax({
-            url: '{{ route('pnl.reguler.nett-invoice.retur-list') }}',
+            url: '{{ route('pnl.reguler.nett-invoice.npkp-list') }}',
             type: 'POST',
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
             data: {
-                pt: $('#filter_pt').val() || ['all'],
-                brand: $('#filter_brand').val() || ['all'],
-                depo: $('#filter_depo').val() || ['all'],
-                periode: $('#filter_periode').val()
+                brand: (brandVal && brandVal.length > 0) ? brandVal : ['all'],
+                periode: periode,
+                retur_customer_ids: returCustomerIds
             },
             success: function(response) {
-                if (response.status) {
+                $('#npkp-loading').hide();
+
+                if (response.status && response.data.length > 0) {
+                    npkpInvoiceData = response.data;
                     let html = '';
-                    if (response.data.length === 0) {
-                        html =
-                            '<tr><td colspan="5" class="text-center">Tidak ada invoice retur yang tersedia</td></tr>';
-                    } else {
-                        response.data.forEach(function(item) {
-                            html += `
-                                <tr>
-                                    <td><input type="checkbox" class="retur-checkbox" value="${item.no_invoice}"></td>
-                                    <td>${item.kode_pelanggan}</td>
-                                    <td>${item.nama_pelanggan}</td>
-                                    <td>${item.no_invoice}</td>
-                                    <td>${new Intl.NumberFormat('id-ID', {style: 'currency', currency: 'IDR'}).format(item.nilai_retur)}</td>
-                                </tr>
-                            `;
-                        });
-                    }
-                    $('#retur-tbody').html(html);
-                    $('#modal-retur').modal('show');
+                    response.data.forEach(function(item) {
+                        const dateFormatted = item.tgl_faktur_pajak ? moment(item.tgl_faktur_pajak)
+                            .format('DD/MM/YYYY') : '-';
+                        const isMatch = item.is_matching_customer;
+                        const rowClass = isMatch ? 'npkp-match-row' : '';
+                        const matchBadge = isMatch ?
+                            '<span class="badge bg-success npkp-match-badge">Customer Sama</span>' :
+                            '';
+
+                        html += `<tr class="${rowClass}">
+                            <td class="text-center">
+                                <input type="checkbox" class="npkp-checkbox"
+                                    value="${item.no_invoice}"
+                                    data-nilai="${item.nilai_invoice}">
+                            </td>
+                            <td>${item.kode_pelanggan} ${matchBadge}</td>
+                            <td>${item.nama_pelanggan}</td>
+                            <td>${item.no_invoice}</td>
+                            <td>${dateFormatted}</td>
+                            <td class="text-end">${formatCurrency(item.nilai_invoice)}</td>
+                        </tr>`;
+                    });
+                    $('#npkp-tbody').html(html);
+                    $('#npkp-table-wrapper').show();
+                    $('#npkp-empty').hide();
                 } else {
-                    swal('Error', response.message, 'error');
+                    npkpInvoiceData = [];
+                    $('#npkp-empty').html(
+                        '<i class="fas fa-inbox d-block" style="font-size:2.5rem;color:#dadce0;margin-bottom:10px;"></i><p class="mb-0">Tidak ada invoice Non-PKP ditemukan</p>'
+                    ).show();
+                    $('#npkp-table-wrapper').hide();
                 }
             },
-            error: function(xhr) {
-                swal('Error', 'Gagal mengambil daftar retur', 'error');
+            error: function() {
+                $('#npkp-loading').hide();
+                $('#npkp-empty').html(
+                    '<i class="fas fa-exclamation-triangle d-block" style="font-size:2.5rem;color:#f44336;margin-bottom:10px;"></i><p class="mb-0">Gagal memuat data</p>'
+                ).show();
             }
         });
     }
 
-    function processNett() {
-        const selectedReturs = [];
-        $('.retur-checkbox:checked').each(function() {
-            selectedReturs.push($(this).val());
+    // ── Netting preview (client-side simulation) ──
+
+    function updateNettingPreview() {
+        const checkedNpkp = [];
+        $('.npkp-checkbox:checked').each(function() {
+            checkedNpkp.push({
+                no_invoice: $(this).val(),
+                nilai_invoice: parseFloat($(this).data('nilai'))
+            });
         });
 
-        if (selectedReturs.length === 0) {
-            swal('Peringatan', 'Pilih minimal satu invoice retur', 'warning');
+        if (checkedNpkp.length === 0) {
+            $('#netting-preview').removeClass('active');
+            $('#btn-process-nett').prop('disabled', true);
             return;
         }
 
+        // Clone retur data for simulation
+        let returPool = selectedReturData.map(r => ({
+            no_invoice: r.no_invoice,
+            remaining: r.nilai_retur
+        }));
+
+        let previewHtml = '';
+        let totalOriginal = 0;
+        let totalReturUsed = 0;
+        let totalNett = 0;
+
+        checkedNpkp.forEach(function(npkp) {
+            let remainingNpkp = npkp.nilai_invoice;
+            let returUsedForThis = 0;
+
+            for (let i = 0; i < returPool.length; i++) {
+                if (returPool[i].remaining <= 0 || remainingNpkp <= 0) continue;
+
+                if (remainingNpkp >= returPool[i].remaining) {
+                    returUsedForThis += returPool[i].remaining;
+                    remainingNpkp -= returPool[i].remaining;
+                    returPool[i].remaining = 0;
+                } else {
+                    returUsedForThis += remainingNpkp;
+                    returPool[i].remaining -= remainingNpkp;
+                    remainingNpkp = 0;
+                }
+
+                if (remainingNpkp <= 0) break;
+            }
+
+            const nettValue = npkp.nilai_invoice - returUsedForThis;
+            totalOriginal += npkp.nilai_invoice;
+            totalReturUsed += returUsedForThis;
+            totalNett += nettValue;
+
+            const nettClass = nettValue > 0 ? 'nett-result-positive' : 'nett-result-negative';
+
+            previewHtml += `<tr>
+                <td>${npkp.no_invoice}</td>
+                <td class="text-end">${formatCurrency(npkp.nilai_invoice)}</td>
+                <td class="text-end">${formatCurrency(returUsedForThis)}</td>
+                <td class="text-end ${nettClass}">${formatCurrency(nettValue)}</td>
+            </tr>`;
+        });
+
+        const totalReturRemaining = returPool.reduce((sum, r) => sum + r.remaining, 0);
+
+        $('#netting-preview-tbody').html(previewHtml);
+        $('#preview-total-original').text(formatCurrency(totalOriginal));
+        $('#preview-total-retur-used').text(formatCurrency(totalReturUsed));
+        $('#preview-total-nett').text(formatCurrency(totalNett));
+        $('#preview-retur-remaining').text(formatCurrency(totalReturRemaining));
+
+        $('#netting-preview').addClass('active');
+        $('#btn-process-nett').prop('disabled', false);
+    }
+
+    // ── Process nett ──
+
+    function processNett() {
+        const selectedNpkpInvoices = [];
+        $('.npkp-checkbox:checked').each(function() {
+            selectedNpkpInvoices.push($(this).val());
+        });
+
+        if (selectedNpkpInvoices.length === 0) {
+            swal('Peringatan', 'Pilih minimal satu invoice Non-PKP', 'warning');
+            return;
+        }
+
+        const returInvoices = selectedReturData.map(item => item.no_invoice);
+
         swal({
             title: 'Konfirmasi',
-            text: `Anda akan melakukan proses nett untuk invoice ${currentInvoiceForNett} dengan ${selectedReturs.length} invoice retur. Lanjutkan?`,
+            text: `Proses netting ${selectedNpkpInvoices.length} invoice Non-PKP dengan ${returInvoices.length} invoice retur. Lanjutkan?`,
             icon: 'warning',
             buttons: {
                 cancel: {
@@ -435,33 +700,36 @@
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
                     data: {
-                        no_invoice: currentInvoiceForNett,
-                        retur_invoices: selectedReturs
+                        npkp_invoices: selectedNpkpInvoices,
+                        retur_invoices: returInvoices
                     },
                     success: function(response) {
                         if (response.status) {
                             swal('Berhasil', response.message, 'success').then(() => {
-                                $('#modal-retur').modal('hide');
+                                $('#modal-npkp').modal('hide');
+                                clearReturSelection();
                                 table.ajax.reload();
+                                historyTable.ajax.reload();
                             });
                         } else {
                             swal('Error', response.message, 'error');
                         }
                     },
                     error: function(xhr) {
-                        const message = xhr.responseJSON?.message ||
-                            'Gagal melakukan proses netting';
-                        swal('Error', message, 'error');
+                        swal('Error', xhr.responseJSON?.message || 'Gagal melakukan proses netting',
+                            'error');
                     }
                 });
             }
         });
     }
 
+    // ── Export ──
+
     function exportData(format) {
         swal({
             title: 'Konfirmasi',
-            text: 'Anda akan export data nett invoice ke format ' + format.toUpperCase() + '. Lanjutkan?',
+            text: 'Export data nett invoice ke ' + format.toUpperCase() + '. Lanjutkan?',
             icon: 'info',
             buttons: {
                 cancel: {

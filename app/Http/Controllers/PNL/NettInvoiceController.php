@@ -10,6 +10,7 @@ use App\Models\NettInvoiceDetail;
 use App\Models\NettInvoiceDetailItem;
 use App\Models\NettInvoiceHeader;
 use App\Models\NettInvoiceHeaderItem;
+use App\Models\NettInvoiceHistory;
 use App\Models\PajakKeluaranDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,7 +26,7 @@ class NettInvoiceController extends Controller
     }
 
     /**
-     * Get data for DataTables with filters
+     * Get retur invoice data for the main DataTable
      */
     public function getData(Request $request)
     {
@@ -35,11 +36,20 @@ class NettInvoiceController extends Controller
                     'customer_id as kode_pelanggan',
                     'nama_customer_sistem as nama_pelanggan',
                     'no_invoice',
-                    DB::raw('SUM(dpp + ppn) as nilai_invoice'),
-                    DB::raw('0 as nett_invoice'),
+                    'tgl_faktur_pajak',
+                    DB::raw('ABS(SUM(dpp + ppn)) as nilai_retur'),
                 )
-                // ->where("is_checked", 1)
-                ->where('is_downloaded', 0);
+                ->where('is_downloaded', 0)
+                ->where(function ($subQuery) {
+                    $subQuery
+                        ->where(function ($innerQuery) {
+                            $innerQuery
+                                ->where('qty_pcs', '<', 0)
+                                ->where('hargatotal_sblm_ppn', '>=', -1000000)
+                                ->where('has_moved', 'n');
+                        })
+                        ->orWhere('moved_to', 'retur');
+                });
 
             // Apply filters
             if ($request->has('pt') && ! in_array('all', $request->pt ?? [])) {
@@ -129,21 +139,12 @@ class NettInvoiceController extends Controller
                 }
             }
 
-            // Force Nett Invoice to only use Non-PKP invoices
-            $pkp = MasterPkp::where('is_active', true)->pluck('IDPelanggan')->toArray();
-            $query->whereNotIn('customer_id', $pkp);
-            $query->where('tipe_ppn', 'PPN');
-            $query->where('qty_pcs', '>', 0);
-            $query->where(function ($subQuery) {
-                $subQuery
-                    ->where('hargatotal_sblm_ppn', '>', 0)
-                    ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
-            });
-
-            // Exclude invoices that have already been netted
-            $nettedInvoices = NettInvoiceHeader::pluck('no_invoice')->toArray();
-            if (! empty($nettedInvoices)) {
-                $query->whereNotIn('no_invoice', $nettedInvoices);
+            // Exclude retur that have been fully used in netting (remaining_value = 0)
+            $fullyUsedReturs = NettInvoiceDetail::where('remaining_value', 0)
+                ->pluck('no_invoice_retur')
+                ->toArray();
+            if (! empty($fullyUsedReturs)) {
+                $query->whereNotIn('no_invoice', $fullyUsedReturs);
             }
 
             // Group by invoice
@@ -151,31 +152,36 @@ class NettInvoiceController extends Controller
                 'customer_id',
                 'nama_customer_sistem',
                 'no_invoice',
+                'tgl_faktur_pajak',
             );
 
-            // Get total records (use subquery because of groupBy)
+            // Get total records
             $countQuery = clone $query;
             $totalRecords = DB::table(DB::raw("({$countQuery->toSql()}) as sub"))
                 ->mergeBindings($countQuery)
                 ->count();
 
-            // log the query
-            Log::info('Query: '.$query->toSql());
-
             // Pagination
             $start = $request->get('start', 0);
             $length = $request->get('length', 10);
 
-            $records = $query->offset($start)->limit($length)->get();
+            $records = $query->orderBy('tgl_faktur_pajak', 'asc')
+                ->offset($start)
+                ->limit($length)
+                ->get();
 
-            // Check if any invoice has been netted
+            // Check for partial usage and adjust nilai_retur
             foreach ($records as &$record) {
-                $nettHeader = NettInvoiceHeader::where(
-                    'no_invoice',
+                $partialDetail = NettInvoiceDetail::where(
+                    'no_invoice_retur',
                     $record->no_invoice,
-                )->first();
-                if ($nettHeader) {
-                    $record->nett_invoice = $nettHeader->invoice_value_nett;
+                )->where('remaining_value', '>', 0)->first();
+
+                if ($partialDetail) {
+                    $record->nilai_retur = $partialDetail->remaining_value;
+                    $record->is_partial = true;
+                } else {
+                    $record->is_partial = false;
                 }
             }
 
@@ -234,7 +240,111 @@ class NettInvoiceController extends Controller
     }
 
     /**
-     * Get list of retur invoices (excluding already used ones)
+     * Get list of Non-PKP invoices for modal selection
+     * Accepts retur_customer_ids to prioritize matching customers
+     */
+    public function getNonPkpList(Request $request)
+    {
+        try {
+            $query = DB::table('pajak_keluaran_details')
+                ->select(
+                    'customer_id as kode_pelanggan',
+                    'nama_customer_sistem as nama_pelanggan',
+                    'no_invoice',
+                    'tgl_faktur_pajak',
+                    DB::raw('SUM(dpp + ppn) as nilai_invoice'),
+                )
+                ->where('is_downloaded', 0);
+
+            // Use main page brand filter
+            if (
+                $request->has('brand') &&
+                ! in_array('all', $request->brand ?? [])
+            ) {
+                $query->whereIn('brand', $request->brand);
+            }
+
+            // Filter periode
+            if ($request->has('periode') && ! empty($request->periode)) {
+                $periode = explode(' - ', $request->periode);
+                if (count($periode) === 2) {
+                    $periodeAwal = \Carbon\Carbon::createFromFormat(
+                        'd/m/Y',
+                        $periode[0],
+                    )->format('Y-m-d');
+                    $periodeAkhir = \Carbon\Carbon::createFromFormat(
+                        'd/m/Y',
+                        $periode[1],
+                    )->format('Y-m-d');
+                    $query->whereBetween('tgl_faktur_pajak', [
+                        $periodeAwal,
+                        $periodeAkhir,
+                    ]);
+                }
+            }
+
+            // Force Non-PKP only
+            $pkp = MasterPkp::where('is_active', true)->pluck('IDPelanggan')->toArray();
+            $query->whereNotIn('customer_id', $pkp);
+            $query->where('tipe_ppn', 'PPN');
+            $query->where('qty_pcs', '>', 0);
+            $query->where(function ($subQuery) {
+                $subQuery
+                    ->where('hargatotal_sblm_ppn', '>', 0)
+                    ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
+            });
+
+            // Exclude invoices that have already been netted
+            $nettedInvoices = NettInvoiceHeader::pluck('no_invoice')->toArray();
+            if (! empty($nettedInvoices)) {
+                $query->whereNotIn('no_invoice', $nettedInvoices);
+            }
+
+            // Group by invoice
+            $query->groupBy(
+                'customer_id',
+                'nama_customer_sistem',
+                'no_invoice',
+                'tgl_faktur_pajak',
+            );
+
+            $invoices = $query->orderBy('tgl_faktur_pajak', 'asc')->get();
+
+            // Mark matching customer_ids for prioritization
+            $returCustomerIds = $request->retur_customer_ids ?? [];
+            foreach ($invoices as &$invoice) {
+                $invoice->is_matching_customer = in_array(
+                    $invoice->kode_pelanggan,
+                    $returCustomerIds,
+                );
+            }
+
+            // Sort: matching customers first, then by date
+            $sorted = $invoices->sortBy(function ($item) {
+                return ($item->is_matching_customer ? '0' : '1').'_'.$item->tgl_faktur_pajak;
+            })->values();
+
+            return response()->json([
+                'status' => true,
+                'data' => $sorted,
+            ]);
+        } catch (\Throwable $th) {
+            Log::error(
+                'Error in NettInvoiceController@getNonPkpList: '.$th->getMessage(),
+            );
+
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => $th->getMessage(),
+                ],
+                500,
+            );
+        }
+    }
+
+    /**
+     * Get list of retur invoices (legacy, kept for compatibility)
      */
     public function getReturList(Request $request)
     {
@@ -247,7 +357,6 @@ class NettInvoiceController extends Controller
                     DB::raw('ABS(SUM(dpp + ppn)) as nilai_retur'),
                 )
                 ->where('is_downloaded', 0)
-                // ->where("is_checked", 1)
                 ->where(function ($subQuery) {
                     $subQuery
                         ->where(function ($innerQuery) {
@@ -259,7 +368,6 @@ class NettInvoiceController extends Controller
                         ->orWhere('moved_to', 'retur');
                 });
 
-            // Apply same filters as getData
             if ($request->has('pt') && ! in_array('all', $request->pt ?? [])) {
                 $query->whereIn('company', $request->pt);
             }
@@ -332,15 +440,13 @@ class NettInvoiceController extends Controller
                 }
             }
 
-            // Exclude retur that have been used in netting process
-            $usedReturs = NettInvoiceDetail::pluck(
-                'no_invoice_retur',
-            )->toArray();
-            if (! empty($usedReturs)) {
-                $query->whereNotIn('no_invoice', $usedReturs);
+            $fullyUsedReturs = NettInvoiceDetail::where('remaining_value', 0)
+                ->pluck('no_invoice_retur')
+                ->toArray();
+            if (! empty($fullyUsedReturs)) {
+                $query->whereNotIn('no_invoice', $fullyUsedReturs);
             }
 
-            // Group by invoice
             $query->groupBy(
                 'customer_id',
                 'nama_customer_sistem',
@@ -370,15 +476,16 @@ class NettInvoiceController extends Controller
     }
 
     /**
-     * Process netting between invoice and retur
+     * Process netting: multiple returs against multiple Non-PKP invoices
+     * Returs are processed oldest-first, remaining value is tracked
      */
     public function processNett(Request $request)
     {
         try {
             DB::beginTransaction();
 
-            $noInvoice = $request->no_invoice;
             $returInvoices = $request->retur_invoices ?? [];
+            $npkpInvoices = $request->npkp_invoices ?? [];
 
             if (empty($returInvoices)) {
                 return response()->json(
@@ -390,78 +497,20 @@ class NettInvoiceController extends Controller
                 );
             }
 
-            // Check if any retur has been used before
-            $usedReturs = NettInvoiceDetail::whereIn(
-                'no_invoice_retur',
-                $returInvoices,
-            )
-                ->pluck('no_invoice_retur')
-                ->toArray();
-            if (! empty($usedReturs)) {
-                DB::rollBack();
-
+            if (empty($npkpInvoices)) {
                 return response()->json(
                     [
                         'status' => false,
-                        'message' => 'Invoice retur berikut sudah pernah digunakan: '.
-                            implode(', ', $usedReturs),
+                        'message' => 'Pilih minimal satu invoice Non-PKP',
                     ],
                     400,
-                );
-            }
-
-            // Get invoice data
-            $invoiceItems = PajakKeluaranDetail::where(
-                'no_invoice',
-                $noInvoice,
-            )->get();
-            if ($invoiceItems->isEmpty()) {
-                DB::rollBack();
-
-                return response()->json(
-                    [
-                        'status' => false,
-                        'message' => 'Invoice tidak ditemukan',
-                    ],
-                    404,
                 );
             }
 
             $pkp = MasterPkp::where('is_active', true)->pluck('IDPelanggan')->toArray();
-            $invalidInvoice = $invoiceItems->contains(function ($item) use (
-                $pkp,
-            ) {
-                $isNonPkpCustomer = ! in_array($item->customer_id, $pkp);
-                $isValidValue =
-                    $item->hargatotal_sblm_ppn > 0 ||
-                    $item->hargatotal_sblm_ppn <= -1000000;
 
-                return ! (
-                    $isNonPkpCustomer &&
-                    $item->tipe_ppn === 'PPN' &&
-                    $item->qty_pcs > 0 &&
-                    $isValidValue
-                );
-            });
-
-            if ($invalidInvoice) {
-                DB::rollBack();
-
-                return response()->json(
-                    [
-                        'status' => false,
-                        'message' => 'Invoice harus Non-PKP (PPN) dan bukan retur/bebas yang tidak valid',
-                    ],
-                    400,
-                );
-            }
-
-            $invoiceValueOriginal = $invoiceItems->sum(function ($item) {
-                return $item->dpp + $item->ppn;
-            });
-
-            // Get retur data and calculate total
-            $totalReturValue = 0;
+            // Collect and sort retur data oldest-first
+            $returDataList = [];
             foreach ($returInvoices as $returInvoice) {
                 $returItems = PajakKeluaranDetail::where(
                     'no_invoice',
@@ -480,119 +529,223 @@ class NettInvoiceController extends Controller
                     );
                 }
 
-                $invalidRetur = $returItems->contains(function ($item) {
-                    $isReturMoved = $item->moved_to === 'retur';
-                    $isReturBebas =
-                        $item->qty_pcs < 0 &&
-                        $item->hargatotal_sblm_ppn >= -1000000 &&
-                        $item->has_moved === 'n';
+                $partialDetail = NettInvoiceDetail::where(
+                    'no_invoice_retur',
+                    $returInvoice,
+                )->where('remaining_value', '>', 0)->first();
 
-                    return ! ($isReturMoved || $isReturBebas);
-                });
+                $returValue = $partialDetail
+                    ? $partialDetail->remaining_value
+                    : abs($returItems->sum(function ($item) {
+                        return $item->dpp + $item->ppn;
+                    }));
 
-                if ($invalidRetur) {
+                $returDataList[] = [
+                    'no_invoice' => $returInvoice,
+                    'items' => $returItems,
+                    'value' => $returValue,
+                    'remaining' => $returValue,
+                    'tgl_faktur_pajak' => $returItems->first()->tgl_faktur_pajak ?? '1970-01-01',
+                    'is_partial_reuse' => $partialDetail !== null,
+                ];
+            }
+
+            usort($returDataList, function ($a, $b) {
+                return strcmp($a['tgl_faktur_pajak'], $b['tgl_faktur_pajak']);
+            });
+
+            // Generate unique transaction ID
+            $idTransaksi = 'NETT-'.date('YmdHis').'-'.uniqid();
+
+            // Process each Non-PKP invoice
+            foreach ($npkpInvoices as $noInvoiceNpkp) {
+                $npkpItems = PajakKeluaranDetail::where(
+                    'no_invoice',
+                    $noInvoiceNpkp,
+                )->get();
+
+                if ($npkpItems->isEmpty()) {
                     DB::rollBack();
 
                     return response()->json(
                         [
                             'status' => false,
-                            'message' => "Invoice retur {$returInvoice} bukan retur bebas Non-PKP",
+                            'message' => "Invoice Non-PKP {$noInvoiceNpkp} tidak ditemukan",
+                        ],
+                        404,
+                    );
+                }
+
+                // Validate Non-PKP
+                $invalidInvoice = $npkpItems->contains(function ($item) use ($pkp) {
+                    $isNonPkpCustomer = ! in_array($item->customer_id, $pkp);
+                    $isValidValue =
+                        $item->hargatotal_sblm_ppn > 0 ||
+                        $item->hargatotal_sblm_ppn <= -1000000;
+
+                    return ! (
+                        $isNonPkpCustomer &&
+                        $item->tipe_ppn === 'PPN' &&
+                        $item->qty_pcs > 0 &&
+                        $isValidValue
+                    );
+                });
+
+                if ($invalidInvoice) {
+                    DB::rollBack();
+
+                    return response()->json(
+                        [
+                            'status' => false,
+                            'message' => "Invoice {$noInvoiceNpkp} bukan Non-PKP (PPN) yang valid",
                         ],
                         400,
                     );
                 }
 
-                $returValue = abs(
-                    $returItems->sum(function ($item) {
-                        return $item->dpp + $item->ppn;
-                    }),
-                );
-                $totalReturValue += $returValue;
-            }
+                $invoiceValueOriginal = $npkpItems->sum(function ($item) {
+                    return $item->dpp + $item->ppn;
+                });
 
-            // Calculate nett value
-            $invoiceValueNett = $invoiceValueOriginal - $totalReturValue;
+                // Calculate total retur used for this Non-PKP
+                $remainingNpkpValue = $invoiceValueOriginal;
+                $totalReturUsedForThis = 0;
+                $returUsageForThis = [];
 
-            // Generate unique transaction ID
-            $idTransaksi = 'NETT-'.date('YmdHis').'-'.uniqid();
+                foreach ($returDataList as $index => &$returData) {
+                    if ($returData['remaining'] <= 0 || $remainingNpkpValue <= 0) {
+                        continue;
+                    }
 
-            $firstItem = $invoiceItems->first();
+                    $returUsed = 0;
+                    if ($remainingNpkpValue >= $returData['remaining']) {
+                        $returUsed = $returData['remaining'];
+                        $remainingNpkpValue -= $returData['remaining'];
+                        $returData['remaining'] = 0;
+                    } else {
+                        $returUsed = $remainingNpkpValue;
+                        $returData['remaining'] -= $remainingNpkpValue;
+                        $remainingNpkpValue = 0;
+                    }
 
-            // Save to nett_invoice_headers
-            $nettHeader = NettInvoiceHeader::create([
-                'id_transaksi' => $idTransaksi,
-                'pt' => $firstItem->company,
-                'principal' => $firstItem->brand,
-                'depo' => $firstItem->depo,
-                'no_invoice' => $noInvoice,
-                'invoice_value_original' => $invoiceValueOriginal,
-                'invoice_value_nett' => $invoiceValueNett,
-                'mp_bulan' => date('m'),
-                'mp_tahun' => date('Y'),
-                'is_checked' => 1,
-                'is_downloaded' => 0,
-                'status' => 'netted',
-                'created_at' => now(),
-            ]);
+                    $totalReturUsedForThis += $returUsed;
+                    $returUsageForThis[] = [
+                        'index' => $index,
+                        'no_invoice' => $returData['no_invoice'],
+                        'used' => $returUsed,
+                        'remaining_after' => $returData['remaining'],
+                    ];
 
-            // Save invoice items to nett_invoice_header_items
-            foreach ($invoiceItems as $item) {
-                NettInvoiceHeaderItem::create([
+                    if ($remainingNpkpValue <= 0) {
+                        break;
+                    }
+                }
+                unset($returData);
+
+                $invoiceValueNett = $invoiceValueOriginal - $totalReturUsedForThis;
+                $firstNpkpItem = $npkpItems->first();
+
+                // Save to nett_invoice_headers
+                NettInvoiceHeader::create([
                     'id_transaksi' => $idTransaksi,
-                    'no_invoice' => $noInvoice,
-                    'kode_barang' => $item->kode_produk,
-                    'satuan' => $item->satuan,
-                    'qty' => $item->qty_pcs,
-                    'harga_satuan' => $item->hargasatuan_sblm_ppn,
-                    'harga_total' => $item->hargatotal_sblm_ppn,
-                    'created_at' => now(),
-                ]);
-            }
-
-            // Save retur data to nett_invoice_details and items
-            foreach ($returInvoices as $returInvoice) {
-                $returItems = PajakKeluaranDetail::where(
-                    'no_invoice',
-                    $returInvoice,
-                )->get();
-                $returValue = abs(
-                    $returItems->sum(function ($item) {
-                        return $item->dpp + $item->ppn;
-                    }),
-                );
-
-                $firstReturItem = $returItems->first();
-
-                NettInvoiceDetail::create([
-                    'id_transaksi' => $idTransaksi,
-                    'pt' => $firstReturItem->company,
-                    'principal' => $firstReturItem->brand,
-                    'depo' => $firstReturItem->depo,
-                    'no_invoice_retur' => $returInvoice,
-                    'invoice_retur_value' => $returValue,
+                    'pt' => $firstNpkpItem->company,
+                    'principal' => $firstNpkpItem->brand,
+                    'depo' => $firstNpkpItem->depo,
+                    'no_invoice' => $noInvoiceNpkp,
+                    'invoice_value_original' => $invoiceValueOriginal,
+                    'invoice_value_nett' => $invoiceValueNett,
                     'mp_bulan' => date('m'),
                     'mp_tahun' => date('Y'),
                     'is_checked' => 1,
                     'is_downloaded' => 0,
-                    'status' => 'used',
+                    'status' => 'netted',
                     'created_at' => now(),
                 ]);
 
-                foreach ($returItems as $item) {
-                    NettInvoiceDetailItem::create([
+                // Save Non-PKP invoice items
+                foreach ($npkpItems as $item) {
+                    NettInvoiceHeaderItem::create([
                         'id_transaksi' => $idTransaksi,
-                        'no_invoice_retur' => $returInvoice,
+                        'no_invoice' => $noInvoiceNpkp,
                         'kode_barang' => $item->kode_produk,
                         'satuan' => $item->satuan,
-                        'qty' => abs((float) $item->qty_pcs),
-                        'harga_satuan' => abs(
-                            (float) $item->hargasatuan_sblm_ppn,
-                        ),
-                        'harga_total' => abs(
-                            (float) $item->hargatotal_sblm_ppn,
-                        ),
+                        'qty' => $item->qty_pcs,
+                        'harga_satuan' => $item->hargasatuan_sblm_ppn,
+                        'harga_total' => $item->hargatotal_sblm_ppn,
                         'created_at' => now(),
                     ]);
+                }
+
+                // Save history for each retur usage against this Non-PKP
+                foreach ($returUsageForThis as $usage) {
+                    NettInvoiceHistory::create([
+                        'id_transaksi' => $idTransaksi,
+                        'no_invoice_npkp' => $noInvoiceNpkp,
+                        'no_invoice_retur' => $usage['no_invoice'],
+                        'nilai_invoice_npkp' => $invoiceValueOriginal,
+                        'nilai_retur_used' => $usage['used'],
+                        'nilai_nett' => $invoiceValueNett,
+                        'remaining_value' => $usage['remaining_after'],
+                        'status' => 'processed',
+                        'created_by' => Auth::user()->username ?? Auth::user()->name ?? null,
+                        'created_at' => now(),
+                    ]);
+                }
+
+                // If no retur remaining, stop processing more Non-PKP invoices
+                $totalReturRemaining = array_sum(array_column($returDataList, 'remaining'));
+                if ($totalReturRemaining <= 0) {
+                    break;
+                }
+            }
+
+            // Save retur details and items
+            foreach ($returDataList as $returData) {
+                $firstReturItem = $returData['items']->first();
+                $finalRemaining = $returData['remaining'];
+                $detailStatus = $finalRemaining > 0 ? 'partial' : 'used';
+
+                if ($returData['is_partial_reuse']) {
+                    NettInvoiceDetail::where(
+                        'no_invoice_retur',
+                        $returData['no_invoice'],
+                    )->update([
+                        'remaining_value' => $finalRemaining,
+                        'status' => $detailStatus,
+                    ]);
+                } else {
+                    NettInvoiceDetail::create([
+                        'id_transaksi' => $idTransaksi,
+                        'pt' => $firstReturItem->company,
+                        'principal' => $firstReturItem->brand,
+                        'depo' => $firstReturItem->depo,
+                        'no_invoice_retur' => $returData['no_invoice'],
+                        'invoice_retur_value' => $returData['value'],
+                        'remaining_value' => $finalRemaining,
+                        'mp_bulan' => date('m'),
+                        'mp_tahun' => date('Y'),
+                        'is_checked' => 1,
+                        'is_downloaded' => 0,
+                        'status' => $detailStatus,
+                        'created_at' => now(),
+                    ]);
+
+                    foreach ($returData['items'] as $item) {
+                        NettInvoiceDetailItem::create([
+                            'id_transaksi' => $idTransaksi,
+                            'no_invoice_retur' => $returData['no_invoice'],
+                            'kode_barang' => $item->kode_produk,
+                            'satuan' => $item->satuan,
+                            'qty' => abs((float) $item->qty_pcs),
+                            'harga_satuan' => abs(
+                                (float) $item->hargasatuan_sblm_ppn,
+                            ),
+                            'harga_total' => abs(
+                                (float) $item->hargatotal_sblm_ppn,
+                            ),
+                            'created_at' => now(),
+                        ]);
+                    }
                 }
             }
 
@@ -603,7 +756,6 @@ class NettInvoiceController extends Controller
                 'message' => 'Proses netting berhasil',
                 'data' => [
                     'id_transaksi' => $idTransaksi,
-                    'nett_value' => $invoiceValueNett,
                 ],
             ]);
         } catch (\Throwable $th) {
@@ -626,6 +778,46 @@ class NettInvoiceController extends Controller
                 [
                     'status' => false,
                     'message' => $th->getMessage(),
+                ],
+                500,
+            );
+        }
+    }
+
+    /**
+     * Get nett invoice processing history
+     */
+    public function getNettHistory(Request $request)
+    {
+        try {
+            $query = NettInvoiceHistory::query();
+
+            $totalRecords = $query->count();
+
+            $start = $request->get('start', 0);
+            $length = $request->get('length', 10);
+
+            $records = $query->orderBy('created_at', 'desc')
+                ->offset($start)
+                ->limit($length)
+                ->get();
+
+            return response()->json([
+                'draw' => intval($request->get('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $totalRecords,
+                'data' => $records,
+            ]);
+        } catch (\Throwable $th) {
+            Log::error(
+                'Error in NettInvoiceController@getNettHistory: '.$th->getMessage(),
+            );
+
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => $th->getMessage(),
+                    'data' => [],
                 ],
                 500,
             );

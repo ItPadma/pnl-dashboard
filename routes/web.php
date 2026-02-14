@@ -59,6 +59,8 @@ Route::controller(NettInvoiceController::class)->group(function () {
         Route::post('/pnl/reguler/nett-invoice/detail', 'getInvoiceDetail')->name('pnl.reguler.nett-invoice.detail');
         Route::post('/pnl/reguler/nett-invoice/retur-list', 'getReturList')->name('pnl.reguler.nett-invoice.retur-list');
         Route::post('/pnl/reguler/nett-invoice/process', 'processNett')->name('pnl.reguler.nett-invoice.process');
+        Route::post('/pnl/reguler/nett-invoice/npkp-list', 'getNonPkpList')->name('pnl.reguler.nett-invoice.npkp-list');
+        Route::post('/pnl/reguler/nett-invoice/history', 'getNettHistory')->name('pnl.reguler.nett-invoice.history');
         Route::get('/pnl/reguler/nett-invoice/export', 'exportData')->name('pnl.reguler.nett-invoice.export');
     });
 });

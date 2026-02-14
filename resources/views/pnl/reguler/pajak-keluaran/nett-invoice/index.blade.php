@@ -21,6 +21,189 @@
             transform: translate(-50%, -50%);
             z-index: 9999;
         }
+
+        .btn-pilih-invoice {
+            display: none;
+        }
+
+        .selected-count-badge {
+            font-size: 0.85rem;
+        }
+
+        /* ── Modal styling ── */
+        #modal-npkp .modal-content {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 12px 48px rgba(0, 0, 0, .18);
+            overflow: hidden;
+        }
+
+        #modal-npkp .modal-header {
+            background: linear-gradient(135deg, #1a73e8, #1557b0);
+            color: #fff;
+            border-bottom: none;
+            padding: 18px 24px;
+        }
+
+        #modal-npkp .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+
+        #modal-npkp .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 20px 24px;
+        }
+
+        #modal-npkp .modal-footer {
+            background-color: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            padding: 14px 24px;
+        }
+
+        .retur-summary-card {
+            background: linear-gradient(135deg, #f0f7ff, #e8f0fe);
+            border: 1px solid #d2e3fc;
+            border-radius: 10px;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .retur-summary-card .card-header {
+            background: rgba(26, 115, 232, .08);
+            padding: 10px 16px;
+            border-bottom: 1px solid #d2e3fc;
+        }
+
+        .retur-summary-card .card-header h6 {
+            color: #1a73e8;
+            font-weight: 600;
+        }
+
+        .retur-summary-card .card-body {
+            padding: 12px 16px;
+        }
+
+        .retur-summary-table th {
+            font-size: .8rem;
+            text-transform: uppercase;
+            color: #5f6368;
+            background-color: transparent;
+            letter-spacing: .03em;
+        }
+
+        .retur-summary-table td {
+            font-size: .85rem;
+        }
+
+        .total-row td {
+            font-size: .95rem;
+            color: #1a73e8;
+        }
+
+        /* Green highlight for matching customers */
+        .npkp-match-row {
+            background-color: #e6f4ea !important;
+        }
+
+        .npkp-match-row:hover {
+            background-color: #ceead6 !important;
+        }
+
+        .npkp-match-badge {
+            font-size: .7rem;
+            vertical-align: middle;
+            margin-left: 4px;
+        }
+
+        .npkp-filter-bar {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 16px;
+        }
+
+        .npkp-section-title {
+            font-size: .9rem;
+            font-weight: 600;
+            color: #3c4043;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .npkp-section-title i {
+            color: #1a73e8;
+        }
+
+        /* Netting preview panel */
+        .netting-preview {
+            background: linear-gradient(135deg, #fff8e1, #fff3cd);
+            border: 1px solid #ffd54f;
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .netting-preview.active {
+            display: block;
+            animation: fadeSlideIn .3s ease;
+        }
+
+        .netting-preview h6 {
+            color: #e65100;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .netting-detail-table th {
+            font-size: .78rem;
+            text-transform: uppercase;
+            color: #5f6368;
+            white-space: nowrap;
+        }
+
+        .netting-detail-table td {
+            font-size: .85rem;
+        }
+
+        .nett-result-positive {
+            color: #1e8e3e;
+            font-weight: 700;
+        }
+
+        .nett-result-negative {
+            color: #d93025;
+            font-weight: 700;
+        }
+
+        @keyframes fadeSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Empty state */
+        .npkp-empty-state {
+            text-align: center;
+            padding: 32px 16px;
+            color: #80868b;
+        }
+
+        .npkp-empty-state i {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #dadce0;
+        }
     </style>
 @endsection
 
@@ -91,18 +274,13 @@
             </div>
 
             <div class="row mb-3">
-                <div class="col-md-3 col-sm-12">
-                    <div class="form-group form-group-default">
-                        <label for="filter_tipe">TIPE (Fokus Netting)</label>
-                        <select class="form-select" id="filter_tipe">
-                            <option value="npkp" selected>Invoice Non-PKP</option>
-                            <option value="retur">Invoice Retur (Bebas)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-3 col-sm-12">
-                    <button class="btn btn-primary mt-3" id="btn-apply-filter">
+                <div class="col-md-12 d-flex align-items-center gap-2">
+                    <button class="btn btn-primary" id="btn-apply-filter">
                         <i class="fas fa-check"></i> Apply Filter
+                    </button>
+                    <button class="btn btn-warning btn-pilih-invoice" id="btn-pilih-invoice">
+                        <i class="fas fa-exchange-alt"></i> Pilih Invoice Non-PKP
+                        <span class="badge bg-light text-dark selected-count-badge ms-1" id="selected-count">0</span>
                     </button>
                 </div>
             </div>
@@ -119,21 +297,59 @@
                 </div>
             </div>
 
-            {{-- Results Table --}}
+            {{-- Retur Invoice Table --}}
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
+                        <div class="card-header">
+                            <h4 class="card-title">Daftar Invoice Retur</h4>
+                        </div>
                         <div class="card-body">
                             <div class="tbl-container">
                                 <table class="table table-sm table-bordered table-hover" id="table-nett-invoice">
                                     <thead>
                                         <tr>
+                                            <th><input type="checkbox" id="select-all-retur"></th>
                                             <th>Kode Pelanggan</th>
                                             <th>Nama Pelanggan</th>
-                                            <th>No Invoice</th>
-                                            <th>Nilai Invoice</th>
-                                            <th>Nett Invoice</th>
+                                            <th>No Invoice Retur</th>
+                                            <th>Tanggal</th>
+                                            <th>Nilai Retur</th>
+                                            <th>Status</th>
                                             <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Nett History Table --}}
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="card-title">Histori Proses Nett</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="tbl-container">
+                                <table class="table table-sm table-bordered table-hover" id="table-nett-history">
+                                    <thead>
+                                        <tr>
+                                            <th>ID Transaksi</th>
+                                            <th>No Invoice Non-PKP</th>
+                                            <th>No Invoice Retur</th>
+                                            <th>Nilai Invoice Non-PKP</th>
+                                            <th>Nilai Retur Digunakan</th>
+                                            <th>Nilai Nett</th>
+                                            <th>Sisa Retur</th>
+                                            <th>Status</th>
+                                            <th>Dibuat Oleh</th>
+                                            <th>Tanggal</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -177,52 +393,152 @@
         </div>
     </div>
 
-    {{-- Modal Pilih Retur --}}
-    <div class="modal fade" id="modal-retur" tabindex="-1" aria-labelledby="modalReturLabel" aria-hidden="true">
+    {{-- Modal Pilih Invoice Non-PKP --}}
+    <div class="modal fade" id="modal-npkp" tabindex="-1" aria-labelledby="modalNpkpLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalReturLabel">Pilih Invoice Retur (Bebas)</h5>
+                    <div>
+                        <h5 class="modal-title mb-0" id="modalNpkpLabel">
+                            <i class="fas fa-exchange-alt me-2"></i>Netting Invoice
+                        </h5>
+                        <small class="text-white-50">Pilih invoice Non-PKP untuk proses netting</small>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="card bg-light mb-3">
-                        <div class="card-body py-2">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <small class="text-muted">No Invoice</small>
-                                    <p class="mb-0 fw-bold" id="selected-invoice"></p>
-                                </div>
-                                <div class="col-md-4">
-                                    <small class="text-muted">Pelanggan</small>
-                                    <p class="mb-0" id="selected-pelanggan"><span id="selected-kode-pelanggan"></span>
-                                        - <span id="selected-nama-pelanggan"></span></p>
-                                </div>
-                                <div class="col-md-4">
-                                    <small class="text-muted">Nilai Invoice (DPP+PPN)</small>
-                                    <p class="mb-0 fw-bold text-primary" id="selected-nilai-invoice"></p>
-                                </div>
+                    {{-- Selected Retur Summary --}}
+                    <div class="retur-summary-card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-receipt me-1"></i> Invoice Retur yang Dipilih</h6>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-borderless retur-summary-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>No Invoice Retur</th>
+                                        <th>Kode Pelanggan</th>
+                                        <th>Nama Pelanggan</th>
+                                        <th>Tanggal</th>
+                                        <th class="text-end">Nilai Retur</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="selected-retur-summary">
+                                </tbody>
+                                <tfoot>
+                                    <tr class="total-row">
+                                        <td colspan="4" class="text-end fw-bold border-top">Total Nilai Retur:</td>
+                                        <td id="total-retur-value" class="text-end fw-bold border-top">Rp 0</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    {{-- Non-PKP Filter (only periode, brand from main page) --}}
+                    <div class="npkp-filter-bar">
+                        <div class="row align-items-end">
+                            <div class="col-md-5">
+                                <label for="modal_filter_periode" class="form-label mb-1"
+                                    style="font-size:.85rem;color:#5f6368;">
+                                    <i class="fas fa-calendar-alt me-1"></i>PERIODE
+                                </label>
+                                <input type="text" class="form-control form-control-sm" id="modal_filter_periode"
+                                    placeholder="Pilih Periode" value="{{ date('d/m/Y') }}" />
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button class="btn btn-primary btn-sm" id="btn-filter-npkp">
+                                    <i class="fas fa-search me-1"></i> Tampilkan Invoice Non-PKP
+                                </button>
+                            </div>
+                            <div class="col-md-3 text-end d-flex align-items-end justify-content-end">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Brand mengikuti filter halaman utama
+                                </small>
                             </div>
                         </div>
                     </div>
-                    <h6 class="mb-2">Daftar Invoice Retur (Bebas)</h6>
-                    <table class="table table-sm table-bordered">
-                        <thead>
-                            <tr>
-                                <th><input type="checkbox" id="select-all-retur"></th>
-                                <th>Kode Pelanggan</th>
-                                <th>Nama Pelanggan</th>
-                                <th>No Invoice Retur (Bebas)</th>
-                                <th>Nilai Retur</th>
-                            </tr>
-                        </thead>
-                        <tbody id="retur-tbody">
-                        </tbody>
-                    </table>
+
+                    {{-- Non-PKP Invoice List --}}
+                    <div class="npkp-section-title">
+                        <i class="fas fa-file-invoice"></i> Daftar Invoice Non-PKP
+                    </div>
+
+                    <div id="npkp-loading" class="text-center py-4" style="display:none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Memuat invoice Non-PKP...</p>
+                    </div>
+
+                    <div id="npkp-empty" class="npkp-empty-state">
+                        <i class="fas fa-inbox d-block"></i>
+                        <p class="mb-0">Klik <strong>"Tampilkan Invoice Non-PKP"</strong> untuk memuat daftar</p>
+                    </div>
+
+                    <div id="npkp-table-wrapper" style="display:none;">
+                        <div class="input-group input-group-sm mb-2" style="max-width:360px;">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" id="npkp-search"
+                                placeholder="Cari kode pelanggan, nama, atau no invoice...">
+                        </div>
+                        <div class="tbl-container" style="max-height:320px; overflow-y:auto;">
+                            <table class="table table-sm table-bordered table-hover mb-0" id="table-npkp">
+                                <thead class="table-light" style="position:sticky;top:0;z-index:1;">
+                                    <tr>
+                                        <th style="width:40px;">Pilih</th>
+                                        <th>Kode Pelanggan</th>
+                                        <th>Nama Pelanggan</th>
+                                        <th>No Invoice</th>
+                                        <th>Tanggal</th>
+                                        <th class="text-end">Nilai Invoice</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="npkp-tbody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {{-- Netting Preview --}}
+                    <div class="netting-preview" id="netting-preview">
+                        <h6><i class="fas fa-calculator me-1"></i> Simulasi Netting</h6>
+                        <div class="tbl-container">
+                            <table class="table table-sm table-bordered netting-detail-table mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>No Invoice Non-PKP</th>
+                                        <th class="text-end">Nilai Asli</th>
+                                        <th class="text-end">Total Retur Digunakan</th>
+                                        <th class="text-end">Nilai Setelah Nett</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="netting-preview-tbody">
+                                </tbody>
+                                <tfoot>
+                                    <tr class="fw-bold">
+                                        <td>Total</td>
+                                        <td class="text-end" id="preview-total-original">Rp 0</td>
+                                        <td class="text-end" id="preview-total-retur-used">Rp 0</td>
+                                        <td class="text-end" id="preview-total-nett">Rp 0</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="text-end fw-bold">Sisa Retur Tidak Terpakai:</td>
+                                        <td class="text-end fw-bold" id="preview-retur-remaining">Rp 0</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="button" class="btn btn-primary" id="btn-process-nett">Proses Nett</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Batal
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btn-process-nett" disabled>
+                        <i class="fas fa-cog me-1"></i> Proses Nett
+                    </button>
                 </div>
             </div>
         </div>

@@ -22,6 +22,7 @@ class NettInvoiceDetail extends Model
         'depo',
         'no_invoice_retur',
         'invoice_retur_value',
+        'remaining_value',
         'mp_bulan',
         'mp_tahun',
         'is_checked',
@@ -32,6 +33,7 @@ class NettInvoiceDetail extends Model
 
     protected $casts = [
         'invoice_retur_value' => 'decimal:2',
+        'remaining_value' => 'decimal:2',
         'is_checked' => 'boolean',
         'is_downloaded' => 'boolean',
         'created_at' => 'datetime',
