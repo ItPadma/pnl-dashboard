@@ -501,7 +501,7 @@ class RegulerController extends Controller
                     break;
                 case 'nonstandar':
                     $query->whereRaw(
-                        "(jenis = 'non-standar' AND has_moved = 'n') OR (has_moved = 'y' AND moved_to = 'nonstandar')",
+                        "(jenis = 'non-standar' AND has_moved = 'n' AND LEN(nik) IN (15, 16) AND RIGHT(nik, 2) != '00') OR (has_moved = 'y' AND moved_to = 'nonstandar')",
                     );
                     break;
             }
@@ -1030,7 +1030,7 @@ class RegulerController extends Controller
             }
             if ($request->tipe == 'nonstandar') {
                 $dbquery->whereRaw(
-                    "(jenis = 'non-standar' AND has_moved = 'n') OR (has_moved = 'y' AND moved_to = 'nonstandar')",
+                    "(jenis = 'non-standar' AND has_moved = 'n' AND LEN(nik) IN (15, 16) AND RIGHT(nik, 2) != '00') OR (has_moved = 'y' AND moved_to = 'nonstandar')",
                 );
             }
         }
