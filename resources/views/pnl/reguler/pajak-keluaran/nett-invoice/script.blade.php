@@ -8,6 +8,10 @@
     let historyTable;
     let selectedReturData = [];
     let npkpInvoiceData = []; // Store loaded Non-PKP data for preview calculations
+    let availableDates = [];
+    let availableDateSet = new Set();
+    let availableDatesRequest = null;
+    let availableDatesDebounceTimer = null;
 
     const formatCurrency = (value) => new Intl.NumberFormat('id-ID', {
         style: 'currency',
@@ -17,8 +21,13 @@
 
     $(document).ready(function() {
         initializeFilters();
+        scheduleFetchAvailableDates();
         initializeDataTable();
         initializeHistoryTable();
+
+        $('#filter_pt, #filter_brand, #filter_depo').on('change', function() {
+            scheduleFetchAvailableDates();
+        });
 
         // Apply filter
         $('#btn-apply-filter').on('click', function() {
@@ -209,23 +218,104 @@
         });
 
         // Daterangepickers
-        $('#filter_periode').daterangepicker({
-            locale: {
-                format: 'DD/MM/YYYY'
+        initializeDateRangePickers();
+    }
+
+    function fetchAvailableDates() {
+        if (availableDatesRequest && availableDatesRequest.readyState !== 4) {
+            availableDatesRequest.abort();
+        }
+
+        let ptVal = $('#filter_pt').val();
+        let brandVal = $('#filter_brand').val();
+        let depoVal = $('#filter_depo').val();
+
+        availableDatesRequest =
+        $.ajax({
+            url: '{{ route('pnl.reguler.nett-invoice.available-dates') }}',
+            type: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
-            autoUpdateInput: true,
-            startDate: moment(),
-            endDate: moment()
+            data: {
+                pt: (ptVal && ptVal.length > 0) ? ptVal : ['all'],
+                brand: (brandVal && brandVal.length > 0) ? brandVal : ['all'],
+                depo: (depoVal && depoVal.length > 0) ? depoVal : ['all']
+            },
+            success: function(response) {
+                if (response.status) {
+                    availableDates = response.data || [];
+                    availableDateSet = new Set(availableDates);
+                    initializeDateRangePickers();
+                }
+            },
+            error: function(xhr) {
+                if (xhr.statusText !== 'abort') {
+                    console.error('Error fetching available dates');
+                }
+            }
         });
-        $('#modal_filter_periode').daterangepicker({
-            locale: {
-                format: 'DD/MM/YYYY'
-            },
-            autoUpdateInput: true,
-            startDate: moment(),
-            endDate: moment(),
+    }
+
+    function scheduleFetchAvailableDates() {
+        if (availableDatesDebounceTimer) {
+            clearTimeout(availableDatesDebounceTimer);
+        }
+
+        availableDatesDebounceTimer = setTimeout(function() {
+            fetchAvailableDates();
+        }, 300);
+    }
+
+    function initializeDateRangePickers() {
+        initializeSingleDateRangePicker('#filter_periode');
+        initializeSingleDateRangePicker('#modal_filter_periode', {
             parentEl: '#modal-npkp'
         });
+    }
+
+    function initializeSingleDateRangePicker(selector, extraOptions = {}) {
+        const $input = $(selector);
+        if ($input.length === 0) {
+            return;
+        }
+
+        let startDate = moment();
+        let endDate = moment();
+
+        const existingPicker = $input.data('daterangepicker');
+        if (existingPicker) {
+            startDate = existingPicker.startDate.clone();
+            endDate = existingPicker.endDate.clone();
+            $input.data('daterangepicker').remove();
+        } else {
+            const existingValue = ($input.val() || '').trim();
+            if (existingValue.includes(' - ')) {
+                const [startText, endText] = existingValue.split(' - ');
+                const parsedStart = moment(startText, 'DD/MM/YYYY', true);
+                const parsedEnd = moment(endText, 'DD/MM/YYYY', true);
+                if (parsedStart.isValid() && parsedEnd.isValid()) {
+                    startDate = parsedStart;
+                    endDate = parsedEnd;
+                }
+            }
+        }
+
+        const options = {
+            locale: {
+                format: 'DD/MM/YYYY'
+            },
+            autoUpdateInput: true,
+            startDate: startDate,
+            endDate: endDate,
+            isCustomDate: function(date) {
+                const dateStr = date.format('YYYY-MM-DD');
+                return availableDateSet.has(dateStr) ? 'has-data' : '';
+            },
+            ...extraOptions
+        };
+
+        $input.daterangepicker(options);
     }
 
     function initializeDataTable() {
@@ -516,8 +606,10 @@
     }
 
     function fetchNonPkpInvoices() {
-        let brandVal = $('#filter_brand').val(); // use main-page brand filter
-        let periode = $('#modal_filter_periode').val();
+        let ptVal = $('#filter_pt').val();
+        let brandVal = $('#filter_brand').val();
+        let depoVal = $('#filter_depo').val();
+        let periode = $('#modal_filter_periode').val(); // tetap gunakan periode dari modal
 
         // Get unique customer IDs from selected retur
         let returCustomerIds = [...new Set(selectedReturData.map(r => r.kode_pelanggan))];
@@ -534,7 +626,9 @@
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
             data: {
+                pt: (ptVal && ptVal.length > 0) ? ptVal : ['all'],
                 brand: (brandVal && brandVal.length > 0) ? brandVal : ['all'],
+                depo: (depoVal && depoVal.length > 0) ? depoVal : ['all'],
                 periode: periode,
                 retur_customer_ids: returCustomerIds
             },

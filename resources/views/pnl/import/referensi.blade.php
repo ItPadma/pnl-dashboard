@@ -51,6 +51,7 @@
 
             <div class="tab-content mt-4" id="referensiTabContent">
                 <div class="tab-pane fade show active" id="pane-tipe" role="tabpanel" aria-labelledby="tab-tipe"
+                    data-store-url="{{ route('pnl.master-data.store.referensi', ['type' => 'tipe']) }}"
                     data-update-url="{{ route('pnl.master-data.update.referensi', ['type' => 'tipe', 'id' => '__ID__']) }}"
                     data-toggle-url="{{ route('pnl.master-data.toggle.referensi', ['type' => 'tipe', 'id' => '__ID__']) }}">
                     <div class="row g-4">
@@ -89,7 +90,7 @@
                                 <div class="card-body">
                                     <form id="form-tipe" method="post" action="#">
                                         @csrf
-                                        @method('put')
+                                        <input type="hidden" name="_method" id="tipe-method" value="post">
                                         <input type="hidden" name="id" id="tipe-id">
                                         <div class="form-group">
                                             <label for="tipe-kode" class="form-label">Kode</label>
@@ -101,7 +102,7 @@
                                         </div>
                                         <div class="d-flex flex-wrap gap-2">
                                             <button type="submit" class="btn btn-primary" @if (! $canEdit) disabled @endif>
-                                                <i class="fas fa-save fa-fw"></i> Simpan Perubahan
+                                                <i class="fas fa-save fa-fw"></i> Simpan
                                             </button>
                                             <button type="button" class="btn btn-light" data-reset="tipe">Reset</button>
                                         </div>
@@ -188,6 +189,7 @@
                 </div>
 
                 <div class="tab-pane fade" id="pane-kode-transaksi" role="tabpanel" aria-labelledby="tab-kode-transaksi"
+                    data-store-url="{{ route('pnl.master-data.store.referensi', ['type' => 'kode-transaksi']) }}"
                     data-update-url="{{ route('pnl.master-data.update.referensi', ['type' => 'kode-transaksi', 'id' => '__ID__']) }}"
                     data-toggle-url="{{ route('pnl.master-data.toggle.referensi', ['type' => 'kode-transaksi', 'id' => '__ID__']) }}">
                     <div class="row g-4">
@@ -225,7 +227,7 @@
                                 <div class="card-body">
                                     <form id="form-kode-transaksi" method="post" action="#">
                                         @csrf
-                                        @method('put')
+                                        <input type="hidden" name="_method" id="kode-transaksi-method" value="post">
                                         <input type="hidden" name="id" id="kode-transaksi-id">
                                         <div class="form-group">
                                             <label for="kode-transaksi-kode" class="form-label">Kode</label>
@@ -237,7 +239,7 @@
                                         </div>
                                         <div class="d-flex flex-wrap gap-2">
                                             <button type="submit" class="btn btn-primary" @if (! $canEdit) disabled @endif>
-                                                <i class="fas fa-save fa-fw"></i> Simpan Perubahan
+                                                <i class="fas fa-save fa-fw"></i> Simpan
                                             </button>
                                             <button type="button" class="btn btn-light" data-reset="kode-transaksi">Reset</button>
                                         </div>
@@ -324,6 +326,7 @@
                 </div>
 
                 <div class="tab-pane fade" id="pane-keterangan-tambahan" role="tabpanel" aria-labelledby="tab-keterangan-tambahan"
+                    data-store-url="{{ route('pnl.master-data.store.referensi', ['type' => 'keterangan-tambahan']) }}"
                     data-update-url="{{ route('pnl.master-data.update.referensi', ['type' => 'keterangan-tambahan', 'id' => '__ID__']) }}"
                     data-toggle-url="{{ route('pnl.master-data.toggle.referensi', ['type' => 'keterangan-tambahan', 'id' => '__ID__']) }}">
                     <div class="row g-4">
@@ -361,7 +364,7 @@
                                 <div class="card-body">
                                     <form id="form-keterangan-tambahan" method="post" action="#">
                                         @csrf
-                                        @method('put')
+                                        <input type="hidden" name="_method" id="keterangan-tambahan-method" value="post">
                                         <input type="hidden" name="id" id="keterangan-tambahan-id">
                                         <div class="form-group">
                                             <label for="keterangan-tambahan-kode" class="form-label">Kode</label>
@@ -382,7 +385,7 @@
                                         </div>
                                         <div class="d-flex flex-wrap gap-2">
                                             <button type="submit" class="btn btn-primary" @if (! $canEdit) disabled @endif>
-                                                <i class="fas fa-save fa-fw"></i> Simpan Perubahan
+                                                <i class="fas fa-save fa-fw"></i> Simpan
                                             </button>
                                             <button type="button" class="btn btn-light" data-reset="keterangan-tambahan">Reset</button>
                                         </div>
@@ -474,6 +477,7 @@
                 </div>
 
                 <div class="tab-pane fade" id="pane-id-pembeli" role="tabpanel" aria-labelledby="tab-id-pembeli"
+                    data-store-url="{{ route('pnl.master-data.store.referensi', ['type' => 'id-pembeli']) }}"
                     data-update-url="{{ route('pnl.master-data.update.referensi', ['type' => 'id-pembeli', 'id' => '__ID__']) }}"
                     data-toggle-url="{{ route('pnl.master-data.toggle.referensi', ['type' => 'id-pembeli', 'id' => '__ID__']) }}">
                     <div class="row g-4">
@@ -511,7 +515,7 @@
                                 <div class="card-body">
                                     <form id="form-id-pembeli" method="post" action="#">
                                         @csrf
-                                        @method('put')
+                                        <input type="hidden" name="_method" id="id-pembeli-method" value="post">
                                         <input type="hidden" name="id" id="id-pembeli-id">
                                         <div class="form-group">
                                             <label for="id-pembeli-kode" class="form-label">Kode</label>
@@ -523,7 +527,7 @@
                                         </div>
                                         <div class="d-flex flex-wrap gap-2">
                                             <button type="submit" class="btn btn-primary" @if (! $canEdit) disabled @endif>
-                                                <i class="fas fa-save fa-fw"></i> Simpan Perubahan
+                                                <i class="fas fa-save fa-fw"></i> Simpan
                                             </button>
                                             <button type="button" class="btn btn-light" data-reset="id-pembeli">Reset</button>
                                         </div>
@@ -610,6 +614,7 @@
                 </div>
 
                 <div class="tab-pane fade" id="pane-satuan-ukur" role="tabpanel" aria-labelledby="tab-satuan-ukur"
+                    data-store-url="{{ route('pnl.master-data.store.referensi', ['type' => 'satuan-ukur']) }}"
                     data-update-url="{{ route('pnl.master-data.update.referensi', ['type' => 'satuan-ukur', 'id' => '__ID__']) }}"
                     data-toggle-url="{{ route('pnl.master-data.toggle.referensi', ['type' => 'satuan-ukur', 'id' => '__ID__']) }}">
                     <div class="row g-4">
@@ -647,7 +652,7 @@
                                 <div class="card-body">
                                     <form id="form-satuan-ukur" method="post" action="#">
                                         @csrf
-                                        @method('put')
+                                        <input type="hidden" name="_method" id="satuan-ukur-method" value="post">
                                         <input type="hidden" name="id" id="satuan-ukur-id">
                                         <div class="form-group">
                                             <label for="satuan-ukur-kode" class="form-label">Kode</label>
@@ -659,7 +664,7 @@
                                         </div>
                                         <div class="d-flex flex-wrap gap-2">
                                             <button type="submit" class="btn btn-primary" @if (! $canEdit) disabled @endif>
-                                                <i class="fas fa-save fa-fw"></i> Simpan Perubahan
+                                                <i class="fas fa-save fa-fw"></i> Simpan
                                             </button>
                                             <button type="button" class="btn btn-light" data-reset="satuan-ukur">Reset</button>
                                         </div>
@@ -746,6 +751,7 @@
                 </div>
 
                 <div class="tab-pane fade" id="pane-kode-negara" role="tabpanel" aria-labelledby="tab-kode-negara"
+                    data-store-url="{{ route('pnl.master-data.store.referensi', ['type' => 'kode-negara']) }}"
                     data-update-url="{{ route('pnl.master-data.update.referensi', ['type' => 'kode-negara', 'id' => '__ID__']) }}"
                     data-toggle-url="{{ route('pnl.master-data.toggle.referensi', ['type' => 'kode-negara', 'id' => '__ID__']) }}">
                     <div class="row g-4">
@@ -783,7 +789,7 @@
                                 <div class="card-body">
                                     <form id="form-kode-negara" method="post" action="#">
                                         @csrf
-                                        @method('put')
+                                        <input type="hidden" name="_method" id="kode-negara-method" value="post">
                                         <input type="hidden" name="id" id="kode-negara-id">
                                         <div class="form-group">
                                             <label for="kode-negara-kode" class="form-label">Kode</label>
@@ -795,7 +801,7 @@
                                         </div>
                                         <div class="d-flex flex-wrap gap-2">
                                             <button type="submit" class="btn btn-primary" @if (! $canEdit) disabled @endif>
-                                                <i class="fas fa-save fa-fw"></i> Simpan Perubahan
+                                                <i class="fas fa-save fa-fw"></i> Simpan
                                             </button>
                                             <button type="button" class="btn btn-light" data-reset="kode-negara">Reset</button>
                                         </div>
@@ -1036,6 +1042,19 @@
 
                 const updateUrlTemplate = pane.dataset.updateUrl || '';
                 const toggleUrlTemplate = pane.dataset.toggleUrl || '';
+                const storeUrl = pane.dataset.storeUrl || '';
+                const methodInput = document.getElementById(`${config.resetKey}-method`);
+
+                const setCreateMode = () => {
+                    const idInput = document.getElementById(config.fields.id);
+                    if (idInput) {
+                        idInput.value = '';
+                    }
+                    if (methodInput) {
+                        methodInput.value = 'post';
+                    }
+                    form.action = storeUrl || '#';
+                };
 
                 const fillForm = (row) => {
                     const fields = config.fields;
@@ -1056,6 +1075,9 @@
                     }
 
                     if (row.dataset.id && updateUrlTemplate) {
+                        if (methodInput) {
+                            methodInput.value = 'put';
+                        }
                         form.action = updateUrlTemplate.replace('__ID__', row.dataset.id);
                     }
                 };
@@ -1161,26 +1183,18 @@
                     });
                 });
 
-                form.addEventListener('submit', function (event) {
-                    const idInput = document.getElementById(config.fields.id);
-                    if (!idInput?.value) {
-                        event.preventDefault();
-                        alert('Pilih data terlebih dahulu.');
-                    }
-                });
-
                 const resetButton = document.querySelector(`[data-reset="${config.resetKey}"]`);
                 if (resetButton) {
                     resetButton.addEventListener('click', function () {
                         form.reset();
-                        const idInput = document.getElementById(config.fields.id);
-                        idInput.value = '';
-                        form.action = '#';
+                        setCreateMode();
                         table.querySelectorAll('tbody tr').forEach((row) => {
                             row.classList.remove('table-active');
                         });
                     });
                 }
+
+                setCreateMode();
 
                 const pageLengthSelect = document.getElementById(`${config.resetKey}-page-length`);
                 if (window.jQuery && $.fn.DataTable) {

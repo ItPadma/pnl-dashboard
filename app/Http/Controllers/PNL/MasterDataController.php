@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 
 class MasterDataController extends Controller
@@ -450,9 +451,9 @@ class MasterDataController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        try {
+        $validated = $this->validateReferensi($request, $type, (int) $id);
 
-            $validated = $this->validateReferensi($request, $type);
+        try {
             $model = $this->resolveReferensiModel($type);
             $item = $model->findOrFail($id);
             $item->update($validated);
@@ -474,6 +475,53 @@ class MasterDataController extends Controller
             Log::error('Update referensi failed', [
                 'type' => $type,
                 'id' => $id,
+                'exception' => $th,
+            ]);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Terjadi kesalahan. Silakan coba lagi.');
+        }
+    }
+
+    public function storeReferensi(Request $request, string $type)
+    {
+        $this->assertReferensiType($type);
+
+        if (
+            ! Auth::user()?->canAccessMenu(
+                'master-data-referensi',
+                AccessGroup::LEVEL_READ_WRITE,
+            )
+        ) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $validated = $this->validateReferensi($request, $type);
+
+        try {
+            $validated['is_active'] = true;
+
+            $model = $this->resolveReferensiModel($type);
+            $item = $model->create($validated);
+
+            LogController::createLog(
+                Auth::user()->id,
+                'Create Master Referensi',
+                'Create Master Referensi',
+                '{id: '.$item->id.', tipe: '.$type.'}',
+                'master_referensi',
+                'info',
+                $request,
+            );
+
+            return redirect()
+                ->route('pnl.master-data.index.referensi')
+                ->with('success', 'Data referensi berhasil ditambahkan.');
+        } catch (\Throwable $th) {
+            Log::error('Store referensi failed', [
+                'type' => $type,
                 'exception' => $th,
             ]);
 
@@ -706,10 +754,25 @@ class MasterDataController extends Controller
         ];
     }
 
-    private function validateReferensi(Request $request, string $type): array
+    private function validateReferensi(Request $request, string $type, ?int $id = null): array
     {
+        $request->merge([
+            'kode' => is_string($request->input('kode')) ? trim($request->input('kode')) : $request->input('kode'),
+        ]);
+
+        $table = $this->resolveReferensiModel($type)->getTable();
+        $kodeUniqueRule = Rule::unique($table, 'kode');
+        if ($id !== null) {
+            $kodeUniqueRule = $kodeUniqueRule->ignore($id);
+        }
+
         $rules = [
-            'kode' => 'required|string|max:255',
+            'kode' => [
+                'required',
+                'string',
+                'max:255',
+                $kodeUniqueRule,
+            ],
             'keterangan' => 'nullable|string|max:255',
         ];
 

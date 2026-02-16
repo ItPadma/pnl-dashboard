@@ -8,7 +8,12 @@ class MasterRefKeteranganTambahan extends Model
 {
     protected $table = 'master_ref_keterangan_tambahan';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'kode',
+        'kode_transaksi_id',
+        'keterangan',
+        'is_active',
+    ];
 
     protected $casts = [
         'is_active' => 'boolean',

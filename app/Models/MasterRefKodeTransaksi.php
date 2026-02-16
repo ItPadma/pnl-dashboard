@@ -8,7 +8,11 @@ class MasterRefKodeTransaksi extends Model
 {
     protected $table = 'master_ref_kode_transaksi';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'kode',
+        'keterangan',
+        'is_active',
+    ];
 
     protected $casts = [
         'is_active' => 'boolean',

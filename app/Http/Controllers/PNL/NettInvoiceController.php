@@ -5,6 +5,7 @@ namespace App\Http\Controllers\PNL;
 use App\Events\UserEvent;
 use App\Exports\NettInvoiceExport;
 use App\Http\Controllers\Controller;
+use App\Models\MasterDepo;
 use App\Models\MasterPkp;
 use App\Models\NettInvoiceDetail;
 use App\Models\NettInvoiceDetailItem;
@@ -12,10 +13,13 @@ use App\Models\NettInvoiceHeader;
 use App\Models\NettInvoiceHeaderItem;
 use App\Models\NettInvoiceHistory;
 use App\Models\PajakKeluaranDetail;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
 class NettInvoiceController extends Controller
@@ -31,6 +35,11 @@ class NettInvoiceController extends Controller
     public function getData(Request $request)
     {
         try {
+            $validatedFilters = $this->validateCommonFilters($request, true);
+            $ptFilters = $validatedFilters['pt'];
+            $brandFilters = $validatedFilters['brand'];
+            $depoFilters = $validatedFilters['depo'];
+
             $query = DB::table('pajak_keluaran_details')
                 ->select(
                     'customer_id as kode_pelanggan',
@@ -51,93 +60,13 @@ class NettInvoiceController extends Controller
                         ->orWhere('moved_to', 'retur');
                 });
 
-            // Apply filters
-            if ($request->has('pt') && ! in_array('all', $request->pt ?? [])) {
-                $query->whereIn('company', $request->pt);
-            }
-
-            if (
-                $request->has('brand') &&
-                ! in_array('all', $request->brand ?? [])
-            ) {
-                $query->whereIn('brand', $request->brand);
-            }
-
-            if (
-                $request->has('depo') &&
-                ! in_array('all', $request->depo ?? [])
-            ) {
-                $userInfo = getLoggedInUserInfo();
-
-                if ($userInfo && ! in_array('all', $userInfo->depo)) {
-                    $allowedDepos = \App\Models\MasterDepo::whereIn(
-                        'code',
-                        $userInfo->depo,
-                    )
-                        ->get()
-                        ->pluck('name')
-                        ->toArray();
-                    $requestedDepos = \App\Models\MasterDepo::whereIn(
-                        'code',
-                        $request->depo,
-                    )
-                        ->get()
-                        ->pluck('name')
-                        ->toArray();
-                    $validDepos = array_intersect(
-                        $requestedDepos,
-                        $allowedDepos,
-                    );
-
-                    if (! empty($validDepos)) {
-                        $query->whereIn('depo', $validDepos);
-                    } else {
-                        $query->whereRaw('1 = 0');
-                    }
-                } else {
-                    $depos = \App\Models\MasterDepo::whereIn(
-                        'code',
-                        $request->depo,
-                    )
-                        ->get()
-                        ->pluck('name')
-                        ->toArray();
-                    $query->whereIn('depo', $depos);
-                }
-            } elseif (
-                $request->has('depo') &&
-                in_array('all', $request->depo ?? [])
-            ) {
-                $userInfo = getLoggedInUserInfo();
-                if ($userInfo && ! in_array('all', $userInfo->depo)) {
-                    $depo = \App\Models\MasterDepo::whereIn(
-                        'code',
-                        $userInfo->depo,
-                    )
-                        ->get()
-                        ->pluck('name')
-                        ->toArray();
-                    $query->whereIn('depo', $depo);
-                }
-            }
-
-            if ($request->has('periode') && ! empty($request->periode)) {
-                $periode = explode(' - ', $request->periode);
-                if (count($periode) === 2) {
-                    $periodeAwal = \Carbon\Carbon::createFromFormat(
-                        'd/m/Y',
-                        $periode[0],
-                    )->format('Y-m-d');
-                    $periodeAkhir = \Carbon\Carbon::createFromFormat(
-                        'd/m/Y',
-                        $periode[1],
-                    )->format('Y-m-d');
-                    $query->whereBetween('tgl_faktur_pajak', [
-                        $periodeAwal,
-                        $periodeAkhir,
-                    ]);
-                }
-            }
+            $this->applyCommonPajakKeluaranFilters(
+                $query,
+                $ptFilters,
+                $brandFilters,
+                $depoFilters,
+                $validatedFilters['periode'] ?? null,
+            );
 
             // Exclude retur that have been fully used in netting (remaining_value = 0)
             $fullyUsedReturs = NettInvoiceDetail::where('remaining_value', 0)
@@ -162,8 +91,8 @@ class NettInvoiceController extends Controller
                 ->count();
 
             // Pagination
-            $start = $request->get('start', 0);
-            $length = $request->get('length', 10);
+            $start = (int) ($validatedFilters['start'] ?? 0);
+            $length = (int) ($validatedFilters['length'] ?? 10);
 
             $records = $query->orderBy('tgl_faktur_pajak', 'asc')
                 ->offset($start)
@@ -192,6 +121,13 @@ class NettInvoiceController extends Controller
                 'data' => $records,
             ]);
         } catch (\Throwable $th) {
+            if (
+                $th instanceof ValidationException ||
+                $th instanceof AuthorizationException
+            ) {
+                throw $th;
+            }
+
             Log::error(
                 'Error in NettInvoiceController@getData: '.$th->getMessage(),
             );
@@ -199,7 +135,7 @@ class NettInvoiceController extends Controller
             return response()->json(
                 [
                     'status' => false,
-                    'message' => $th->getMessage(),
+                    'message' => 'Terjadi kesalahan internal.',
                     'data' => [],
                 ],
                 500,
@@ -246,6 +182,17 @@ class NettInvoiceController extends Controller
     public function getNonPkpList(Request $request)
     {
         try {
+            $validatedFilters = $this->validateCommonFilters($request);
+            $validatedExtra = $request->validate([
+                'retur_customer_ids' => 'nullable|array|max:200',
+                'retur_customer_ids.*' => 'string|max:255',
+            ]);
+
+            $ptFilters = $validatedFilters['pt'];
+            $brandFilters = $validatedFilters['brand'];
+            $depoFilters = $validatedFilters['depo'];
+            $returCustomerIds = $validatedExtra['retur_customer_ids'] ?? [];
+
             $query = DB::table('pajak_keluaran_details')
                 ->select(
                     'customer_id as kode_pelanggan',
@@ -256,32 +203,13 @@ class NettInvoiceController extends Controller
                 )
                 ->where('is_downloaded', 0);
 
-            // Use main page brand filter
-            if (
-                $request->has('brand') &&
-                ! in_array('all', $request->brand ?? [])
-            ) {
-                $query->whereIn('brand', $request->brand);
-            }
-
-            // Filter periode
-            if ($request->has('periode') && ! empty($request->periode)) {
-                $periode = explode(' - ', $request->periode);
-                if (count($periode) === 2) {
-                    $periodeAwal = \Carbon\Carbon::createFromFormat(
-                        'd/m/Y',
-                        $periode[0],
-                    )->format('Y-m-d');
-                    $periodeAkhir = \Carbon\Carbon::createFromFormat(
-                        'd/m/Y',
-                        $periode[1],
-                    )->format('Y-m-d');
-                    $query->whereBetween('tgl_faktur_pajak', [
-                        $periodeAwal,
-                        $periodeAkhir,
-                    ]);
-                }
-            }
+            $this->applyCommonPajakKeluaranFilters(
+                $query,
+                $ptFilters,
+                $brandFilters,
+                $depoFilters,
+                $validatedFilters['periode'] ?? null,
+            );
 
             // Force Non-PKP only
             $pkp = MasterPkp::where('is_active', true)->pluck('IDPelanggan')->toArray();
@@ -311,7 +239,6 @@ class NettInvoiceController extends Controller
             $invoices = $query->orderBy('tgl_faktur_pajak', 'asc')->get();
 
             // Mark matching customer_ids for prioritization
-            $returCustomerIds = $request->retur_customer_ids ?? [];
             foreach ($invoices as &$invoice) {
                 $invoice->is_matching_customer = in_array(
                     $invoice->kode_pelanggan,
@@ -329,6 +256,13 @@ class NettInvoiceController extends Controller
                 'data' => $sorted,
             ]);
         } catch (\Throwable $th) {
+            if (
+                $th instanceof ValidationException ||
+                $th instanceof AuthorizationException
+            ) {
+                throw $th;
+            }
+
             Log::error(
                 'Error in NettInvoiceController@getNonPkpList: '.$th->getMessage(),
             );
@@ -336,7 +270,7 @@ class NettInvoiceController extends Controller
             return response()->json(
                 [
                     'status' => false,
-                    'message' => $th->getMessage(),
+                    'message' => 'Terjadi kesalahan internal.',
                 ],
                 500,
             );
@@ -349,6 +283,11 @@ class NettInvoiceController extends Controller
     public function getReturList(Request $request)
     {
         try {
+            $validatedFilters = $this->validateCommonFilters($request);
+            $ptFilters = $validatedFilters['pt'];
+            $brandFilters = $validatedFilters['brand'];
+            $depoFilters = $validatedFilters['depo'];
+
             $query = DB::table('pajak_keluaran_details')
                 ->select(
                     'customer_id as kode_pelanggan',
@@ -368,77 +307,13 @@ class NettInvoiceController extends Controller
                         ->orWhere('moved_to', 'retur');
                 });
 
-            if ($request->has('pt') && ! in_array('all', $request->pt ?? [])) {
-                $query->whereIn('company', $request->pt);
-            }
-
-            if (
-                $request->has('brand') &&
-                ! in_array('all', $request->brand ?? [])
-            ) {
-                $query->whereIn('brand', $request->brand);
-            }
-
-            if (
-                $request->has('depo') &&
-                ! in_array('all', $request->depo ?? [])
-            ) {
-                $userInfo = getLoggedInUserInfo();
-
-                if ($userInfo && ! in_array('all', $userInfo->depo)) {
-                    $allowedDepos = \App\Models\MasterDepo::whereIn(
-                        'code',
-                        $userInfo->depo,
-                    )
-                        ->get()
-                        ->pluck('name')
-                        ->toArray();
-                    $requestedDepos = \App\Models\MasterDepo::whereIn(
-                        'code',
-                        $request->depo,
-                    )
-                        ->get()
-                        ->pluck('name')
-                        ->toArray();
-                    $validDepos = array_intersect(
-                        $requestedDepos,
-                        $allowedDepos,
-                    );
-
-                    if (! empty($validDepos)) {
-                        $query->whereIn('depo', $validDepos);
-                    } else {
-                        $query->whereRaw('1 = 0');
-                    }
-                } else {
-                    $depos = \App\Models\MasterDepo::whereIn(
-                        'code',
-                        $request->depo,
-                    )
-                        ->get()
-                        ->pluck('name')
-                        ->toArray();
-                    $query->whereIn('depo', $depos);
-                }
-            }
-
-            if ($request->has('periode') && ! empty($request->periode)) {
-                $periode = explode(' - ', $request->periode);
-                if (count($periode) === 2) {
-                    $periodeAwal = \Carbon\Carbon::createFromFormat(
-                        'd/m/Y',
-                        $periode[0],
-                    )->format('Y-m-d');
-                    $periodeAkhir = \Carbon\Carbon::createFromFormat(
-                        'd/m/Y',
-                        $periode[1],
-                    )->format('Y-m-d');
-                    $query->whereBetween('tgl_faktur_pajak', [
-                        $periodeAwal,
-                        $periodeAkhir,
-                    ]);
-                }
-            }
+            $this->applyCommonPajakKeluaranFilters(
+                $query,
+                $ptFilters,
+                $brandFilters,
+                $depoFilters,
+                $validatedFilters['periode'] ?? null,
+            );
 
             $fullyUsedReturs = NettInvoiceDetail::where('remaining_value', 0)
                 ->pluck('no_invoice_retur')
@@ -460,6 +335,13 @@ class NettInvoiceController extends Controller
                 'data' => $returs,
             ]);
         } catch (\Throwable $th) {
+            if (
+                $th instanceof ValidationException ||
+                $th instanceof AuthorizationException
+            ) {
+                throw $th;
+            }
+
             Log::error(
                 'Error in NettInvoiceController@getReturList: '.
                     $th->getMessage(),
@@ -468,7 +350,79 @@ class NettInvoiceController extends Controller
             return response()->json(
                 [
                     'status' => false,
-                    'message' => $th->getMessage(),
+                    'message' => 'Terjadi kesalahan internal.',
+                ],
+                500,
+            );
+        }
+    }
+
+    /**
+     * Get available invoice dates for daterangepicker highlight.
+     */
+    public function getAvailableDates(Request $request)
+    {
+        try {
+            $validatedFilters = $this->validateCommonFilters($request);
+
+            $query = DB::table('pajak_keluaran_details')
+                ->select(DB::raw('DISTINCT CAST(tgl_faktur_pajak AS DATE) as tanggal'))
+                ->where('is_downloaded', 0)
+                ->whereNotNull('tgl_faktur_pajak')
+                ->where(function ($subQuery) {
+                    $subQuery
+                        ->where(function ($innerQuery) {
+                            $innerQuery
+                                ->where('qty_pcs', '<', 0)
+                                ->where('hargatotal_sblm_ppn', '>=', -1000000)
+                                ->where('has_moved', 'n');
+                        })
+                        ->orWhere('moved_to', 'retur');
+                });
+
+            $this->applyCommonPajakKeluaranFilters(
+                $query,
+                $validatedFilters['pt'],
+                $validatedFilters['brand'],
+                $validatedFilters['depo'],
+                null,
+            );
+
+            $fullyUsedReturs = NettInvoiceDetail::where('remaining_value', 0)
+                ->pluck('no_invoice_retur')
+                ->toArray();
+            if (! empty($fullyUsedReturs)) {
+                $query->whereNotIn('no_invoice', $fullyUsedReturs);
+            }
+
+            $dates = $query->orderBy('tanggal', 'asc')->get();
+            $formattedDates = $dates
+                ->map(function ($item) {
+                    return \Carbon\Carbon::parse($item->tanggal)->format('Y-m-d');
+                })
+                ->toArray();
+
+            return response()->json([
+                'status' => true,
+                'data' => $formattedDates,
+            ]);
+        } catch (\Throwable $th) {
+            if (
+                $th instanceof ValidationException ||
+                $th instanceof AuthorizationException
+            ) {
+                throw $th;
+            }
+
+            Log::error(
+                'Error in NettInvoiceController@getAvailableDates: '.$th->getMessage(),
+            );
+
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => 'Terjadi kesalahan internal.',
+                    'data' => [],
                 ],
                 500,
             );
@@ -867,6 +821,180 @@ class NettInvoiceController extends Controller
             );
 
             return redirect()->back()->with('error', 'Gagal export data');
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizeFilterValues(mixed $filters): array
+    {
+        if (! is_array($filters) || empty($filters)) {
+            return ['all'];
+        }
+
+        $normalized = array_values(array_filter($filters, fn ($value) => is_string($value) && $value !== ''));
+
+        return empty($normalized) ? ['all'] : $normalized;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validateCommonFilters(Request $request, bool $withPagination = false): array
+    {
+        $rules = [
+            'pt' => 'nullable|array|max:100',
+            'pt.*' => 'string|max:50',
+            'brand' => 'nullable|array|max:100',
+            'brand.*' => 'string|max:100',
+            'depo' => 'nullable|array|max:100',
+            'depo.*' => 'string|max:50',
+            'periode' => [
+                'nullable',
+                'string',
+                'regex:/^\d{2}\/\d{2}\/\d{4}\s-\s\d{2}\/\d{2}\/\d{4}$/',
+            ],
+        ];
+
+        if ($withPagination) {
+            $rules['draw'] = 'nullable|integer|min:0';
+            $rules['start'] = 'nullable|integer|min:0';
+            $rules['length'] = 'nullable|integer|min:1|max:100';
+        }
+
+        $validated = $request->validate($rules);
+
+        if (! empty($validated['periode'])) {
+            $this->parsePeriodeRange($validated['periode']);
+        }
+
+        $validated['pt'] = $this->normalizeFilterValues($validated['pt'] ?? ['all']);
+        $validated['brand'] = $this->normalizeFilterValues($validated['brand'] ?? ['all']);
+        $validated['depo'] = $this->normalizeFilterValues($validated['depo'] ?? ['all']);
+
+        return $validated;
+    }
+
+    /**
+     * Apply shared pt/brand/depo/periode filters with depo access guard.
+     */
+    private function applyCommonPajakKeluaranFilters(
+        Builder $query,
+        array $ptFilters,
+        array $brandFilters,
+        array $depoFilters,
+        ?string $periode,
+    ): void {
+        if (! in_array('all', $ptFilters, true)) {
+            $query->whereIn('company', $ptFilters);
+        }
+
+        if (! in_array('all', $brandFilters, true)) {
+            $query->whereIn('brand', $brandFilters);
+        }
+
+        $this->applyDepoFilterWithAccessGuard($query, $depoFilters);
+
+        if (! empty($periode)) {
+            $parsedPeriode = $this->parsePeriodeRange($periode);
+            $query->whereBetween('tgl_faktur_pajak', $parsedPeriode);
+        }
+    }
+
+    /**
+     * Enforce user depo access and intersect with requested depo filter.
+     */
+    private function applyDepoFilterWithAccessGuard(Builder $query, array $depoFilters): void
+    {
+        $userInfo = getLoggedInUserInfo();
+        $userDepoCodes = $userInfo?->depo;
+
+        if (! is_array($userDepoCodes) || empty($userDepoCodes)) {
+            throw new AuthorizationException('Akses depo tidak valid.');
+        }
+
+        $hasAllDepoAccess = in_array('all', $userDepoCodes, true);
+
+        if ($hasAllDepoAccess) {
+            if (! in_array('all', $depoFilters, true)) {
+                $requestedDepos = $this->resolveDepoNamesByCodes($depoFilters);
+
+                if (! empty($requestedDepos)) {
+                    $query->whereIn('depo', $requestedDepos);
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            }
+
+            return;
+        }
+
+        $allowedDepos = $this->resolveDepoNamesByCodes($userDepoCodes);
+        if (empty($allowedDepos)) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $query->whereIn('depo', $allowedDepos);
+
+        if (! in_array('all', $depoFilters, true)) {
+            $requestedDepos = $this->resolveDepoNamesByCodes($depoFilters);
+            $validDepos = array_values(array_intersect($requestedDepos, $allowedDepos));
+
+            if (! empty($validDepos)) {
+                $query->whereIn('depo', $validDepos);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function resolveDepoNamesByCodes(array $depoCodes): array
+    {
+        $codes = array_values(array_filter($depoCodes, fn ($code) => is_string($code) && $code !== '' && $code !== 'all'));
+        if (empty($codes)) {
+            return [];
+        }
+
+        return MasterDepo::whereIn('code', $codes)
+            ->pluck('name')
+            ->toArray();
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function parsePeriodeRange(string $periode): array
+    {
+        $parts = explode(' - ', $periode);
+        if (count($parts) !== 2) {
+            throw ValidationException::withMessages([
+                'periode' => ['Format periode tidak valid. Gunakan dd/mm/YYYY - dd/mm/YYYY.'],
+            ]);
+        }
+
+        try {
+            $start = \Carbon\Carbon::createFromFormat('d/m/Y', $parts[0]);
+            $end = \Carbon\Carbon::createFromFormat('d/m/Y', $parts[1]);
+
+            if ($start->format('d/m/Y') !== $parts[0] || $end->format('d/m/Y') !== $parts[1]) {
+                throw ValidationException::withMessages([
+                    'periode' => ['Tanggal periode tidak valid.'],
+                ]);
+            }
+
+            return [$start->format('Y-m-d'), $end->format('Y-m-d')];
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'periode' => ['Tanggal periode tidak valid.'],
+            ]);
         }
     }
 }

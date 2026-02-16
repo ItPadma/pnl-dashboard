@@ -8,7 +8,11 @@ class MasterRefSatuanUkur extends Model
 {
     protected $table = 'master_ref_satuan_ukur';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'kode',
+        'keterangan',
+        'is_active',
+    ];
 
     protected $casts = [
         'is_active' => 'boolean',

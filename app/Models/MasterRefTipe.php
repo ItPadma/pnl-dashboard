@@ -8,7 +8,11 @@ class MasterRefTipe extends Model
 {
     protected $table = 'master_ref_tipe';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'kode',
+        'keterangan',
+        'is_active',
+    ];
 
     protected $casts = [
         'is_active' => 'boolean',

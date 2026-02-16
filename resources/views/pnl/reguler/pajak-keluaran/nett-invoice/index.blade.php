@@ -204,6 +204,23 @@
             margin-bottom: 10px;
             color: #dadce0;
         }
+
+        /* Highlight for dates with data */
+        .daterangepicker td.has-data {
+            background-color: #d4edda;
+            color: #155724;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+
+        .daterangepicker td.has-data:hover {
+            background-color: #c3e6cb;
+        }
+
+        .daterangepicker td.active.has-data {
+            background-color: #357ebd;
+            color: #fff;
+        }
     </style>
 @endsection
 
@@ -435,7 +452,7 @@
                         </div>
                     </div>
 
-                    {{-- Non-PKP Filter (only periode, brand from main page) --}}
+                    {{-- Non-PKP Filter (periode dari modal, PT/Brand/Depo dari halaman utama) --}}
                     <div class="npkp-filter-bar">
                         <div class="row align-items-end">
                             <div class="col-md-5">
@@ -454,7 +471,7 @@
                             <div class="col-md-3 text-end d-flex align-items-end justify-content-end">
                                 <small class="text-muted">
                                     <i class="fas fa-info-circle me-1"></i>
-                                    Brand mengikuti filter halaman utama
+                                    PT, Brand, dan Depo mengikuti filter halaman utama
                                 </small>
                             </div>
                         </div>

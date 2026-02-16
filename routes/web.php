@@ -60,6 +60,9 @@ Route::controller(NettInvoiceController::class)->group(function () {
         Route::post('/pnl/reguler/nett-invoice/retur-list', 'getReturList')->name('pnl.reguler.nett-invoice.retur-list');
         Route::post('/pnl/reguler/nett-invoice/process', 'processNett')->name('pnl.reguler.nett-invoice.process');
         Route::post('/pnl/reguler/nett-invoice/npkp-list', 'getNonPkpList')->name('pnl.reguler.nett-invoice.npkp-list');
+        Route::post('/pnl/reguler/nett-invoice/available-dates', 'getAvailableDates')
+            ->middleware('throttle:30,1')
+            ->name('pnl.reguler.nett-invoice.available-dates');
         Route::post('/pnl/reguler/nett-invoice/history', 'getNettHistory')->name('pnl.reguler.nett-invoice.history');
         Route::get('/pnl/reguler/nett-invoice/export', 'exportData')->name('pnl.reguler.nett-invoice.export');
     });
@@ -90,8 +93,11 @@ Route::controller(MasterDataController::class)->group(function () {
         Route::patch('/pnl/master-data/import/master-pkp/{id}/toggle', 'toggleMasterPKP')->name('pnl.master-data.toggle.master-pkp');
     });
 
-    Route::middleware('menu.access:master-data-referensi')->group(function () {
+    Route::middleware([AuthnCheck::class, 'menu.access:master-data-referensi'])->group(function () {
         Route::get('/pnl/master-data/referensi', 'indexReferensi')->name('pnl.master-data.index.referensi');
+        Route::post('/pnl/master-data/referensi/{type}', 'storeReferensi')
+            ->whereIn('type', ['tipe', 'kode-transaksi', 'keterangan-tambahan', 'id-pembeli', 'satuan-ukur', 'kode-negara'])
+            ->name('pnl.master-data.store.referensi');
         Route::post('/pnl/master-data/referensi/{type}/import', 'importReferensi')
             ->whereIn('type', ['tipe', 'kode-transaksi', 'keterangan-tambahan', 'id-pembeli', 'satuan-ukur', 'kode-negara'])
             ->name('pnl.master-data.import.referensi');
