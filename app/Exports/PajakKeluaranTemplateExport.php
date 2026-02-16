@@ -63,6 +63,7 @@ class PajakKeluaranTemplateExport implements WithMultipleSheets
                 $invoiceOrder[] = $invoiceKey;
                 $invoiceGroups[$invoiceKey] = [
                     'no_invoice' => $record->no_invoice,
+                    'no_do' => $record->no_do,
                     'tgl_faktur_pajak' => $record->tgl_faktur_pajak,
                     'npwp_customer' => $record->npwp_customer,
                     'nik' => $record->nik,
