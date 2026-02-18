@@ -13,6 +13,7 @@ use App\Models\NettInvoiceHeader;
 use App\Models\NettInvoiceHeaderItem;
 use App\Models\NettInvoiceHistory;
 use App\Models\PajakKeluaranDetail;
+use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -149,17 +150,40 @@ class NettInvoiceController extends Controller
     public function getInvoiceDetail(Request $request)
     {
         try {
-            $noInvoice = $request->no_invoice;
+            $validated = $request->validate([
+                'no_invoice' => 'required|string|max:255',
+            ]);
 
-            $items = PajakKeluaranDetail::where('no_invoice', $noInvoice)
+            $noInvoice = $validated['no_invoice'];
+
+            $accessCheck = DB::table('pajak_keluaran_details')
+                ->where('no_invoice', $noInvoice);
+            $this->applyCommonPajakKeluaranFilters($accessCheck, ['all'], ['all'], ['all'], null);
+
+            if (! $accessCheck->exists()) {
+                throw new AuthorizationException('Anda tidak memiliki akses ke invoice ini.');
+            }
+
+            $itemsQuery = DB::table('pajak_keluaran_details')
+                ->where('no_invoice', $noInvoice)
                 ->select('kode_produk', 'qty_pcs', 'dpp', 'ppn', 'disc')
-                ->get();
+                ->orderBy('id');
+
+            $this->applyCommonPajakKeluaranFilters($itemsQuery, ['all'], ['all'], ['all'], null);
+            $items = $itemsQuery->get();
 
             return response()->json([
                 'status' => true,
                 'data' => $items,
             ]);
         } catch (\Throwable $th) {
+            if (
+                $th instanceof ValidationException ||
+                $th instanceof AuthorizationException
+            ) {
+                throw $th;
+            }
+
             Log::error(
                 'Error in NettInvoiceController@getInvoiceDetail: '.
                     $th->getMessage(),
@@ -168,7 +192,7 @@ class NettInvoiceController extends Controller
             return response()->json(
                 [
                     'status' => false,
-                    'message' => $th->getMessage(),
+                    'message' => 'Terjadi kesalahan internal.',
                 ],
                 500,
             );
@@ -182,7 +206,7 @@ class NettInvoiceController extends Controller
     public function getNonPkpList(Request $request)
     {
         try {
-            $validatedFilters = $this->validateCommonFilters($request);
+            $validatedFilters = $this->validateCommonFilters($request, false, true);
             $validatedExtra = $request->validate([
                 'retur_customer_ids' => 'nullable|array|max:200',
                 'retur_customer_ids.*' => 'string|max:255',
@@ -222,8 +246,12 @@ class NettInvoiceController extends Controller
                     ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
             });
 
-            // Exclude invoices that have already been netted
-            $nettedInvoices = NettInvoiceHeader::pluck('no_invoice')->toArray();
+            // Exclude invoices that have already been netted in selected reporting period only
+            $reportingPeriod = $this->resolveReportingPeriodFromPeriode($validatedFilters['periode']);
+            $nettedInvoices = NettInvoiceHeader::where('mp_bulan', $reportingPeriod['bulan'])
+                ->where('mp_tahun', $reportingPeriod['tahun'])
+                ->pluck('no_invoice')
+                ->toArray();
             if (! empty($nettedInvoices)) {
                 $query->whereNotIn('no_invoice', $nettedInvoices);
             }
@@ -436,28 +464,45 @@ class NettInvoiceController extends Controller
     public function processNett(Request $request)
     {
         try {
+            $validated = $request->validate([
+                'retur_invoices' => 'required|array|min:1|max:200',
+                'retur_invoices.*' => 'string|max:255|distinct',
+                'npkp_invoices' => 'required|array|min:1|max:200',
+                'npkp_invoices.*' => 'string|max:255|distinct',
+                'periode' => [
+                    'required',
+                    'string',
+                    'regex:/^\d{2}\/\d{2}\/\d{4}\s-\s\d{2}\/\d{2}\/\d{4}$/',
+                ],
+            ]);
+
+            $reportingPeriod = $this->resolveReportingPeriodFromPeriode($validated['periode']);
+            $parsedPeriodeRange = $this->parsePeriodeRange($validated['periode']);
+            $returInvoices = $validated['retur_invoices'];
+            $npkpInvoices = $validated['npkp_invoices'];
+
+            $this->assertInvoiceAccess($npkpInvoices);
+            $this->assertInvoiceAccess($returInvoices);
+            $this->assertNpkpInvoicesWithinPeriode($npkpInvoices, $parsedPeriodeRange);
+
             DB::beginTransaction();
 
-            $returInvoices = $request->retur_invoices ?? [];
-            $npkpInvoices = $request->npkp_invoices ?? [];
+            $alreadyNettedThisPeriod = NettInvoiceHeader::whereIn('no_invoice', $npkpInvoices)
+                ->where('mp_bulan', $reportingPeriod['bulan'])
+                ->where('mp_tahun', $reportingPeriod['tahun'])
+                ->lockForUpdate()
+                ->pluck('no_invoice')
+                ->toArray();
 
-            if (empty($returInvoices)) {
+            if (! empty($alreadyNettedThisPeriod)) {
+                DB::rollBack();
+
                 return response()->json(
                     [
                         'status' => false,
-                        'message' => 'Pilih minimal satu invoice retur',
+                        'message' => 'Sebagian invoice Non-PKP sudah diproses pada masa lapor terpilih: '.implode(', ', $alreadyNettedThisPeriod),
                     ],
-                    400,
-                );
-            }
-
-            if (empty($npkpInvoices)) {
-                return response()->json(
-                    [
-                        'status' => false,
-                        'message' => 'Pilih minimal satu invoice Non-PKP',
-                    ],
-                    400,
+                    422,
                 );
             }
 
@@ -608,8 +653,8 @@ class NettInvoiceController extends Controller
                     'no_invoice' => $noInvoiceNpkp,
                     'invoice_value_original' => $invoiceValueOriginal,
                     'invoice_value_nett' => $invoiceValueNett,
-                    'mp_bulan' => date('m'),
-                    'mp_tahun' => date('Y'),
+                    'mp_bulan' => $reportingPeriod['bulan'],
+                    'mp_tahun' => $reportingPeriod['tahun'],
                     'is_checked' => 1,
                     'is_downloaded' => 0,
                     'status' => 'netted',
@@ -676,8 +721,8 @@ class NettInvoiceController extends Controller
                         'no_invoice_retur' => $returData['no_invoice'],
                         'invoice_retur_value' => $returData['value'],
                         'remaining_value' => $finalRemaining,
-                        'mp_bulan' => date('m'),
-                        'mp_tahun' => date('Y'),
+                        'mp_bulan' => $reportingPeriod['bulan'],
+                        'mp_tahun' => $reportingPeriod['tahun'],
                         'is_checked' => 1,
                         'is_downloaded' => 0,
                         'status' => $detailStatus,
@@ -713,7 +758,14 @@ class NettInvoiceController extends Controller
                 ],
             ]);
         } catch (\Throwable $th) {
-            DB::rollBack();
+            if ($th instanceof ValidationException || $th instanceof AuthorizationException) {
+                throw $th;
+            }
+
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
             Log::error(
                 'Error in NettInvoiceController@processNett: '.
                     $th->getMessage(),
@@ -723,7 +775,7 @@ class NettInvoiceController extends Controller
                 new UserEvent(
                     'error',
                     'Nett Invoice',
-                    'Gagal melakukan proses netting: '.$th->getMessage(),
+                    'Gagal melakukan proses netting.',
                     Auth::user(),
                 ),
             );
@@ -731,7 +783,7 @@ class NettInvoiceController extends Controller
             return response()->json(
                 [
                     'status' => false,
-                    'message' => $th->getMessage(),
+                    'message' => 'Terjadi kesalahan internal.',
                 ],
                 500,
             );
@@ -744,14 +796,21 @@ class NettInvoiceController extends Controller
     public function getNettHistory(Request $request)
     {
         try {
-            $query = NettInvoiceHistory::query();
+            $query = DB::table('nett_invoice_histories')
+                ->select('nett_invoice_histories.*')
+                ->join('nett_invoice_headers', function ($join) {
+                    $join->on('nett_invoice_histories.id_transaksi', '=', 'nett_invoice_headers.id_transaksi')
+                        ->on('nett_invoice_histories.no_invoice_npkp', '=', 'nett_invoice_headers.no_invoice');
+                });
+
+            $this->applyDepoFilterWithAccessGuard($query, ['all']);
 
             $totalRecords = $query->count();
 
             $start = $request->get('start', 0);
             $length = $request->get('length', 10);
 
-            $records = $query->orderBy('created_at', 'desc')
+            $records = $query->orderBy('nett_invoice_histories.created_at', 'desc')
                 ->offset($start)
                 ->limit($length)
                 ->get();
@@ -763,6 +822,10 @@ class NettInvoiceController extends Controller
                 'data' => $records,
             ]);
         } catch (\Throwable $th) {
+            if ($th instanceof AuthorizationException) {
+                throw $th;
+            }
+
             Log::error(
                 'Error in NettInvoiceController@getNettHistory: '.$th->getMessage(),
             );
@@ -770,7 +833,7 @@ class NettInvoiceController extends Controller
             return response()->json(
                 [
                     'status' => false,
-                    'message' => $th->getMessage(),
+                    'message' => 'Terjadi kesalahan internal.',
                     'data' => [],
                 ],
                 500,
@@ -841,8 +904,11 @@ class NettInvoiceController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function validateCommonFilters(Request $request, bool $withPagination = false): array
-    {
+    private function validateCommonFilters(
+        Request $request,
+        bool $withPagination = false,
+        bool $requirePeriode = false,
+    ): array {
         $rules = [
             'pt' => 'nullable|array|max:100',
             'pt.*' => 'string|max:50',
@@ -851,7 +917,7 @@ class NettInvoiceController extends Controller
             'depo' => 'nullable|array|max:100',
             'depo.*' => 'string|max:50',
             'periode' => [
-                'nullable',
+                $requirePeriode ? 'required' : 'nullable',
                 'string',
                 'regex:/^\d{2}\/\d{2}\/\d{4}\s-\s\d{2}\/\d{2}\/\d{4}$/',
             ],
@@ -988,12 +1054,99 @@ class NettInvoiceController extends Controller
                 ]);
             }
 
+            if ($start->greaterThan($end)) {
+                throw ValidationException::withMessages([
+                    'periode' => ['Tanggal mulai periode tidak boleh lebih besar dari tanggal akhir.'],
+                ]);
+            }
+
             return [$start->format('Y-m-d'), $end->format('Y-m-d')];
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (\Throwable) {
             throw ValidationException::withMessages([
                 'periode' => ['Tanggal periode tidak valid.'],
+            ]);
+        }
+    }
+
+    /**
+     * @return array{bulan: string, tahun: string}
+     */
+    private function resolveReportingPeriodFromPeriode(string $periode): array
+    {
+        [, $endDate] = $this->parsePeriodeRange($periode);
+
+        $reportingDate = Carbon::createFromFormat('Y-m-d', $endDate);
+        if ((int) $reportingDate->format('d') <= 15) {
+            $reportingDate = $reportingDate->subMonthNoOverflow();
+        }
+
+        return [
+            'bulan' => $reportingDate->format('m'),
+            'tahun' => $reportingDate->format('Y'),
+        ];
+    }
+
+    /**
+     * @param  array<int, string>  $invoiceNumbers
+     */
+    private function assertInvoiceAccess(array $invoiceNumbers): void
+    {
+        if (empty($invoiceNumbers)) {
+            return;
+        }
+
+        $accessibleInvoicesQuery = DB::table('pajak_keluaran_details')
+            ->select('no_invoice')
+            ->whereIn('no_invoice', $invoiceNumbers)
+            ->groupBy('no_invoice');
+
+        $this->applyDepoFilterWithAccessGuard($accessibleInvoicesQuery, ['all']);
+
+        $accessibleInvoices = $accessibleInvoicesQuery->pluck('no_invoice')->toArray();
+        $requestedInvoices = array_values(array_unique($invoiceNumbers));
+
+        if (count($accessibleInvoices) !== count($requestedInvoices)) {
+            throw new AuthorizationException('Sebagian invoice tidak termasuk akses depo Anda.');
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $invoiceNumbers
+     * @param  array{0: string, 1: string}  $periodeRange
+     */
+    private function assertNpkpInvoicesWithinPeriode(array $invoiceNumbers, array $periodeRange): void
+    {
+        if (empty($invoiceNumbers)) {
+            return;
+        }
+
+        $pkp = MasterPkp::where('is_active', true)->pluck('IDPelanggan')->toArray();
+
+        $query = DB::table('pajak_keluaran_details')
+            ->select('no_invoice')
+            ->whereIn('no_invoice', $invoiceNumbers)
+            ->where('is_downloaded', 0)
+            ->whereBetween('tgl_faktur_pajak', $periodeRange)
+            ->whereNotIn('customer_id', $pkp)
+            ->where('tipe_ppn', 'PPN')
+            ->where('qty_pcs', '>', 0)
+            ->where(function ($subQuery) {
+                $subQuery
+                    ->where('hargatotal_sblm_ppn', '>', 0)
+                    ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
+            })
+            ->groupBy('no_invoice');
+
+        $this->applyDepoFilterWithAccessGuard($query, ['all']);
+
+        $eligibleInvoices = $query->pluck('no_invoice')->toArray();
+        $requestedInvoices = array_values(array_unique($invoiceNumbers));
+
+        if (count($eligibleInvoices) !== count($requestedInvoices)) {
+            throw ValidationException::withMessages([
+                'npkp_invoices' => ['Sebagian invoice Non-PKP berada di luar periode terpilih atau tidak valid.'],
             ]);
         }
     }

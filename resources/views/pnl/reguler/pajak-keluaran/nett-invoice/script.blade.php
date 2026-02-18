@@ -572,6 +572,22 @@
             return;
         }
 
+        // Keep modal period in sync with main filter period
+        const mainPeriode = ($('#filter_periode').val() || '').trim();
+        if (mainPeriode !== '') {
+            $('#modal_filter_periode').val(mainPeriode);
+            const modalPicker = $('#modal_filter_periode').data('daterangepicker');
+            if (modalPicker && mainPeriode.includes(' - ')) {
+                const [startText, endText] = mainPeriode.split(' - ');
+                const startDate = moment(startText, 'DD/MM/YYYY', true);
+                const endDate = moment(endText, 'DD/MM/YYYY', true);
+                if (startDate.isValid() && endDate.isValid()) {
+                    modalPicker.setStartDate(startDate);
+                    modalPicker.setEndDate(endDate);
+                }
+            }
+        }
+
         // Populate retur summary table
         let summaryHtml = '';
         let totalRetur = 0;
@@ -671,8 +687,20 @@
                     $('#npkp-table-wrapper').hide();
                 }
             },
-            error: function() {
+            error: function(xhr) {
                 $('#npkp-loading').hide();
+
+                if (xhr.status === 422) {
+                    const periodeError = xhr.responseJSON?.errors?.periode?.[0];
+                    const safeMessage = $('<div>').text(periodeError || 'Data periode tidak valid').html();
+                    $('#npkp-empty').html(
+                        '<i class="fas fa-exclamation-triangle d-block" style="font-size:2.5rem;color:#f44336;margin-bottom:10px;"></i><p class="mb-0">' +
+                        safeMessage +
+                        '</p>'
+                    ).show();
+                    return;
+                }
+
                 $('#npkp-empty').html(
                     '<i class="fas fa-exclamation-triangle d-block" style="font-size:2.5rem;color:#f44336;margin-bottom:10px;"></i><p class="mb-0">Gagal memuat data</p>'
                 ).show();
@@ -769,6 +797,12 @@
         }
 
         const returInvoices = selectedReturData.map(item => item.no_invoice);
+        const periode = ($('#modal_filter_periode').val() || '').trim();
+
+        if (!periode) {
+            swal('Peringatan', 'Periode pada modal wajib diisi', 'warning');
+            return;
+        }
 
         swal({
             title: 'Konfirmasi',
@@ -795,7 +829,8 @@
                     },
                     data: {
                         npkp_invoices: selectedNpkpInvoices,
-                        retur_invoices: returInvoices
+                        retur_invoices: returInvoices,
+                        periode: periode
                     },
                     success: function(response) {
                         if (response.status) {
@@ -810,6 +845,13 @@
                         }
                     },
                     error: function(xhr) {
+                        if (xhr.status === 422) {
+                            const periodeError = xhr.responseJSON?.errors?.periode?.[0];
+                            swal('Validasi Gagal', periodeError || xhr.responseJSON?.message ||
+                                'Data periode tidak valid', 'warning');
+                            return;
+                        }
+
                         swal('Error', xhr.responseJSON?.message || 'Gagal melakukan proses netting',
                             'error');
                     }
