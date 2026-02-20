@@ -188,8 +188,8 @@
                             <button class="btn btn-outline-success ms-2" id="btn-download-filtered"
                                 onclick="downloadFilteredData()">
                                 <i class="fas fa-download"></i>
-                                <div class="spinner-border spinner-border-sm ms-1" id="sp-download-filtered"
-                                    role="status" hidden><span class="visually-hidden">Loading...</span></div>
+                                <div class="spinner-border spinner-border-sm ms-1" id="sp-download-filtered" role="status"
+                                    hidden><span class="visually-hidden">Loading...</span></div>
                                 Download
                             </button>
                         @endif
@@ -221,9 +221,9 @@
                                     role="tab" aria-controls="tabpanel-retur" aria-selected="false">Retur</a>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <a class="nav-link" id="simple-tab-5" data-bs-toggle="tab"
-                                    href="#tabpanel-nonstandar" role="tab" aria-controls="tabpanel-nonstandar"
-                                    aria-selected="false">Non Standar</a>
+                                <a class="nav-link" id="simple-tab-5" data-bs-toggle="tab" href="#tabpanel-nonstandar"
+                                    role="tab" aria-controls="tabpanel-nonstandar" aria-selected="false">Non
+                                    Standar</a>
                             </li>
                         </ul>
                         <div class="tab-content pt-3" id="tab-content">
@@ -1303,6 +1303,46 @@
                             <div class="alert alert-info">Belum ada data yang dipilih.</div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Input Master PKP -->
+    <div class="modal fade" id="modalInputMasterPkp" tabindex="-1" aria-labelledby="modalInputMasterPkpLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalInputMasterPkpLabel">Input Master PKP yang Belum Terdaftar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        Terdapat Master Data PKP yang belum ada untuk data-data yang dipilih. Silakan lengkapi data di bawah
+                        ini sebelum melanjutkan proses 'Ubah Tipe'.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID Pelanggan</th>
+                                    <th>Nama PKP</th>
+                                    <th>NPWP / No PKP</th>
+                                    <th>Alamat PKP</th>
+                                    <th>Type Pajak</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-missing-pkp">
+                                <!-- Data di-render via Javascript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" id="btn-save-master-pkp">Simpan &
+                        Lanjutkan</button>
                 </div>
             </div>
         </div>

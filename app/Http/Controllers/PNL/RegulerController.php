@@ -427,6 +427,140 @@ class RegulerController extends Controller
         }
     }
 
+    public function checkMissingPkp(Request $request)
+    {
+        if (! Auth::guard('web')->check()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+                'data' => [],
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|distinct|exists:pajak_keluaran_details,id',
+        ]);
+
+        try {
+            $ids = $validated['ids'];
+
+            // Get selected items
+            $items = $this->buildScopedPajakKeluaranQuery($request)
+                ->select('customer_id', 'nama_customer_sistem', 'alamat_sistem', 'npwp_customer')
+                ->whereIn('id', $ids)
+                ->whereNotNull('customer_id')
+                ->where('customer_id', '!=', '')
+                ->get()
+                ->unique('customer_id');
+
+            $customerIds = $items->pluck('customer_id')->toArray();
+
+            // Find missing from master_pkp
+            $existingPkpCustomerIds = MasterPkp::whereIn('IDPelanggan', $customerIds)
+                ->where('is_active', true)
+                ->pluck('IDPelanggan')
+                ->toArray();
+
+            $missingPkp = $items->filter(function ($item) use ($existingPkpCustomerIds) {
+                return !in_array($item->customer_id, $existingPkpCustomerIds);
+            })->values()->map(function ($item) {
+                return [
+                    'IDPelanggan' => $item->customer_id,
+                    'NamaPKP' => $item->nama_customer_sistem,
+                    'AlamatPKP' => $item->alamat_sistem,
+                    'NoPKP' => $item->npwp_customer,
+                    'TypePajak' => 'PPN', // Default to PPN
+                ];
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Check missing PKP successful',
+                'data' => $missingPkp,
+            ]);
+        } catch (\Throwable $th) {
+            Log::error('Failed to check missing PKP', [
+                'context' => __METHOD__,
+                'exception' => $th,
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Terjadi kesalahan saat memeriksa data PKP.',
+                'data' => [],
+            ], 500);
+        }
+    }
+
+    public function saveMasterPkpBulk(Request $request)
+    {
+        if (! Auth::guard('web')->check()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        if (! $this->hasWriteAccess()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Forbidden',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'pkp_list' => 'required|array|min:1',
+            'pkp_list.*.IDPelanggan' => 'required|string',
+            'pkp_list.*.NamaPKP' => 'required|string',
+            'pkp_list.*.AlamatPKP' => 'nullable|string',
+            'pkp_list.*.NoPKP' => 'nullable|string',
+            'pkp_list.*.TypePajak' => 'required|string',
+        ]);
+
+        try {
+            DB::transaction(function () use ($validated, $request) {
+                foreach ($validated['pkp_list'] as $pkpData) {
+                    MasterPkp::updateOrCreate(
+                        ['IDPelanggan' => $pkpData['IDPelanggan']],
+                        [
+                            'NamaPKP' => $pkpData['NamaPKP'],
+                            'AlamatPKP' => $pkpData['AlamatPKP'],
+                            'NoPKP' => $pkpData['NoPKP'],
+                            'TypePajak' => $pkpData['TypePajak'],
+                            'is_active' => true,
+                        ]
+                    );
+
+                    LogController::createLog(
+                        Auth::user()->id,
+                        'Add/Update Master PKP via Modal',
+                        'Create',
+                        json_encode($pkpData),
+                        'master_pkp',
+                        'info',
+                        $request
+                    );
+                }
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Data Master PKP berhasil disimpan.',
+            ]);
+        } catch (\Throwable $th) {
+            Log::error('Failed to save bulk Master PKP', [
+                'context' => __METHOD__,
+                'exception' => $th,
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Terjadi kesalahan saat menyimpan data Master PKP.',
+            ], 500);
+        }
+    }
+
     public function updateChecked(Request $request)
     {
         if (! Auth::guard('web')->check()) {

@@ -395,7 +395,8 @@
         $('#table-nonstandar tbody').on('change', '.row-checkbox-nonstandar', function() {
             const isChecked = $(this).is(':checked') ? 1 : 0;
             const id = $(this).data('id');
-            const allChecked = $('.row-checkbox-nonstandar').length === $('.row-checkbox-nonstandar:checked')
+            const allChecked = $('.row-checkbox-nonstandar').length === $(
+                    '.row-checkbox-nonstandar:checked')
                 .length;
             $('#select-all-nonstandar').prop('checked', allChecked);
             toggleMoveToSelect(id, isChecked);
@@ -694,11 +695,15 @@
         }
     }
 
+    // Variabel state untuk menyimpan status move sementara modal PKP diajukan
+    let pendingMoveParams = null;
+
     // Event listener untuk tombol apply move-to
     function applyMoveTo(from) {
         const move_from = from;
         // ambil nilai dari select dengan id move-to yang saat ini aktif (tidak disabled)
         const move_to = $('select[id*="move-to-"]:not([disabled]):visible').val();
+
         if (move_from && move_to) {
             // Ambil semua ID dari checkbox yang dicentang
             const ids = $('.row-checkbox-' + move_from).filter(':checked').map(function() {
@@ -706,28 +711,56 @@
             }).get();
 
             if (ids.length > 0) {
-                // Kirim AJAX request untuk memperbarui status di database
-                $.ajax({
-                    url: "{{ route('pnl.reguler.pajak-keluaran.updateMove2') }}",
-                    type: "POST",
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                        ids: ids,
-                        move_from: move_from,
-                        move_to: move_to
-                    },
-                    success: function(response) {
-                        if (response.status) {
-                            reloadTableMoveFromMove2(move_from, move_to);
-                            toastr.success(response.message);
-                        } else {
-                            toastr.error(response.message);
+                if (move_to === 'pkp') {
+                    // Check missing PKP first
+                    $.ajax({
+                        url: "{{ route('pnl.reguler.pajak-keluaran.checkMissingPkp') }}",
+                        type: "POST",
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            ids: ids
+                        },
+                        success: function(response) {
+                            if (response.status && response.data.length > 0) {
+                                // Tampilkan Modal
+                                pendingMoveParams = {
+                                    ids: ids,
+                                    move_from: move_from,
+                                    move_to: move_to
+                                };
+
+                                let tbodyHtml = '';
+                                response.data.forEach(function(item, index) {
+                                    tbodyHtml += `
+                                        <tr>
+                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][IDPelanggan]" value="${item.IDPelanggan}" readonly></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][NamaPKP]" value="${item.NamaPKP}" required></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][NoPKP]" value="${item.NoPKP || ''}"></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][AlamatPKP]" value="${item.AlamatPKP || ''}"></td>
+                                            <td>
+                                                <select class="form-select form-select-sm" name="pkp_list[${index}][TypePajak]">
+                                                    <option value="PPN" ${item.TypePajak === 'PPN' ? 'selected' : ''}>PPN</option>
+                                                    <option value="NON-PPN" ${item.TypePajak === 'NON-PPN' ? 'selected' : ''}>NON-PPN</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    `;
+                                });
+
+                                $('#tbody-missing-pkp').html(tbodyHtml);
+                                $('#modalInputMasterPkp').modal('show');
+                            } else {
+                                // Proceed direct move
+                                executeMoveTo(ids, move_from, move_to);
+                            }
+                        },
+                        error: function(xhr) {
+                            toastr.error('Terjadi kesalahan saat mengecek data Master PKP.');
                         }
-                    },
-                    error: function(xhr) {
-                        toastr.error(xhr.responseText);
-                    }
-                });
+                    });
+                } else {
+                    executeMoveTo(ids, move_from, move_to);
+                }
             } else {
                 toastr.warning('Tidak ada data yang dipilih untuk dipindahkan.');
             }
@@ -735,6 +768,97 @@
             toastr.warning('Silakan pilih tipe pajak dan tujuan pemindahan.');
         }
     }
+
+    function executeMoveTo(ids, move_from, move_to) {
+        // Kirim AJAX request untuk memperbarui status di database
+        $.ajax({
+            url: "{{ route('pnl.reguler.pajak-keluaran.updateMove2') }}",
+            type: "POST",
+            data: {
+                _token: '{{ csrf_token() }}',
+                ids: ids,
+                move_from: move_from,
+                move_to: move_to
+            },
+            success: function(response) {
+                if (response.status) {
+                    reloadTableMoveFromMove2(move_from, move_to);
+                    toastr.success(response.message);
+                } else {
+                    toastr.error(response.message);
+                }
+            },
+            error: function(xhr) {
+                toastr.error(xhr.responseText);
+            }
+        });
+    }
+
+    // Modal save button handler
+    $(document).on('click', '#btn-save-master-pkp', function() {
+        const pkpList = [];
+        let isValid = true;
+
+        $('#tbody-missing-pkp tr').each(function() {
+            const idPelanggan = $(this).find('input[name*="[IDPelanggan]"]').val();
+            const namaPKP = $(this).find('input[name*="[NamaPKP]"]').val();
+            const noPKP = $(this).find('input[name*="[NoPKP]"]').val();
+            const alamatPKP = $(this).find('input[name*="[AlamatPKP]"]').val();
+            const typePajak = $(this).find('select[name*="[TypePajak]"]').val();
+
+            if (!namaPKP) {
+                isValid = false;
+                $(this).find('input[name*="[NamaPKP]"]').addClass('is-invalid');
+            } else {
+                $(this).find('input[name*="[NamaPKP]"]').removeClass('is-invalid');
+            }
+
+            pkpList.push({
+                IDPelanggan: idPelanggan,
+                NamaPKP: namaPKP,
+                NoPKP: noPKP,
+                AlamatPKP: alamatPKP,
+                TypePajak: typePajak
+            });
+        });
+
+        if (!isValid) {
+            toastr.error('Pastikan semua form mandatory terisi.');
+            return;
+        }
+
+        const $btn = $(this);
+        const originalText = $btn.html();
+        $btn.html('<div class="spinner-border spinner-border-sm" role="status"></div> Menyimpan...').prop(
+            'disabled', true);
+
+        $.ajax({
+            url: "{{ route('pnl.reguler.pajak-keluaran.saveMasterPkpBulk') }}",
+            type: "POST",
+            data: {
+                _token: '{{ csrf_token() }}',
+                pkp_list: pkpList
+            },
+            success: function(response) {
+                if (response.status) {
+                    $('#modalInputMasterPkp').modal('hide');
+                    if (pendingMoveParams) {
+                        executeMoveTo(pendingMoveParams.ids, pendingMoveParams.move_from,
+                            pendingMoveParams.move_to);
+                        pendingMoveParams = null; // reset
+                    }
+                } else {
+                    toastr.error(response.message);
+                }
+            },
+            error: function(xhr) {
+                toastr.error('Terjadi kesalahan saat menyimpan data Master PKP.');
+            },
+            complete: function() {
+                $btn.html(originalText).prop('disabled', false);
+            }
+        });
+    });
 
     function handleSelectAll(tipe, element) {
         const isChecked = $(element).is(':checked');
@@ -806,8 +930,8 @@
                 else if (tipe == 'pkpnppn') table = tablePkpNppn;
                 else if (tipe == 'npkp') table = tableNonPkp;
                 else if (tipe == 'npkpnppn') table = tableNonPkpNppn;
-            else if (tipe == 'retur') table = tableRetur;
-            else if (tipe == 'nonstandar') table = tableNonStandar;
+                else if (tipe == 'retur') table = tableRetur;
+                else if (tipe == 'nonstandar') table = tableNonStandar;
 
                 let params = table.ajax.params();
                 // Ensure params exist (might be null if no ajax made yet?)
