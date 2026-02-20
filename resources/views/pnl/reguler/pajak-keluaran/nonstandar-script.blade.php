@@ -157,16 +157,16 @@
                     name: 'no_fp'
                 },
                 {
-                    data: 'brand',
-                    name: 'brand'
-                },
-                {
                     data: 'depo',
                     name: 'depo'
                 },
                 {
                     data: 'area',
                     name: 'area'
+                },
+                {
+                    data: 'brand',
+                    name: 'brand'
                 },
                 {
                     data: 'type_jual',
@@ -187,6 +187,12 @@
                 {
                     data: 'barang_jasa',
                     name: 'barang_jasa'
+                },
+                {
+                    data: 'nonstandar_keterangan',
+                    name: 'nonstandar_keterangan',
+                    orderable: false,
+                    searchable: true
                 }
             ],
             columnDefs: [{

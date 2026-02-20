@@ -1,6 +1,18 @@
 <script>
     // Function to format child row for Non Standar (product details)
     function formatChildRowNonStandar(d) {
+        var escapeHtml = function(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, function(char) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                } [char];
+            });
+        };
+
         if (!d.products || d.products.length === 0) {
             return '<div style="padding:6px 12px;font-size:0.72rem;color:#6b7280;">Tidak ada detail produk</div>';
         }
@@ -18,10 +30,10 @@
             '<thead><tr><th>KODE</th><th>NAMA PRODUK</th><th>SAT</th><th style="text-align:right">QTY</th><th style="text-align:right">HARGA SAT</th><th style="text-align:right">HARGA TOTAL</th><th style="text-align:right">DISC</th><th style="text-align:right">DPP</th><th style="text-align:right">DPP LAIN</th><th style="text-align:right">PPN</th></tr></thead><tbody>';
         d.products.forEach(function(p) {
             html += '<tr>';
-            html += '<td style="white-space:nowrap">' + (p.kode_produk || '-') + '</td>';
-            html += '<td>' + (p.nama_produk || '-') + '</td>';
-            html += '<td>' + (p.satuan || '-') + '</td>';
-            html += '<td style="text-align:right">' + (p.qty_pcs || 0) + '</td>';
+            html += '<td style="white-space:nowrap">' + escapeHtml(p.kode_produk || '-') + '</td>';
+            html += '<td>' + escapeHtml(p.nama_produk || '-') + '</td>';
+            html += '<td>' + escapeHtml(p.satuan || '-') + '</td>';
+            html += '<td style="text-align:right">' + escapeHtml(p.qty_pcs || 0) + '</td>';
             html += '<td style="text-align:right">' + fmt(p.hargasatuan_sblm_ppn) + '</td>';
             html += '<td style="text-align:right">' + fmt(p.hargatotal_sblm_ppn) + '</td>';
             html += '<td style="text-align:right">' + fmt(p.disc) + '</td>';
@@ -87,7 +99,8 @@
                         if (row.is_downloaded == 1 && data == 1) {
                             return '<div style="display: flex; align-items: center; gap: 5px;"><i class="fas fa-fw fa-check text-secondary"></i><i class="fas fa-fw fa-download text-secondary"></i></div>';
                         }
-                        return `<input type="checkbox" class="row-checkbox-nonstandar" data-invoice="${row.no_invoice}" ${checked}>`;
+                        const invoice = $('<div>').text(row.no_invoice || '').html();
+                        return `<input type="checkbox" class="row-checkbox-nonstandar" data-invoice="${invoice}" ${checked}>`;
                     }
                 },
                 {
@@ -217,6 +230,12 @@
                 {
                     data: 'barang_jasa',
                     name: 'barang_jasa'
+                },
+                {
+                    data: 'nonstandar_keterangan',
+                    name: 'nonstandar_keterangan',
+                    orderable: false,
+                    searchable: true
                 }
             ],
             columnDefs: [{

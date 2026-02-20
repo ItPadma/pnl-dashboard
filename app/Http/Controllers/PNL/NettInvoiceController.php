@@ -47,7 +47,7 @@ class NettInvoiceController extends Controller
                     'nama_customer_sistem as nama_pelanggan',
                     'no_invoice',
                     'tgl_faktur_pajak',
-                    DB::raw('ABS(SUM(dpp + ppn)) as nilai_retur'),
+                    DB::raw('ABS(SUM(dpp + ppn)) as nilai_awal_retur'),
                 )
                 ->where('is_downloaded', 0)
                 ->where(function ($subQuery) {
@@ -85,10 +85,33 @@ class NettInvoiceController extends Controller
                 'tgl_faktur_pajak',
             );
 
-            // Get total records
-            $countQuery = clone $query;
-            $totalRecords = DB::table(DB::raw("({$countQuery->toSql()}) as sub"))
-                ->mergeBindings($countQuery)
+            // Get total records before search filtering
+            $totalCountQuery = clone $query;
+            $totalRecords = DB::table(DB::raw("({$totalCountQuery->toSql()}) as sub"))
+                ->mergeBindings($totalCountQuery)
+                ->count();
+
+            // DataTables global search (Daftar Invoice Retur)
+            $searchValue = trim((string) $request->input('search.value', ''));
+            if ($searchValue !== '') {
+                $escapedSearch = str_replace(
+                    ['\\', '%', '_'],
+                    ['\\\\', '\\%', '\\_'],
+                    $searchValue,
+                );
+                $likeKeyword = "%{$escapedSearch}%";
+
+                $query->where(function ($searchQuery) use ($likeKeyword) {
+                    $searchQuery
+                        ->where('customer_id', 'like', $likeKeyword)
+                        ->orWhere('nama_customer_sistem', 'like', $likeKeyword)
+                        ->orWhere('no_invoice', 'like', $likeKeyword);
+                });
+            }
+
+            $filteredCountQuery = clone $query;
+            $filteredRecords = DB::table(DB::raw("({$filteredCountQuery->toSql()}) as sub"))
+                ->mergeBindings($filteredCountQuery)
                 ->count();
 
             // Pagination
@@ -100,25 +123,31 @@ class NettInvoiceController extends Controller
                 ->limit($length)
                 ->get();
 
-            // Check for partial usage and adjust nilai_retur
+            // Check for partial usage and expose initial + remaining retur value
             foreach ($records as &$record) {
                 $partialDetail = NettInvoiceDetail::where(
                     'no_invoice_retur',
                     $record->no_invoice,
                 )->where('remaining_value', '>', 0)->first();
 
+                $record->nilai_awal_retur = (float) $record->nilai_awal_retur;
+
                 if ($partialDetail) {
-                    $record->nilai_retur = $partialDetail->remaining_value;
+                    $record->nilai_sisa_retur = (float) $partialDetail->remaining_value;
                     $record->is_partial = true;
                 } else {
+                    $record->nilai_sisa_retur = (float) $record->nilai_awal_retur;
                     $record->is_partial = false;
                 }
+
+                // Backward compatibility alias for existing consumers
+                $record->nilai_retur = $record->nilai_sisa_retur;
             }
 
             return response()->json([
                 'draw' => intval($request->get('draw')),
                 'recordsTotal' => $totalRecords,
-                'recordsFiltered' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
                 'data' => $records,
             ]);
         } catch (\Throwable $th) {
@@ -321,7 +350,7 @@ class NettInvoiceController extends Controller
                     'customer_id as kode_pelanggan',
                     'nama_customer_sistem as nama_pelanggan',
                     'no_invoice',
-                    DB::raw('ABS(SUM(dpp + ppn)) as nilai_retur'),
+                    DB::raw('ABS(SUM(dpp + ppn)) as nilai_awal_retur'),
                 )
                 ->where('is_downloaded', 0)
                 ->where(function ($subQuery) {
@@ -357,6 +386,21 @@ class NettInvoiceController extends Controller
             );
 
             $returs = $query->get();
+
+            foreach ($returs as &$retur) {
+                $partialDetail = NettInvoiceDetail::where(
+                    'no_invoice_retur',
+                    $retur->no_invoice,
+                )->where('remaining_value', '>', 0)->first();
+
+                $retur->nilai_awal_retur = (float) $retur->nilai_awal_retur;
+                $retur->nilai_sisa_retur = $partialDetail
+                    ? (float) $partialDetail->remaining_value
+                    : (float) $retur->nilai_awal_retur;
+
+                // Backward compatibility alias for existing consumers
+                $retur->nilai_retur = $retur->nilai_sisa_retur;
+            }
 
             return response()->json([
                 'status' => true,
@@ -484,6 +528,7 @@ class NettInvoiceController extends Controller
             $this->assertInvoiceAccess($npkpInvoices);
             $this->assertInvoiceAccess($returInvoices);
             $this->assertNpkpInvoicesWithinPeriode($npkpInvoices, $parsedPeriodeRange);
+            $this->assertReturInvoicesEligible($returInvoices, $parsedPeriodeRange);
 
             DB::beginTransaction();
 
@@ -1147,6 +1192,54 @@ class NettInvoiceController extends Controller
         if (count($eligibleInvoices) !== count($requestedInvoices)) {
             throw ValidationException::withMessages([
                 'npkp_invoices' => ['Sebagian invoice Non-PKP berada di luar periode terpilih atau tidak valid.'],
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $invoiceNumbers
+     * @param  array{0: string, 1: string}  $periodeRange
+     */
+    private function assertReturInvoicesEligible(array $invoiceNumbers, array $periodeRange): void
+    {
+        if (empty($invoiceNumbers)) {
+            return;
+        }
+
+        $fullyUsedReturs = NettInvoiceDetail::whereIn('no_invoice_retur', $invoiceNumbers)
+            ->where('remaining_value', 0)
+            ->pluck('no_invoice_retur')
+            ->toArray();
+
+        $query = DB::table('pajak_keluaran_details')
+            ->select('no_invoice')
+            ->whereIn('no_invoice', $invoiceNumbers)
+            ->where('is_downloaded', 0)
+            ->whereBetween('tgl_faktur_pajak', $periodeRange)
+            ->where(function ($subQuery) {
+                $subQuery
+                    ->where(function ($innerQuery) {
+                        $innerQuery
+                            ->where('qty_pcs', '<', 0)
+                            ->where('hargatotal_sblm_ppn', '>=', -1000000)
+                            ->where('has_moved', 'n');
+                    })
+                    ->orWhere('moved_to', 'retur');
+            })
+            ->groupBy('no_invoice');
+
+        if (! empty($fullyUsedReturs)) {
+            $query->whereNotIn('no_invoice', $fullyUsedReturs);
+        }
+
+        $this->applyDepoFilterWithAccessGuard($query, ['all']);
+
+        $eligibleInvoices = $query->pluck('no_invoice')->toArray();
+        $requestedInvoices = array_values(array_unique($invoiceNumbers));
+
+        if (count($eligibleInvoices) !== count($requestedInvoices)) {
+            throw ValidationException::withMessages([
+                'retur_invoices' => ['Sebagian invoice retur berada di luar periode terpilih atau tidak valid.'],
             ]);
         }
     }

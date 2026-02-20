@@ -221,6 +221,109 @@
             background-color: #357ebd;
             color: #fff;
         }
+
+        /* Compact table mode for Retur + History */
+        .compact-table-card .card-header {
+            padding: .55rem .85rem;
+        }
+
+        .compact-table-card .card-title {
+            font-size: .98rem;
+            margin-bottom: 0;
+        }
+
+        .compact-table-card .card-body {
+            padding: .6rem .75rem;
+        }
+
+        .compact-table {
+            font-size: .82rem;
+            margin-bottom: 0;
+        }
+
+        .compact-table thead th {
+            font-size: .75rem;
+            text-transform: uppercase;
+            letter-spacing: .02em;
+            padding: .35rem .45rem;
+            line-height: 1.15;
+            vertical-align: middle;
+        }
+
+        .compact-table tbody td {
+            padding: .3rem .45rem;
+            line-height: 1.2;
+            vertical-align: middle;
+        }
+
+        .compact-table .btn.btn-sm {
+            font-size: .72rem;
+            padding: .2rem .4rem;
+            line-height: 1.2;
+        }
+
+        .compact-table input[type='checkbox'] {
+            transform: scale(.9);
+        }
+
+        #table-nett-invoice_wrapper .dataTables_length,
+        #table-nett-invoice_wrapper .dataTables_filter,
+        #table-nett-history_wrapper .dataTables_length,
+        #table-nett-history_wrapper .dataTables_filter {
+            margin-bottom: .35rem;
+            font-size: .75rem;
+        }
+
+        #table-nett-invoice_wrapper .dataTables_filter input,
+        #table-nett-history_wrapper .dataTables_filter input {
+            min-height: 32px;
+            padding: .2rem .45rem;
+            font-size: .75rem;
+        }
+
+        #table-nett-invoice_wrapper .dataTables_length select,
+        #table-nett-history_wrapper .dataTables_length select {
+            min-height: 32px;
+            padding: .1rem 1.4rem .1rem .35rem;
+            font-size: .75rem;
+        }
+
+        #table-nett-invoice_wrapper .dataTables_info,
+        #table-nett-history_wrapper .dataTables_info,
+        #table-nett-invoice_wrapper .dataTables_paginate,
+        #table-nett-history_wrapper .dataTables_paginate {
+            margin-top: .4rem;
+            font-size: .75rem;
+        }
+
+        #table-nett-invoice_wrapper .pagination,
+        #table-nett-history_wrapper .pagination {
+            margin-bottom: 0;
+        }
+
+        #table-nett-invoice_wrapper .page-link,
+        #table-nett-history_wrapper .page-link {
+            padding: .2rem .45rem;
+            font-size: .72rem;
+        }
+
+        @media (max-width: 992px) {
+            .compact-table {
+                font-size: .85rem;
+            }
+
+            .compact-table thead th,
+            .compact-table tbody td {
+                padding: .45rem .5rem;
+            }
+
+            #table-nett-invoice_wrapper .dataTables_filter input,
+            #table-nett-history_wrapper .dataTables_filter input,
+            #table-nett-invoice_wrapper .dataTables_length select,
+            #table-nett-history_wrapper .dataTables_length select {
+                min-height: 34px;
+            }
+        }
     </style>
 @endsection
 
@@ -317,13 +420,13 @@
             {{-- Retur Invoice Table --}}
             <div class="row">
                 <div class="col-md-12">
-                    <div class="card">
+                    <div class="card compact-table-card">
                         <div class="card-header">
                             <h4 class="card-title">Daftar Invoice Retur</h4>
                         </div>
                         <div class="card-body">
                             <div class="tbl-container">
-                                <table class="table table-sm table-bordered table-hover" id="table-nett-invoice">
+                                <table class="table table-sm table-bordered table-hover compact-table" id="table-nett-invoice">
                                     <thead>
                                         <tr>
                                             <th><input type="checkbox" id="select-all-retur"></th>
@@ -331,7 +434,8 @@
                                             <th>Nama Pelanggan</th>
                                             <th>No Invoice Retur</th>
                                             <th>Tanggal</th>
-                                            <th>Nilai Retur</th>
+                                            <th>NILAI AWAL RETUR</th>
+                                            <th>NILAI SISA RETUR</th>
                                             <th>Status</th>
                                             <th>Action</th>
                                         </tr>
@@ -348,13 +452,13 @@
             {{-- Nett History Table --}}
             <div class="row mt-4">
                 <div class="col-md-12">
-                    <div class="card">
+                    <div class="card compact-table-card">
                         <div class="card-header">
                             <h4 class="card-title">Histori Proses Nett</h4>
                         </div>
                         <div class="card-body">
                             <div class="tbl-container">
-                                <table class="table table-sm table-bordered table-hover" id="table-nett-history">
+                                <table class="table table-sm table-bordered table-hover compact-table" id="table-nett-history">
                                     <thead>
                                         <tr>
                                             <th>ID Transaksi</th>
@@ -437,14 +541,14 @@
                                         <th>Kode Pelanggan</th>
                                         <th>Nama Pelanggan</th>
                                         <th>Tanggal</th>
-                                        <th class="text-end">Nilai Retur</th>
+                                        <th class="text-end">Nilai Sisa Retur</th>
                                     </tr>
                                 </thead>
                                 <tbody id="selected-retur-summary">
                                 </tbody>
                                 <tfoot>
                                     <tr class="total-row">
-                                        <td colspan="4" class="text-end fw-bold border-top">Total Nilai Retur:</td>
+                                        <td colspan="4" class="text-end fw-bold border-top">Total Nilai Sisa Retur:</td>
                                         <td id="total-retur-value" class="text-end fw-bold border-top">Rp 0</td>
                                     </tr>
                                 </tfoot>

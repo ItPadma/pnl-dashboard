@@ -1224,6 +1224,7 @@
                                                 <th>STATUS FP</th>
                                                 <th>ID TKU PEMBELI</th>
                                                 <th>JENIS</th>
+                                                <th>KETERANGAN</th>
                                             </tr>
                                             <tr>
                                                 <th></th>
@@ -1308,6 +1309,9 @@
                                                 <th><input type="text"
                                                         class="form-control form-control-sm column-filter-nonstandar"
                                                         placeholder="Jenis" data-column="28"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-nonstandar"
+                                                        placeholder="Keterangan" data-column="29"></th>
                                             </tr>
                                         </thead>
                                         <tbody>

@@ -19,6 +19,20 @@
         minimumFractionDigits: 0
     }).format(value);
 
+    const escapeHtml = (value) => $('<div>').text(value ?? '').html();
+    const escapeAttr = (value) => String(value ?? '').replace(/[&<>"'`]/g, (char) => {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+            '`': '&#96;'
+        };
+
+        return map[char];
+    });
+
     $(document).ready(function() {
         initializeFilters();
         scheduleFetchAvailableDates();
@@ -343,26 +357,41 @@
                     orderable: false,
                     searchable: false,
                     render: function(data, type, row) {
+                        const noInvoice = escapeAttr(row.no_invoice);
+                        const kodePelanggan = escapeAttr(row.kode_pelanggan);
+                        const namaPelanggan = escapeAttr(row.nama_pelanggan);
+                        const tanggalFaktur = escapeAttr(row.tgl_faktur_pajak);
+                        const nilaiSisaRetur = row.nilai_sisa_retur !== undefined ? row.nilai_sisa_retur : row.nilai_retur;
+
                         return `<input type="checkbox" class="retur-checkbox"
-                            value="${row.no_invoice}"
-                            data-kode="${row.kode_pelanggan}"
-                            data-nama="${row.nama_pelanggan}"
-                            data-tanggal="${row.tgl_faktur_pajak}"
-                            data-nilai="${row.nilai_retur}"
+                            value="${noInvoice}"
+                            data-kode="${kodePelanggan}"
+                            data-nama="${namaPelanggan}"
+                            data-tanggal="${tanggalFaktur}"
+                            data-nilai="${nilaiSisaRetur}"
                             data-partial="${row.is_partial ? '1' : '0'}">`;
                     }
                 },
                 {
                     data: 'kode_pelanggan',
-                    name: 'kode_pelanggan'
+                    name: 'kode_pelanggan',
+                    render: function(data) {
+                        return escapeHtml(data);
+                    }
                 },
                 {
                     data: 'nama_pelanggan',
-                    name: 'nama_pelanggan'
+                    name: 'nama_pelanggan',
+                    render: function(data) {
+                        return escapeHtml(data);
+                    }
                 },
                 {
                     data: 'no_invoice',
-                    name: 'no_invoice'
+                    name: 'no_invoice',
+                    render: function(data) {
+                        return escapeHtml(data);
+                    }
                 },
                 {
                     data: 'tgl_faktur_pajak',
@@ -372,8 +401,15 @@
                     }
                 },
                 {
-                    data: 'nilai_retur',
-                    name: 'nilai_retur',
+                    data: 'nilai_awal_retur',
+                    name: 'nilai_awal_retur',
+                    render: function(data) {
+                        return formatCurrency(data);
+                    }
+                },
+                {
+                    data: 'nilai_sisa_retur',
+                    name: 'nilai_sisa_retur',
                     render: function(data) {
                         return formatCurrency(data);
                     }
@@ -392,7 +428,7 @@
                     orderable: false,
                     searchable: false,
                     render: function(data, type, row) {
-                        return `<button class="btn btn-sm btn-info btn-detail" data-invoice="${row.no_invoice}">
+                        return `<button class="btn btn-sm btn-info btn-detail" data-invoice="${escapeAttr(row.no_invoice)}">
                             <i class="fas fa-eye"></i> Detail
                         </button>`;
                     }
@@ -427,16 +463,22 @@
                     data: 'id_transaksi',
                     name: 'id_transaksi',
                     render: function(data) {
-                        return data ? `<span title="${data}">${data.substring(0, 20)}…</span>` : '-';
+                        return data ? `<span title="${escapeAttr(data)}">${escapeHtml(data.substring(0, 20))}…</span>` : '-';
                     }
                 },
                 {
                     data: 'no_invoice_npkp',
-                    name: 'no_invoice_npkp'
+                    name: 'no_invoice_npkp',
+                    render: function(data) {
+                        return escapeHtml(data);
+                    }
                 },
                 {
                     data: 'no_invoice_retur',
-                    name: 'no_invoice_retur'
+                    name: 'no_invoice_retur',
+                    render: function(data) {
+                        return escapeHtml(data);
+                    }
                 },
                 {
                     data: 'nilai_invoice_npkp',
@@ -472,14 +514,14 @@
                     data: 'status',
                     name: 'status',
                     render: function(data) {
-                        return `<span class="badge bg-info">${data}</span>`;
+                        return `<span class="badge bg-info">${escapeHtml(data)}</span>`;
                     }
                 },
                 {
                     data: 'created_by',
                     name: 'created_by',
                     render: function(data) {
-                        return data || '-';
+                        return data ? escapeHtml(data) : '-';
                     }
                 },
                 {
@@ -544,9 +586,12 @@
                 if (response.status) {
                     let html = '';
                     response.data.forEach(function(item) {
+                        const kodeProduk = escapeHtml(item.kode_produk);
+                        const qtyPcs = escapeHtml(item.qty_pcs);
+
                         html += `<tr>
-                            <td>${item.kode_produk}</td>
-                            <td>${item.qty_pcs}</td>
+                            <td>${kodeProduk}</td>
+                            <td>${qtyPcs}</td>
                             <td>${formatCurrency(item.dpp)}</td>
                             <td>${formatCurrency(item.ppn)}</td>
                             <td>${formatCurrency(item.disc)}</td>
@@ -598,9 +643,9 @@
             const partialBadge = item.is_partial ?
                 ' <span class="badge bg-warning text-dark" style="font-size:.65rem;">Partial</span>' : '';
             summaryHtml += `<tr>
-                <td>${item.no_invoice}${partialBadge}</td>
-                <td>${item.kode_pelanggan}</td>
-                <td>${item.nama_pelanggan}</td>
+                <td>${escapeHtml(item.no_invoice)}${partialBadge}</td>
+                <td>${escapeHtml(item.kode_pelanggan)}</td>
+                <td>${escapeHtml(item.nama_pelanggan)}</td>
                 <td>${dateFormatted}</td>
                 <td class="text-end">${formatCurrency(item.nilai_retur)}</td>
             </tr>`;
@@ -657,6 +702,9 @@
                     response.data.forEach(function(item) {
                         const dateFormatted = item.tgl_faktur_pajak ? moment(item.tgl_faktur_pajak)
                             .format('DD/MM/YYYY') : '-';
+                        const invoiceNo = escapeAttr(item.no_invoice);
+                        const kodePelanggan = escapeHtml(item.kode_pelanggan);
+                        const namaPelanggan = escapeHtml(item.nama_pelanggan);
                         const isMatch = item.is_matching_customer;
                         const rowClass = isMatch ? 'npkp-match-row' : '';
                         const matchBadge = isMatch ?
@@ -666,12 +714,12 @@
                         html += `<tr class="${rowClass}">
                             <td class="text-center">
                                 <input type="checkbox" class="npkp-checkbox"
-                                    value="${item.no_invoice}"
+                                    value="${invoiceNo}"
                                     data-nilai="${item.nilai_invoice}">
                             </td>
-                            <td>${item.kode_pelanggan} ${matchBadge}</td>
-                            <td>${item.nama_pelanggan}</td>
-                            <td>${item.no_invoice}</td>
+                            <td>${kodePelanggan} ${matchBadge}</td>
+                            <td>${namaPelanggan}</td>
+                            <td>${escapeHtml(item.no_invoice)}</td>
                             <td>${dateFormatted}</td>
                             <td class="text-end">${formatCurrency(item.nilai_invoice)}</td>
                         </tr>`;
@@ -764,7 +812,7 @@
             const nettClass = nettValue > 0 ? 'nett-result-positive' : 'nett-result-negative';
 
             previewHtml += `<tr>
-                <td>${npkp.no_invoice}</td>
+                <td>${escapeHtml(npkp.no_invoice)}</td>
                 <td class="text-end">${formatCurrency(npkp.nilai_invoice)}</td>
                 <td class="text-end">${formatCurrency(returUsedForThis)}</td>
                 <td class="text-end ${nettClass}">${formatCurrency(nettValue)}</td>
@@ -846,8 +894,10 @@
                     },
                     error: function(xhr) {
                         if (xhr.status === 422) {
-                            const periodeError = xhr.responseJSON?.errors?.periode?.[0];
-                            swal('Validasi Gagal', periodeError || xhr.responseJSON?.message ||
+                            const errors = xhr.responseJSON?.errors || {};
+                            const firstError = errors.periode?.[0] || errors.retur_invoices?.[0] || errors.npkp_invoices?.[0];
+
+                            swal('Validasi Gagal', firstError || xhr.responseJSON?.message ||
                                 'Data periode tidak valid', 'warning');
                             return;
                         }
