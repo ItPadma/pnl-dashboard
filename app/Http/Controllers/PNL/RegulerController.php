@@ -23,6 +23,23 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class RegulerController extends Controller
 {
+    /**
+     * Cached active PKP customer IDs (per-request).
+     */
+    private ?array $cachedPkpIds = null;
+
+    /**
+     * Get active PKP customer IDs, cached for the lifetime of this request.
+     */
+    private function getActivePkpIds(): array
+    {
+        if ($this->cachedPkpIds === null) {
+            $this->cachedPkpIds = MasterPkp::where('is_active', true)
+                ->pluck('IDPelanggan')
+                ->toArray();
+        }
+        return $this->cachedPkpIds;
+    }
     public function pkIndex()
     {
         return view("pnl.reguler.pajak-keluaran.index");
@@ -73,7 +90,7 @@ class RegulerController extends Controller
             $chstatus = "";
             $retrieve_count = 0;
             // Query base
-            $dbquery = DB::table("pajak_keluaran_details")->select("*");
+            $dbquery = DB::table("pajak_keluaran_details");
             $filters = $this->applyFilters($dbquery, $request);
             Log::info("periode: " . $request->periode);
 
@@ -95,7 +112,7 @@ class RegulerController extends Controller
             }
             // Total records
             $totalRecords = $dbquery->count();
-            $totalRecordswithFilter = $dbquery->count();
+            $totalRecordswithFilter = $totalRecords;
             $records = $dbquery
                 ->orderBy($columnName, $columnSortOrder)
                 ->skip($start)
@@ -103,7 +120,8 @@ class RegulerController extends Controller
                 ->get();
 
             if ($request->tipe === "nonstandar") {
-                $records = $records->map(function ($record) {
+                $pkpIds = $this->getActivePkpIds();
+                $records = $records->map(function ($record) use ($pkpIds) {
                     $record->nonstandar_keterangan = $this->buildNonStandarReason(
                         $record->nik ?? null,
                         $record->has_moved ?? null,
@@ -112,6 +130,7 @@ class RegulerController extends Controller
                         $record->qty_pcs ?? null,
                         $record->hargatotal_sblm_ppn ?? null,
                         $record->customer_id ?? null,
+                        $pkpIds,
                     );
 
                     return $record;
@@ -171,7 +190,7 @@ class RegulerController extends Controller
             $grouped = $request->get("grouped") ?? false;
 
             // Query base
-            $dbquery = DB::table("pajak_keluaran_details")->select("*");
+            $dbquery = DB::table("pajak_keluaran_details");
             $this->applyFilters($dbquery, $request);
             Log::info("periode (DB only): " . $request->periode);
 
@@ -250,6 +269,7 @@ class RegulerController extends Controller
                                 $record->qty_pcs ?? null,
                                 $record->hargatotal_sblm_ppn ?? null,
                                 $record->customer_id ?? null,
+                                $this->getActivePkpIds(),
                             ),
                             "total_hargatotal" => 0,
                             "total_disc" => 0,
@@ -325,7 +345,7 @@ class RegulerController extends Controller
             } else {
                 // Original ungrouped logic
                 $totalRecords = $dbquery->count();
-                $totalRecordswithFilter = $dbquery->count();
+                $totalRecordswithFilter = $totalRecords;
                 $records = $dbquery
                     ->orderBy($columnName)
                     ->skip($start)
@@ -333,7 +353,8 @@ class RegulerController extends Controller
                     ->get();
 
                 if ($request->tipe === "nonstandar") {
-                    $records = $records->map(function ($record) {
+                    $pkpIds = $this->getActivePkpIds();
+                    $records = $records->map(function ($record) use ($pkpIds) {
                         $record->nonstandar_keterangan = $this->buildNonStandarReason(
                             $record->nik ?? null,
                             $record->has_moved ?? null,
@@ -342,6 +363,7 @@ class RegulerController extends Controller
                             $record->qty_pcs ?? null,
                             $record->hargatotal_sblm_ppn ?? null,
                             $record->customer_id ?? null,
+                            $pkpIds,
                         );
 
                         return $record;
@@ -938,40 +960,71 @@ class RegulerController extends Controller
             }
 
             // Additional conditions based on the type
-            $pkp = MasterPkp::where("is_active", true)
-                ->pluck("IDPelanggan")
-                ->toArray();
+            $pkp = $this->getActivePkpIds();
             switch ($tipe) {
                 case "pkp":
-                    $query->whereRaw("
-                    (
-                        tipe_ppn = 'PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)
-                    )
-                    OR
-                    (has_moved = 'y' AND moved_to = 'pkp')");
+                    $query->where(function ($q) use ($pkp) {
+                        $q->where(function ($inner) use ($pkp) {
+                            $inner->where('tipe_ppn', 'PPN')
+                                ->where('qty_pcs', '>', 0)
+                                ->where('has_moved', 'n')
+                                ->whereIn('customer_id', $pkp);
+                        })->orWhere(function ($inner) {
+                            $inner->where('has_moved', 'y')
+                                ->where('moved_to', 'pkp');
+                        });
+                    });
                     break;
                 case "pkpnppn":
-                    $query->whereRaw("
-                    (
-                        tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)
-                    ) OR (has_moved = 'y' AND moved_to = 'pkpnppn')");
+                    $query->where(function ($q) use ($pkp) {
+                        $q->where(function ($inner) use ($pkp) {
+                            $inner->where('tipe_ppn', 'NON-PPN')
+                                ->where('qty_pcs', '>', 0)
+                                ->where('has_moved', 'n')
+                                ->whereIn('customer_id', $pkp);
+                        })->orWhere(function ($inner) {
+                            $inner->where('has_moved', 'y')
+                                ->where('moved_to', 'pkpnppn');
+                        });
+                    });
                     break;
                 case "npkp":
-                    $query->whereRaw("
-                    (
-                        tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000) AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)
-                    ) OR (has_moved = 'y' AND moved_to = 'npkp')");
+                    $query->where(function ($q) use ($pkp) {
+                        $q->where(function ($inner) use ($pkp) {
+                            $inner->where('tipe_ppn', 'PPN')
+                                ->where(function ($harga) {
+                                    $harga->where('hargatotal_sblm_ppn', '>', 0)
+                                        ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
+                                })
+                                ->where('has_moved', 'n')
+                                ->whereNotIn('customer_id', $pkp);
+                        })->orWhere(function ($inner) {
+                            $inner->where('has_moved', 'y')
+                                ->where('moved_to', 'npkp');
+                        });
+                    });
                     break;
                 case "npkpnppn":
-                    $query->whereRaw("
-                    (
-                        tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)
-                    ) OR (has_moved = 'y' AND moved_to = 'npkpnppn')");
+                    $query->where(function ($q) use ($pkp) {
+                        $q->where(function ($inner) use ($pkp) {
+                            $inner->where('tipe_ppn', 'NON-PPN')
+                                ->where('qty_pcs', '>', 0)
+                                ->where('has_moved', 'n')
+                                ->whereNotIn('customer_id', $pkp);
+                        })->orWhere(function ($inner) {
+                            $inner->where('has_moved', 'y')
+                                ->where('moved_to', 'npkpnppn');
+                        });
+                    });
                     break;
                 case "retur":
-                    $query->whereRaw(
-                        "qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000 AND has_moved = 'n' OR moved_to = 'retur'",
-                    );
+                    $query->where(function ($q) {
+                        $q->where(function ($inner) {
+                            $inner->where('qty_pcs', '<', 0)
+                                ->where('hargatotal_sblm_ppn', '>=', -1000000)
+                                ->where('has_moved', 'n');
+                        })->orWhere('moved_to', 'retur');
+                    });
                     break;
                 case "nonstandar":
                     $this->applyNonStandarScope($query);
@@ -1513,55 +1566,86 @@ class RegulerController extends Controller
             }
         }
         if ($request->has("tipe")) {
-            $pkp = MasterPkp::where("is_active", true)
-                ->pluck("IDPelanggan")
-                ->toArray();
+            $pkp = $this->getActivePkpIds();
             if ($request->tipe == "pkp") {
-                $dbquery->whereRaw("
-                (
-                    tipe_ppn = 'PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)
-                )
-                OR
-                (has_moved = 'y' AND moved_to = 'pkp')");
+                $dbquery->where(function ($q) use ($pkp) {
+                    $q->where(function ($inner) use ($pkp) {
+                        $inner->where('tipe_ppn', 'PPN')
+                            ->where('qty_pcs', '>', 0)
+                            ->where('has_moved', 'n')
+                            ->whereIn('customer_id', $pkp);
+                    })->orWhere(function ($inner) {
+                        $inner->where('has_moved', 'y')
+                            ->where('moved_to', 'pkp');
+                    });
+                });
                 $metadata["tipe"] =
                     " AND e.szTaxTypeId = 'PPN' AND a.szCustId IN ('" .
                     implode("','", $pkp) .
                     "')";
             }
             if ($request->tipe == "pkpnppn") {
-                $dbquery->whereRaw("
-                (
-                    tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)
-                ) OR (has_moved = 'y' AND moved_to = 'pkpnppn')");
+                $dbquery->where(function ($q) use ($pkp) {
+                    $q->where(function ($inner) use ($pkp) {
+                        $inner->where('tipe_ppn', 'NON-PPN')
+                            ->where('qty_pcs', '>', 0)
+                            ->where('has_moved', 'n')
+                            ->whereIn('customer_id', $pkp);
+                    })->orWhere(function ($inner) {
+                        $inner->where('has_moved', 'y')
+                            ->where('moved_to', 'pkpnppn');
+                    });
+                });
                 $metadata["tipe"] =
                     " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId IN ('" .
                     implode("','", $pkp) .
                     "')";
             }
             if ($request->tipe == "npkp") {
-                $dbquery->whereRaw("
-                (
-                    tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000) AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)
-                ) OR (has_moved = 'y' AND moved_to = 'npkp')");
+                $dbquery->where(function ($q) use ($pkp) {
+                    $q->where(function ($inner) use ($pkp) {
+                        $inner->where('tipe_ppn', 'PPN')
+                            ->where(function ($harga) {
+                                $harga->where('hargatotal_sblm_ppn', '>', 0)
+                                    ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
+                            })
+                            ->where('has_moved', 'n')
+                            ->whereNotIn('customer_id', $pkp);
+                    })->orWhere(function ($inner) {
+                        $inner->where('has_moved', 'y')
+                            ->where('moved_to', 'npkp');
+                    });
+                });
                 $metadata["tipe"] =
                     " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN ('" .
                     implode("','", $pkp) .
                     "')";
             }
             if ($request->tipe == "npkpnppn") {
-                $dbquery->whereRaw("
-                (
-                    tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND has_moved = 'n' AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)
-                ) OR (has_moved = 'y' AND moved_to = 'npkpnppn')");
+                $dbquery->where(function ($q) use ($pkp) {
+                    $q->where(function ($inner) use ($pkp) {
+                        $inner->where('tipe_ppn', 'NON-PPN')
+                            ->where('qty_pcs', '>', 0)
+                            ->where('has_moved', 'n')
+                            ->whereNotIn('customer_id', $pkp);
+                    })->orWhere(function ($inner) {
+                        $inner->where('has_moved', 'y')
+                            ->where('moved_to', 'npkpnppn');
+                    });
+                });
                 $metadata["tipe"] =
                     " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId NOT IN ('" .
                     implode("','", $pkp) .
                     "')";
             }
             if ($request->tipe == "retur") {
-                $dbquery->whereRaw(
-                    "qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000 AND has_moved = 'n' OR moved_to = 'retur'",
-                );
+                $dbquery->where(function ($q) {
+                    $q->where(function ($inner) {
+                        $inner->where('qty_pcs', '<', 0)
+                            ->where('hargatotal_sblm_ppn', '>=', -1000000)
+                            ->where('has_moved', 'n');
+                    })->orWhere('moved_to', 'retur');
+                });
             }
             if ($request->tipe == "nonstandar") {
                 $this->applyNonStandarScope($dbquery);
@@ -1579,6 +1663,7 @@ class RegulerController extends Controller
         $qtyPcs = null,
         $hargaTotalSblmPpn = null,
         ?string $customerId = null,
+        array $pkpIds = [],
     ): string {
         if ($hasMoved === "y" && $movedTo === "nonstandar") {
             return "Dipindahkan manual ke tab Non Standar";
@@ -1607,6 +1692,7 @@ class RegulerController extends Controller
                 $qtyPcs,
                 $hargaTotalSblmPpn,
                 $customerId,
+                $pkpIds,
             )
         ) {
             return "Tidak memenuhi kategori standar (PKP/PKP NON PPN/NON PKP/NON PKP NON PPN/RETUR)";
@@ -1617,15 +1703,53 @@ class RegulerController extends Controller
 
     private function applyNonStandarScope($query): void
     {
-        $query->whereRaw(
-            "(has_moved = 'y' AND moved_to = 'nonstandar') OR (has_moved = 'n' AND ({$this->normalizedNikLengthSql()} != 16 OR {$this->normalizedNikLastTwoSql()} = '00')) OR " .
-                $this->nonStandarFallbackConditionSql(),
-        );
+        $pkpIds = $this->getActivePkpIds();
+
+        $query->where(function ($q) use ($pkpIds) {
+            // Condition 1: manually moved to nonstandar
+            $q->orWhere(function ($manual) {
+                $manual->where('has_moved', 'y')
+                    ->where('moved_to', 'nonstandar');
+            });
+
+            // Condition 2: NIK format issues (uses nik_digits persisted computed column)
+            $q->orWhere(function ($nikIssue) {
+                $nikIssue->where('has_moved', 'n')
+                    ->where(function ($nikCondition) {
+                        $nikCondition->whereRaw('LEN(nik_digits) != 16')
+                            ->orWhereRaw("RIGHT(nik_digits, 2) = '00'");
+                    });
+            });
+
+            // Condition 3: fallback — doesn't match any standard category
+            $q->orWhereRaw($this->nonStandarFallbackConditionSql($pkpIds));
+        });
     }
 
-    private function nonStandarFallbackConditionSql(): string
+    private function nonStandarFallbackConditionSql(array $pkpIds = []): string
     {
-        return "(has_moved = 'n' AND NOT ((tipe_ppn = 'PPN' AND qty_pcs > 0 AND customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)) OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)) OR (tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000) AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)) OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)) OR (qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000)))";
+        if (empty($pkpIds)) {
+            // If no PKP customers, simplify: all IN() checks are false, all NOT IN() checks are true
+            return "(has_moved = 'n' AND NOT ("
+                . "(tipe_ppn = 'PPN' AND qty_pcs > 0 AND 1=0)" // PKP PPN — impossible
+                . " OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND 1=0)" // PKP Non-PPN — impossible
+                . " OR (tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000))" // Non-PKP (all are non-PKP)
+                . " OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0)" // Non-PKP Non-PPN (all are non-PKP)
+                . " OR (qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000)" // Retur
+                . "))";
+        }
+
+        $idList = implode(',', array_map(function ($id) {
+            return "'" . str_replace("'", "''", $id) . "'";
+        }, $pkpIds));
+
+        return "(has_moved = 'n' AND NOT ("
+            . "(tipe_ppn = 'PPN' AND qty_pcs > 0 AND customer_id IN ($idList))"
+            . " OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND customer_id IN ($idList))"
+            . " OR (tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000) AND customer_id NOT IN ($idList))"
+            . " OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND customer_id NOT IN ($idList))"
+            . " OR (qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000)"
+            . "))";
     }
 
     private function applyNonStandarReasonFilter(
@@ -1656,7 +1780,7 @@ class RegulerController extends Controller
                 str_contains($normalizedKeyword, "00")
             ) {
                 $query->orWhereRaw(
-                    "(has_moved = 'n' AND ({$this->normalizedNikLengthSql()} != 16 OR {$this->normalizedNikLastTwoSql()} = '00'))",
+                    "(has_moved = 'n' AND (LEN(nik_digits) != 16 OR RIGHT(nik_digits, 2) = '00'))",
                 );
                 $applied = true;
             }
@@ -1667,7 +1791,7 @@ class RegulerController extends Controller
                 str_contains($normalizedKeyword, "kategori") ||
                 str_contains($normalizedKeyword, "standar")
             ) {
-                $query->orWhereRaw($this->nonStandarFallbackConditionSql());
+                $query->orWhereRaw($this->nonStandarFallbackConditionSql($this->getActivePkpIds()));
                 $applied = true;
             }
 
@@ -1683,20 +1807,13 @@ class RegulerController extends Controller
         $qtyPcs,
         $hargaTotalSblmPpn,
         ?string $customerId,
+        array $pkpIds = [],
     ): bool {
         if ($hasMoved !== "n") {
             return false;
         }
 
-        static $activePkpCustomers = null;
-
-        if ($activePkpCustomers === null) {
-            $activePkpCustomers = MasterPkp::where("is_active", true)
-                ->pluck("IDPelanggan")
-                ->toArray();
-        }
-
-        $isPkp = in_array($customerId, $activePkpCustomers, true);
+        $isPkp = in_array($customerId, $pkpIds, true);
         $qty = floatval($qtyPcs ?? 0);
         $hargaTotal = floatval($hargaTotalSblmPpn ?? 0);
 
