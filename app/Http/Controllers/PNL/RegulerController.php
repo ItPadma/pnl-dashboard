@@ -176,10 +176,35 @@ class RegulerController extends Controller
             Log::info("periode (DB only): " . $request->periode);
 
             if ($grouped) {
-                // Get all records for grouping
-                $allRecords = $dbquery
-                    ->orderBy($columnName, $columnSortOrder)
-                    ->get();
+                // To paginate effectively, we need to first group by the invoice numbers
+                // Since there can be multiple items per invoice, total records = distinct invoices
+                $totalRecords = (clone $dbquery)->distinct('no_invoice')->count('no_invoice');
+                $totalRecordswithFilter = $totalRecords;
+
+                // Step 1: Paginate on the grouped invoices
+                $paginatedInvoicesQuery = (clone $dbquery)
+                    ->select('no_invoice', DB::raw("MAX($columnName) as sort_col"))
+                    ->groupBy('no_invoice')
+                    ->orderBy('sort_col', $columnSortOrder)
+                    ->skip($start)
+                    ->take($rowperpage);
+
+                $paginatedInvoices = $paginatedInvoicesQuery->pluck('no_invoice')->toArray();
+
+                // Step 2: Retrieve only the items for these paginated invoices
+                if (!empty($paginatedInvoices)) {
+                    $allRecords = clone $dbquery;
+                    // Remove group by and select from base query to avoid conflicts
+                    $allRecords->groups = null;
+                    if ($allRecords instanceof \Illuminate\Database\Query\Builder) {
+                        $allRecords->columns = ['*']; // Reset select for query builder
+                    } else if (method_exists($allRecords, 'getQuery')) {
+                        $allRecords->getQuery()->columns = ['*']; // Reset select for eloquent builder
+                    }
+                    $allRecords = $allRecords->whereIn('no_invoice', $paginatedInvoices)->get();
+                } else {
+                    $allRecords = collect(); // Empty collection if no invoices found
+                }
 
                 // Group by invoice
                 $groupedData = [];
@@ -267,15 +292,19 @@ class RegulerController extends Controller
                     );
                 }
 
-                // Convert to indexed array
-                $records = array_values($groupedData);
+                // Restore ordering based on paginatedInvoices array
+                $records = [];
+                foreach ($paginatedInvoices as $invoice) {
+                    if (isset($groupedData[$invoice])) {
+                        $records[] = $groupedData[$invoice];
+                    }
+                }
 
                 // Enrich with nett invoice data for Non-PKP tab
-                if ($request->tipe == "npkp") {
-                    $invoiceNumbers = array_column($records, "no_invoice");
+                if ($request->tipe == "npkp" && !empty($paginatedInvoices)) {
                     $nettHeaders = NettInvoiceHeader::whereIn(
                         "no_invoice",
-                        $invoiceNumbers,
+                        $paginatedInvoices,
                     )
                         ->pluck("invoice_value_nett", "no_invoice")
                         ->toArray();
@@ -293,12 +322,6 @@ class RegulerController extends Controller
                     }
                     unset($record);
                 }
-
-                $totalRecords = count($records);
-                $totalRecordswithFilter = count($records);
-
-                // Apply pagination
-                $records = array_slice($records, $start, $rowperpage);
             } else {
                 // Original ungrouped logic
                 $totalRecords = $dbquery->count();
