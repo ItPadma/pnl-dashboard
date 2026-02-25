@@ -555,6 +555,7 @@ class RegulerController extends Controller
                     "nama_customer_sistem",
                     "alamat_sistem",
                     "npwp_customer",
+                    "nik",
                 )
                 ->whereIn("id", $ids)
                 ->whereNotNull("customer_id")
@@ -586,6 +587,7 @@ class RegulerController extends Controller
                         "IDPelanggan" => $item->customer_id,
                         "NamaPKP" => $item->nama_customer_sistem,
                         "AlamatPKP" => $item->alamat_sistem,
+                        "NIK" => $item->nik,
                         "NoPKP" => $item->npwp_customer,
                         "TypePajak" => "PPN", // Default to PPN
                     ];
@@ -640,6 +642,7 @@ class RegulerController extends Controller
             "pkp_list.*.IDPelanggan" => "required|string",
             "pkp_list.*.NamaPKP" => "required|string",
             "pkp_list.*.AlamatPKP" => "nullable|string",
+            "pkp_list.*.NIK" => "nullable|string",
             "pkp_list.*.NoPKP" => "nullable|string",
             "pkp_list.*.TypePajak" => "required|string",
         ]);
@@ -652,6 +655,7 @@ class RegulerController extends Controller
                         [
                             "NamaPKP" => $pkpData["NamaPKP"],
                             "AlamatPKP" => $pkpData["AlamatPKP"],
+                            "NIK" => $pkpData["NIK"] ?? null,
                             "NoPKP" => $pkpData["NoPKP"],
                             "TypePajak" => $pkpData["TypePajak"],
                             "is_active" => true,
@@ -1046,6 +1050,18 @@ class RegulerController extends Controller
                 case "nonstandar":
                     $this->applyNonStandarScope($query);
                     break;
+                case "pembatalan":
+                    $query->where('has_moved', 'y')
+                        ->where('moved_to', 'pembatalan');
+                    break;
+                case "koreksi":
+                    $query->where('has_moved', 'y')
+                        ->where('moved_to', 'koreksi');
+                    break;
+                case "pending":
+                    $query->where('has_moved', 'y')
+                        ->where('moved_to', 'pending');
+                    break;
             }
             // Log::info('sql count: '.$query->toSql());
             $counts = $query->get();
@@ -1079,7 +1095,7 @@ class RegulerController extends Controller
         try {
             $request->validate([
                 "tipe" =>
-                    "nullable|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar,all",
+                    "nullable|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar,pembatalan,koreksi,pending,all",
                 "chstatus" =>
                     "nullable|in:checked-ready2download,checked-downloaded,unchecked,all",
                 "periode" => [
@@ -1143,7 +1159,7 @@ class RegulerController extends Controller
         try {
             $request->validate([
                 "tipe" =>
-                    "nullable|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar,all",
+                    "nullable|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar,pembatalan,koreksi,pending,all",
                 "chstatus" =>
                     "nullable|in:checked-ready2download,checked-downloaded,unchecked,all",
                 "periode" => [
@@ -1473,7 +1489,6 @@ class RegulerController extends Controller
         }
         if ($request->has("depo") && !in_array("all", $depo)) {
             $userInfo = getLoggedInUserInfo();
-
             // If user has specific depo access, intersect requested depos with allowed depos
             if ($userInfo && !in_array("all", $userInfo->depo)) {
                 // Filter requested depos that user actually has access to
@@ -1666,6 +1681,18 @@ class RegulerController extends Controller
             }
             if ($request->tipe == "nonstandar") {
                 $this->applyNonStandarScope($dbquery);
+            }
+            if ($request->tipe == "pembatalan") {
+                $dbquery->where("has_moved", "y")
+                    ->where("moved_to", "pembatalan");
+            }
+            if ($request->tipe == "koreksi") {
+                $dbquery->where("has_moved", "y")
+                    ->where("moved_to", "koreksi");
+            }
+            if ($request->tipe == "pending") {
+                $dbquery->where("has_moved", "y")
+                    ->where("moved_to", "pending");
             }
         }
 
