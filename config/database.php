@@ -156,6 +156,20 @@ return [
             // 'encrypt' => env('DB_ENCRYPT', 'yes'),
             'trust_server_certificate' => env('DB_LIVE_TRUST_SERVER_CERTIFICATE', 'true'),
         ],
+        'rdw_252' => [
+            'driver' => 'sqlsrv',
+            'url' => env('DB_RDW_252_URL'),
+            'host' => env('DB_RDW_252_HOST', '10.44.3.252'),
+            'port' => env('DB_RDW_252_PORT', '1433'),
+            'database' => env('DB_RDW_252_DATABASE', 'Padma_Live'),
+            'username' => env('DB_RDW_252_USERNAME', 'sa'),
+            'password' => env('DB_RDW_252_PASSWORD', 'P4dm4t1rt4Gr0up'),
+            'charset' => env('DB_RDW_252_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            // 'encrypt' => env('DB_ENCRYPT', 'yes'),
+            'trust_server_certificate' => env('DB_RDW_252_TRUST_SERVER_CERTIFICATE', 'true'),
+        ],
     ],
 
     /*

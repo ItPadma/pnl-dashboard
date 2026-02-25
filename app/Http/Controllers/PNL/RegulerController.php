@@ -10,6 +10,7 @@ use App\Http\Controllers\Utilities\LogController;
 use App\Imports\PajakMasukanCoretaxImport;
 use App\Models\AccessGroup;
 use App\Models\MasterDepo;
+use App\Models\MasterKabupatenKota;
 use App\Models\MasterPkp;
 use App\Models\NettInvoiceHeader;
 use App\Models\PajakKeluaranDetail;
@@ -29,6 +30,11 @@ class RegulerController extends Controller
     private ?array $cachedPkpIds = null;
 
     /**
+     * Cached MasterKabupatenKota IDs (per-request).
+     */
+    private ?array $cachedKabupatenKotaIds = null;
+
+    /**
      * Get active PKP customer IDs, cached for the lifetime of this request.
      */
     private function getActivePkpIds(): array
@@ -39,6 +45,17 @@ class RegulerController extends Controller
                 ->toArray();
         }
         return $this->cachedPkpIds;
+    }
+
+    /**
+     * Get MasterKabupatenKota IDs, cached for the lifetime of this request.
+     */
+    private function getKabupatenKotaIds(): array
+    {
+        if ($this->cachedKabupatenKotaIds === null) {
+            $this->cachedKabupatenKotaIds = MasterKabupatenKota::pluck('id')->toArray();
+        }
+        return $this->cachedKabupatenKotaIds;
     }
     public function pkIndex()
     {
@@ -1671,18 +1688,24 @@ class RegulerController extends Controller
 
         $nikDigits = preg_replace("/\D+/", "", (string) $nik);
         $nikLength = strlen($nikDigits);
-        $nikLastTwoDigits = $nikLength >= 2 ? substr($nikDigits, -2) : "";
+        $nikLastThreeDigits = $nikLength >= 3 ? substr($nikDigits, -3) : "";
+        $nikFirstFourDigits = $nikLength >= 4 ? substr($nikDigits, 0, 4) : "";
 
-        if ($nikLength !== 16 && $nikLastTwoDigits === "00") {
-            return "Jumlah digit NIK tidak standar dan 2 digit akhir NIK 00";
+        if ($nikLength !== 16 && $nikLastThreeDigits === "000") {
+            return "Jumlah digit NIK tidak standar dan 3 digit akhir NIK 000";
         }
 
         if ($nikLength !== 16) {
             return "Jumlah digit NIK tidak standar";
         }
 
-        if ($nikLastTwoDigits === "00") {
-            return "2 digit akhir NIK 00";
+        if ($nikLastThreeDigits === "000") {
+            return "3 digit akhir NIK 000";
+        }
+
+        $kabupatenIds = $this->getKabupatenKotaIds();
+        if ($nikLength >= 4 && !empty($kabupatenIds) && !in_array($nikFirstFourDigits, $kabupatenIds)) {
+            return "4 digit pertama NIK tidak terdaftar di database Kabupaten/Kota";
         }
 
         if (
@@ -1713,11 +1736,17 @@ class RegulerController extends Controller
             });
 
             // Condition 2: NIK format issues (uses nik_digits persisted computed column)
-            $q->orWhere(function ($nikIssue) {
+            $kabupatenIds = $this->getKabupatenKotaIds();
+            $kabsArrayStr = empty($kabupatenIds) ? "''" : implode(',', array_map(function ($id) {
+                return "'" . str_replace("'", "''", $id) . "'";
+            }, $kabupatenIds));
+
+            $q->orWhere(function ($nikIssue) use ($kabsArrayStr) {
                 $nikIssue->where('has_moved', 'n')
-                    ->where(function ($nikCondition) {
+                    ->where(function ($nikCondition) use ($kabsArrayStr) {
                         $nikCondition->whereRaw('LEN(nik_digits) != 16')
-                            ->orWhereRaw("RIGHT(nik_digits, 2) = '00'");
+                            ->orWhereRaw("RIGHT(nik_digits, 3) = '000'")
+                            ->orWhereRaw("LEFT(nik_digits, 4) NOT IN ($kabsArrayStr)");
                     });
             });
 
