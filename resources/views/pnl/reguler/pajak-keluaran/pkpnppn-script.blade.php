@@ -61,6 +61,9 @@
                                 <option value="npkpnppn">Non-PKP Non-PPN</option>
                                 <option value="retur">Retur</option>
                                 <option value="nonstandar">Non Standar</option>
+                                <option value="pembatalan">Pembatalan</option>
+                                <option value="koreksi">Koreksi</option>
+                                <option value="pending">Pending</option>
                             </select>`;
                     }
                 },

@@ -5,6 +5,9 @@
     let tableNonPkpDbNppn;
     let tableReturDb;
     let tableNonStandarDb;
+    let tablePembatalanDb;
+    let tableKoreksiDb;
+    let tablePendingDb;
 
     $.fn.dataTable.ext.errMode = 'none';
 
@@ -14,6 +17,9 @@
     let npkpnppn_data_db = [];
     let retur_data_db = [];
     let nonstandar_data_db = [];
+    let pembatalan_data_db = [];
+    let koreksi_data_db = [];
+    let pending_data_db = [];
 
     // Function to format child row (product details)
     function formatChildRowPkp(d) {

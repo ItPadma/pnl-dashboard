@@ -1,11 +1,11 @@
 <script>
-    // Initialize new DataTable for Non-PKP Non-PPN
-    function initializeDataTableNonPkpNppn() {
-        if ($.fn.DataTable.isDataTable('#table-npkpnppn')) {
-            $('#table-npkpnppn').DataTable().destroy();
+    // Initialize new DataTable for Pembatalan
+    function initializeDataTablePembatalan() {
+        if ($.fn.DataTable.isDataTable('#table-pembatalan')) {
+            $('#table-pembatalan').DataTable().destroy();
         }
 
-        tableNonPkpNppn = $('#table-npkpnppn').DataTable({
+        tablePembatalan = $('#table-pembatalan').DataTable({
             processing: true,
             serverSide: true,
             ajax: {
@@ -16,12 +16,12 @@
                     d.brand = $('#filter_brand').val();
                     d.depo = $('#filter_depo').val();
                     d.periode = $('#filter_periode').val();
-                    d.tipe = 'npkpnppn';
+                    d.tipe = 'pembatalan';
                     d.chstatus = $('#filter_chstatus').val();
                     return d;
                 },
                 dataSrc: function(json) {
-                    npkpnppn_data = json.aaData;
+                    pembatalan_data = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -43,7 +43,7 @@
                         if (row.is_downloaded == 1 && data == 1) {
                             return '<div style="display: flex; align-items: center; gap: 5px;"><i class="fas fa-fw fa-check text-secondary"></i><i class="fas fa-fw fa-download text-secondary"></i></div>';
                         }
-                        return `<input type="checkbox" class="row-checkbox-npkpnppn" data-id="${row.id}" ${checked}>`;
+                        return `<input type="checkbox" class="row-checkbox-pembatalan" data-id="${row.id}" ${checked}>`;
                     }
                 },
                 {
@@ -53,7 +53,7 @@
                     className: 'text-center',
                     render: function(data, type, row) {
                         const checked = row.is_checked == 1 ? '' : 'disabled';
-                        return `<select id="move-to-${row.id}" class="form-select move-to" data-id="${row.id}" data-from="npkpnppn" ${checked}>
+                        return `<select id="move-to-${row.id}" class="form-select move-to" data-id="${row.id}" data-from="pembatalan" ${checked}>
                                 <option value="">Pilih...</option>
                                 <option value="pkp">PKP</option>
                                 <option value="pkpnppn">PKP Non-PPN</option>
@@ -193,7 +193,7 @@
                 }
             ],
             columnDefs: [{
-                targets: [0, ],
+                targets: [0],
                 className: 'text-center',
                 width: '10%'
             }],
@@ -208,7 +208,6 @@
             ordering: true,
             responsive: false,
             autoWidth: true,
-            // scrollX: true,
             language: {
                 processing: '<div><i class="fas fa-spinner fa-spin fa-2x"></i><span>Loading...</span></div>',
                 emptyTable: "Tidak ada data yang tersedia",
@@ -221,34 +220,29 @@
                 '<"row"<"col-sm-12"tr>>' +
                 '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
             initComplete: function() {
-                // Remove thead from .dataTables_scrollBody
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
                 var api = this.api();
-
-                // Apply the search for each column
                 api.columns().every(function() {
                     var column = this;
-                    var input = $('.column-filter-npkpnppn[data-column="' + column.index() + '"]');
-
+                    var input = $('.column-filter-pembatalan[data-column="' + column.index() +
+                    '"]');
                     input.on('keyup change clear', function() {
                         if (column.search() !== this.value) {
                             column.search(this.value).draw();
                         }
                     });
                 });
-
-                tableNonPkpNppn.columns.adjust();
+                tablePembatalan.columns.adjust();
             },
             ajaxComplete: function() {
-                setDownloadCounter('npkpnppn');
+                setDownloadCounter('pembatalan');
             },
             drawCallback: function(settings) {
-                // Remove thead from .dataTables_scrollBody
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
-                setDownloadCounter('npkpnppn');
-                showCheckedSummary('npkpnppn', npkpnppn_data);
+                setDownloadCounter('pembatalan');
+                showCheckedSummary('pembatalan', pembatalan_data);
             }
         });
     }

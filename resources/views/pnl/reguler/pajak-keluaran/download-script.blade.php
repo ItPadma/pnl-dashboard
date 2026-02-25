@@ -77,6 +77,27 @@
                         setDownloadCounter('nonstandar');
                         break;
 
+                    case 'pembatalan':
+                        if (typeof tablePembatalan !== 'undefined' && tablePembatalan) {
+                            tablePembatalan.ajax.reload();
+                        }
+                        setDownloadCounter('pembatalan');
+                        break;
+
+                    case 'koreksi':
+                        if (typeof tableKoreksi !== 'undefined' && tableKoreksi) {
+                            tableKoreksi.ajax.reload();
+                        }
+                        setDownloadCounter('koreksi');
+                        break;
+
+                    case 'pending':
+                        if (typeof tablePending !== 'undefined' && tablePending) {
+                            tablePending.ajax.reload();
+                        }
+                        setDownloadCounter('pending');
+                        break;
+
                     default:
                         tablePkp.ajax.reload();
                         setDownloadCounter('pkp');

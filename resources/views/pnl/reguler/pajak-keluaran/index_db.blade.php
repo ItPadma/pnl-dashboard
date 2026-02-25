@@ -320,6 +320,9 @@
                             <option value="npkpnppn">Non-PKP (Non-PPN)</option>
                             <option value="retur">Retur</option>
                             <option value="nonstandar">Non Standar</option>
+                            <option value="pembatalan">Pembatalan</option>
+                            <option value="koreksi">Koreksi</option>
+                            <option value="pending">Pending</option>
                         </select>
                         <button class="btn btn-outline-primary" id="btn-apply-filter"><i class="fas fa-check"></i>
                             Filter</button>
@@ -327,8 +330,8 @@
                             <button class="btn btn-outline-success ms-2" id="btn-download-filtered"
                                 onclick="downloadFilteredData()">
                                 <i class="fas fa-download"></i>
-                                <div class="spinner-border spinner-border-sm ms-1" id="sp-download-filtered"
-                                    role="status" hidden><span class="visually-hidden">Loading...</span></div>
+                                <div class="spinner-border spinner-border-sm ms-1" id="sp-download-filtered" role="status"
+                                    hidden><span class="visually-hidden">Loading...</span></div>
                                 Download
                             </button>
                         @endif
@@ -360,9 +363,22 @@
                                     role="tab" aria-controls="tabpanel-retur" aria-selected="false">Retur</a>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <a class="nav-link" id="simple-tab-5" data-bs-toggle="tab"
-                                    href="#tabpanel-nonstandar" role="tab" aria-controls="tabpanel-nonstandar"
-                                    aria-selected="false">Non Standar</a>
+                                <a class="nav-link" id="simple-tab-5" data-bs-toggle="tab" href="#tabpanel-pembatalan"
+                                    role="tab" aria-controls="tabpanel-pembatalan"
+                                    aria-selected="false">Pembatalan</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="simple-tab-6" data-bs-toggle="tab" href="#tabpanel-koreksi"
+                                    role="tab" aria-controls="tabpanel-koreksi" aria-selected="false">Koreksi</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="simple-tab-7" data-bs-toggle="tab" href="#tabpanel-pending"
+                                    role="tab" aria-controls="tabpanel-pending" aria-selected="false">Pending</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" id="simple-tab-8" data-bs-toggle="tab" href="#tabpanel-nonstandar"
+                                    role="tab" aria-controls="tabpanel-nonstandar" aria-selected="false">Non
+                                    Standar</a>
                             </li>
                         </ul>
                         <div class="tab-content pt-3" id="tab-content">
@@ -1319,6 +1335,475 @@
                                     </table>
                                 </div>
                             </div>
+
+                            {{-- Tab Panel Pembatalan --}}
+                            <div class="tab-pane" id="tabpanel-pembatalan" role="tabpanel"
+                                aria-labelledby="tabpanel-pembatalan">
+                                <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
+                                    <table>
+                                        <tr>
+                                            <td><i class="fas fa-info-circle icon-counter-pembatalan"></i>
+                                                <div class="spinner-border spinner-border-sm spinner-counter-pembatalan"
+                                                    role="status" style="display: none;"><span
+                                                        class="visually-hidden">Loading...</span></div> Terdapat:
+                                            </td>
+                                            <td id="total_ready2download_pembatalan">0</td>
+                                            <td>data siap&nbsp;&nbsp; di-download</td>
+                                            <td rowspan="2">
+                                                @if (Auth::user()->canAccessMenu('reguler-pajak-keluaran', \App\Models\AccessGroup::LEVEL_READ_WRITE))
+                                                    <button class="btn btn-sm btn-primary ms-3 btn-download"
+                                                        id="btn-download-pembatalan"
+                                                        onclick="downloadCheckedData('pembatalan')" hidden>
+                                                        <i class="fas fa-download"></i>
+                                                        <div class="spinner-border spinner-border-sm" id="sp-pembatalan"
+                                                            role="status" hidden><span
+                                                                class="visually-hidden">Loading...</span></div> Download
+                                                    </button>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td id="total_downloaded_pembatalan">0</td>
+                                            <td>data telah di-download</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="tbl-container">
+                                    <table class="table table-sm table-striped table-bordered table-hover"
+                                        id="table-pembatalan">
+                                        <thead>
+                                            <tr>
+                                                <th></th>
+                                                <th><input type="checkbox" id="select-all-pembatalan"></th>
+                                                <th>CUSTOMER ID</th>
+                                                <th>NIK</th>
+                                                <th>NAMA CUSTOMER</th>
+                                                <th>NPWP CUSTOMER</th>
+                                                <th>NO DO</th>
+                                                <th>NO INVOICE</th>
+                                                <th>TGL FAKTUR PAJAK</th>
+                                                <th>TOTAL HARGA</th>
+                                                <th>TOTAL DISC</th>
+                                                <th>TOTAL DPP</th>
+                                                <th>TOTAL DPP LAIN</th>
+                                                <th>TOTAL PPN</th>
+                                                <th>ALAMAT</th>
+                                                <th>TYPE PAJAK</th>
+                                                <th>NAMA SESUAI NPWP</th>
+                                                <th>ALAMAT NPWP</th>
+                                                <th>NO TELEPON</th>
+                                                <th>NO FP</th>
+                                                <th>DEPO</th>
+                                                <th>AREA</th>
+                                                <th>BRAND</th>
+                                                <th>TYPE JUAL</th>
+                                                <th>KODE JENIS FP</th>
+                                                <th>STATUS FP</th>
+                                                <th>ID TKU PEMBELI</th>
+                                                <th>JENIS</th>
+                                            </tr>
+                                            <tr>
+                                                <th></th>
+                                                <th></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Customer ID" data-column="2"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="NIK" data-column="3"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Nama Customer" data-column="4"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="NPWP Customer" data-column="5"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="No DO" data-column="6"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="No Invoice" data-column="7"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Tgl Faktur" data-column="8"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Total Harga" data-column="9"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Total Disc" data-column="10"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Total DPP" data-column="11"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Total DPP Lain" data-column="12"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Total PPN" data-column="13"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Alamat" data-column="14"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Tipe Pajak" data-column="15"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Nama NPWP" data-column="16"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Alamat NPWP" data-column="17"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="No Telepon" data-column="18"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="No FP" data-column="19"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Depo" data-column="20"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Area" data-column="21"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Brand" data-column="22"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Type Jual" data-column="23"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Kode Jenis FP" data-column="24"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Status FP" data-column="25"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="ID TKU" data-column="26"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pembatalan"
+                                                        placeholder="Jenis" data-column="27"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {{-- Tab Panel Koreksi --}}
+                            <div class="tab-pane" id="tabpanel-koreksi" role="tabpanel"
+                                aria-labelledby="tabpanel-koreksi">
+                                <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
+                                    <table>
+                                        <tr>
+                                            <td><i class="fas fa-info-circle icon-counter-koreksi"></i>
+                                                <div class="spinner-border spinner-border-sm spinner-counter-koreksi"
+                                                    role="status" style="display: none;"><span
+                                                        class="visually-hidden">Loading...</span></div> Terdapat:
+                                            </td>
+                                            <td id="total_ready2download_koreksi">0</td>
+                                            <td>data siap&nbsp;&nbsp; di-download</td>
+                                            <td rowspan="2">
+                                                @if (Auth::user()->canAccessMenu('reguler-pajak-keluaran', \App\Models\AccessGroup::LEVEL_READ_WRITE))
+                                                    <button class="btn btn-sm btn-primary ms-3 btn-download"
+                                                        id="btn-download-koreksi"
+                                                        onclick="downloadCheckedData('koreksi')" hidden>
+                                                        <i class="fas fa-download"></i>
+                                                        <div class="spinner-border spinner-border-sm" id="sp-koreksi"
+                                                            role="status" hidden><span
+                                                                class="visually-hidden">Loading...</span></div> Download
+                                                    </button>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td id="total_downloaded_koreksi">0</td>
+                                            <td>data telah di-download</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="tbl-container">
+                                    <table class="table table-sm table-striped table-bordered table-hover"
+                                        id="table-koreksi">
+                                        <thead>
+                                            <tr>
+                                                <th></th>
+                                                <th><input type="checkbox" id="select-all-koreksi"></th>
+                                                <th>CUSTOMER ID</th>
+                                                <th>NIK</th>
+                                                <th>NAMA CUSTOMER</th>
+                                                <th>NPWP CUSTOMER</th>
+                                                <th>NO DO</th>
+                                                <th>NO INVOICE</th>
+                                                <th>TGL FAKTUR PAJAK</th>
+                                                <th>TOTAL HARGA</th>
+                                                <th>TOTAL DISC</th>
+                                                <th>TOTAL DPP</th>
+                                                <th>TOTAL DPP LAIN</th>
+                                                <th>TOTAL PPN</th>
+                                                <th>ALAMAT</th>
+                                                <th>TYPE PAJAK</th>
+                                                <th>NAMA SESUAI NPWP</th>
+                                                <th>ALAMAT NPWP</th>
+                                                <th>NO TELEPON</th>
+                                                <th>NO FP</th>
+                                                <th>DEPO</th>
+                                                <th>AREA</th>
+                                                <th>BRAND</th>
+                                                <th>TYPE JUAL</th>
+                                                <th>KODE JENIS FP</th>
+                                                <th>STATUS FP</th>
+                                                <th>ID TKU PEMBELI</th>
+                                                <th>JENIS</th>
+                                            </tr>
+                                            <tr>
+                                                <th></th>
+                                                <th></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Customer ID" data-column="2"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="NIK" data-column="3"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Nama Customer" data-column="4"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="NPWP Customer" data-column="5"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="No DO" data-column="6"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="No Invoice" data-column="7"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Tgl Faktur" data-column="8"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Total Harga" data-column="9"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Total Disc" data-column="10"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Total DPP" data-column="11"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Total DPP Lain" data-column="12"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Total PPN" data-column="13"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Alamat" data-column="14"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Tipe Pajak" data-column="15"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Nama NPWP" data-column="16"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Alamat NPWP" data-column="17"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="No Telepon" data-column="18"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="No FP" data-column="19"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Depo" data-column="20"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Area" data-column="21"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Brand" data-column="22"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Type Jual" data-column="23"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Kode Jenis FP" data-column="24"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Status FP" data-column="25"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="ID TKU" data-column="26"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-koreksi"
+                                                        placeholder="Jenis" data-column="27"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {{-- Tab Panel Pending --}}
+                            <div class="tab-pane" id="tabpanel-pending" role="tabpanel"
+                                aria-labelledby="tabpanel-pending">
+                                <div class="col-md-6 col-sm-12 col-xm-12 mb-3">
+                                    <table>
+                                        <tr>
+                                            <td><i class="fas fa-info-circle icon-counter-pending"></i>
+                                                <div class="spinner-border spinner-border-sm spinner-counter-pending"
+                                                    role="status" style="display: none;"><span
+                                                        class="visually-hidden">Loading...</span></div> Terdapat:
+                                            </td>
+                                            <td id="total_ready2download_pending">0</td>
+                                            <td>data siap&nbsp;&nbsp; di-download</td>
+                                            <td rowspan="2">
+                                                @if (Auth::user()->canAccessMenu('reguler-pajak-keluaran', \App\Models\AccessGroup::LEVEL_READ_WRITE))
+                                                    <button class="btn btn-sm btn-primary ms-3 btn-download"
+                                                        id="btn-download-pending"
+                                                        onclick="downloadCheckedData('pending')" hidden>
+                                                        <i class="fas fa-download"></i>
+                                                        <div class="spinner-border spinner-border-sm" id="sp-pending"
+                                                            role="status" hidden><span
+                                                                class="visually-hidden">Loading...</span></div> Download
+                                                    </button>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td id="total_downloaded_pending">0</td>
+                                            <td>data telah di-download</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="tbl-container">
+                                    <table class="table table-sm table-striped table-bordered table-hover"
+                                        id="table-pending">
+                                        <thead>
+                                            <tr>
+                                                <th></th>
+                                                <th><input type="checkbox" id="select-all-pending"></th>
+                                                <th>CUSTOMER ID</th>
+                                                <th>NIK</th>
+                                                <th>NAMA CUSTOMER</th>
+                                                <th>NPWP CUSTOMER</th>
+                                                <th>NO DO</th>
+                                                <th>NO INVOICE</th>
+                                                <th>TGL FAKTUR PAJAK</th>
+                                                <th>TOTAL HARGA</th>
+                                                <th>TOTAL DISC</th>
+                                                <th>TOTAL DPP</th>
+                                                <th>TOTAL DPP LAIN</th>
+                                                <th>TOTAL PPN</th>
+                                                <th>ALAMAT</th>
+                                                <th>TYPE PAJAK</th>
+                                                <th>NAMA SESUAI NPWP</th>
+                                                <th>ALAMAT NPWP</th>
+                                                <th>NO TELEPON</th>
+                                                <th>NO FP</th>
+                                                <th>DEPO</th>
+                                                <th>AREA</th>
+                                                <th>BRAND</th>
+                                                <th>TYPE JUAL</th>
+                                                <th>KODE JENIS FP</th>
+                                                <th>STATUS FP</th>
+                                                <th>ID TKU PEMBELI</th>
+                                                <th>JENIS</th>
+                                            </tr>
+                                            <tr>
+                                                <th></th>
+                                                <th></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Customer ID" data-column="2"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="NIK" data-column="3"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Nama Customer" data-column="4"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="NPWP Customer" data-column="5"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="No DO" data-column="6"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="No Invoice" data-column="7"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Tgl Faktur" data-column="8"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Total Harga" data-column="9"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Total Disc" data-column="10"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Total DPP" data-column="11"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Total DPP Lain" data-column="12"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Total PPN" data-column="13"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Alamat" data-column="14"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Tipe Pajak" data-column="15"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Nama NPWP" data-column="16"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Alamat NPWP" data-column="17"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="No Telepon" data-column="18"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="No FP" data-column="19"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Depo" data-column="20"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Area" data-column="21"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Brand" data-column="22"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Type Jual" data-column="23"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Kode Jenis FP" data-column="24"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Status FP" data-column="25"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="ID TKU" data-column="26"></th>
+                                                <th><input type="text"
+                                                        class="form-control form-control-sm column-filter-pending"
+                                                        placeholder="Jenis" data-column="27"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>

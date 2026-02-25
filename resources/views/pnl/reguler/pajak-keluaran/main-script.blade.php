@@ -6,7 +6,10 @@
             npkp: false,
             npkpnppn: false,
             retur: false,
-            nonstandar: false
+            nonstandar: false,
+            pembatalan: false,
+            koreksi: false,
+            pending: false
         };
 
         const initTableIfNeeded = (tipe) => {
@@ -25,6 +28,12 @@
                 initializeDataTableRetur();
             } else if (tipe === 'nonstandar') {
                 initializeDataTableNonStandar();
+            } else if (tipe === 'pembatalan') {
+                initializeDataTablePembatalan();
+            } else if (tipe === 'koreksi') {
+                initializeDataTableKoreksi();
+            } else if (tipe === 'pending') {
+                initializeDataTablePending();
             }
             tableInitialized[tipe] = true;
         };
@@ -68,6 +77,24 @@
                 $('.dataTables_scrollBody tfoot').remove();
                 showCheckedSummary('nonstandar', nonstandar_data);
             }
+            if (target === '#tabpanel-pembatalan' && tableInitialized.pembatalan && tablePembatalan) {
+                tablePembatalan.columns.adjust();
+                $('.dataTables_scrollBody thead').remove();
+                $('.dataTables_scrollBody tfoot').remove();
+                showCheckedSummary('pembatalan', pembatalan_data);
+            }
+            if (target === '#tabpanel-koreksi' && tableInitialized.koreksi && tableKoreksi) {
+                tableKoreksi.columns.adjust();
+                $('.dataTables_scrollBody thead').remove();
+                $('.dataTables_scrollBody tfoot').remove();
+                showCheckedSummary('koreksi', koreksi_data);
+            }
+            if (target === '#tabpanel-pending' && tableInitialized.pending && tablePending) {
+                tablePending.columns.adjust();
+                $('.dataTables_scrollBody thead').remove();
+                $('.dataTables_scrollBody tfoot').remove();
+                showCheckedSummary('pending', pending_data);
+            }
         });
 
         // Add change event listeners to filters
@@ -88,6 +115,12 @@
                     tableRetur.ajax.reload();
                 } else if (tipe === 'nonstandar' && tableNonStandar) {
                     tableNonStandar.ajax.reload();
+                } else if (tipe === 'pembatalan' && tablePembatalan) {
+                    tablePembatalan.ajax.reload();
+                } else if (tipe === 'koreksi' && tableKoreksi) {
+                    tableKoreksi.ajax.reload();
+                } else if (tipe === 'pending' && tablePending) {
+                    tablePending.ajax.reload();
                 }
 
                 if (tableInitialized[tipe]) {
@@ -107,8 +140,16 @@
                 reloadTable('retur');
             } else if (appllied_tab === 'nonstandar') {
                 reloadTable('nonstandar');
+            } else if (appllied_tab === 'pembatalan') {
+                reloadTable('pembatalan');
+            } else if (appllied_tab === 'koreksi') {
+                reloadTable('koreksi');
+            } else if (appllied_tab === 'pending') {
+                reloadTable('pending');
             } else {
-                ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar'].forEach(reloadTable);
+                ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar', 'pembatalan', 'koreksi',
+                    'pending'
+                ].forEach(reloadTable);
             }
         });
 
@@ -202,6 +243,18 @@
                 if (tableInitialized.nonstandar && tableNonStandar) {
                     tableNonStandar.ajax.reload();
                     setDownloadCounter('nonstandar');
+                }
+                if (tableInitialized.pembatalan && tablePembatalan) {
+                    tablePembatalan.ajax.reload();
+                    setDownloadCounter('pembatalan');
+                }
+                if (tableInitialized.koreksi && tableKoreksi) {
+                    tableKoreksi.ajax.reload();
+                    setDownloadCounter('koreksi');
+                }
+                if (tableInitialized.pending && tablePending) {
+                    tablePending.ajax.reload();
+                    setDownloadCounter('pending');
                 }
             });
         }
@@ -417,6 +470,96 @@
                 }
             });
             showCheckedSummary('nonstandar', nonstandar_data);
+        });
+
+        //////// Checkbox Pembatalan ////////
+        $('#select-all-pembatalan').on('change', function() {
+            handleSelectAll('pembatalan', this);
+        });
+        $('#table-pembatalan tbody').on('change', '.row-checkbox-pembatalan', function() {
+            const isChecked = $(this).is(':checked') ? 1 : 0;
+            const id = $(this).data('id');
+            const allChecked = $('.row-checkbox-pembatalan').length === $(
+                '.row-checkbox-pembatalan:checked').length;
+            $('#select-all-pembatalan').prop('checked', allChecked);
+            toggleMoveToSelect(id, isChecked);
+            $.ajax({
+                url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
+                type: "POST",
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    id: id,
+                    is_checked: isChecked
+                },
+                success: function(response) {
+                    setDownloadCounter('pembatalan');
+                },
+                error: function(xhr) {
+                    console.error(xhr.responseText);
+                    setDownloadCounter('pembatalan');
+                }
+            });
+            showCheckedSummary('pembatalan', pembatalan_data);
+        });
+
+        //////// Checkbox Koreksi ////////
+        $('#select-all-koreksi').on('change', function() {
+            handleSelectAll('koreksi', this);
+        });
+        $('#table-koreksi tbody').on('change', '.row-checkbox-koreksi', function() {
+            const isChecked = $(this).is(':checked') ? 1 : 0;
+            const id = $(this).data('id');
+            const allChecked = $('.row-checkbox-koreksi').length === $('.row-checkbox-koreksi:checked')
+                .length;
+            $('#select-all-koreksi').prop('checked', allChecked);
+            toggleMoveToSelect(id, isChecked);
+            $.ajax({
+                url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
+                type: "POST",
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    id: id,
+                    is_checked: isChecked
+                },
+                success: function(response) {
+                    setDownloadCounter('koreksi');
+                },
+                error: function(xhr) {
+                    console.error(xhr.responseText);
+                    setDownloadCounter('koreksi');
+                }
+            });
+            showCheckedSummary('koreksi', koreksi_data);
+        });
+
+        //////// Checkbox Pending ////////
+        $('#select-all-pending').on('change', function() {
+            handleSelectAll('pending', this);
+        });
+        $('#table-pending tbody').on('change', '.row-checkbox-pending', function() {
+            const isChecked = $(this).is(':checked') ? 1 : 0;
+            const id = $(this).data('id');
+            const allChecked = $('.row-checkbox-pending').length === $('.row-checkbox-pending:checked')
+                .length;
+            $('#select-all-pending').prop('checked', allChecked);
+            toggleMoveToSelect(id, isChecked);
+            $.ajax({
+                url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
+                type: "POST",
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    id: id,
+                    is_checked: isChecked
+                },
+                success: function(response) {
+                    setDownloadCounter('pending');
+                },
+                error: function(xhr) {
+                    console.error(xhr.responseText);
+                    setDownloadCounter('pending');
+                }
+            });
+            showCheckedSummary('pending', pending_data);
         });
 
         // AJAX request untuk filter brand
@@ -654,7 +797,10 @@
             npkp: tableNonPkp,
             npkpnppn: tableNonPkpNppn,
             retur: tableRetur,
-            nonstandar: tableNonStandar
+            nonstandar: tableNonStandar,
+            pembatalan: tablePembatalan,
+            koreksi: tableKoreksi,
+            pending: tablePending
         };
 
         // Reload tabel asal

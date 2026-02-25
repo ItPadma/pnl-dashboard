@@ -6,7 +6,10 @@
             npkp: false,
             npkpnppn: false,
             retur: false,
-            nonstandar: false
+            nonstandar: false,
+            pembatalan: false,
+            koreksi: false,
+            pending: false
         };
 
         const initTableIfNeeded = (tipe) => {
@@ -25,6 +28,12 @@
                 initializeDataTableReturDb();
             } else if (tipe === 'nonstandar') {
                 initializeDataTableNonStandarDb();
+            } else if (tipe === 'pembatalan') {
+                initializeDataTablePembatalanDb();
+            } else if (tipe === 'koreksi') {
+                initializeDataTableKoreksiDb();
+            } else if (tipe === 'pending') {
+                initializeDataTablePendingDb();
             }
             tableInitialized[tipe] = true;
         };
@@ -76,6 +85,27 @@
                     showCheckedSummaryDb('nonstandar', nonstandar_data_db);
                 }
             }
+            if (target === '#tabpanel-pembatalan') {
+                if (tableInitialized['pembatalan'] && tablePembatalanDb) {
+                    tablePembatalanDb.columns.adjust();
+                    $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
+                    showCheckedSummaryDb('pembatalan', pembatalan_data_db);
+                }
+            }
+            if (target === '#tabpanel-koreksi') {
+                if (tableInitialized['koreksi'] && tableKoreksiDb) {
+                    tableKoreksiDb.columns.adjust();
+                    $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
+                    showCheckedSummaryDb('koreksi', koreksi_data_db);
+                }
+            }
+            if (target === '#tabpanel-pending') {
+                if (tableInitialized['pending'] && tablePendingDb) {
+                    tablePendingDb.columns.adjust();
+                    $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
+                    showCheckedSummaryDb('pending', pending_data_db);
+                }
+            }
         });
 
         // Add change event listeners to filters
@@ -96,6 +126,12 @@
                     tableReturDb.ajax.reload();
                 } else if (tipe === 'nonstandar' && tableNonStandarDb) {
                     tableNonStandarDb.ajax.reload();
+                } else if (tipe === 'pembatalan' && tablePembatalanDb) {
+                    tablePembatalanDb.ajax.reload();
+                } else if (tipe === 'koreksi' && tableKoreksiDb) {
+                    tableKoreksiDb.ajax.reload();
+                } else if (tipe === 'pending' && tablePendingDb) {
+                    tablePendingDb.ajax.reload();
                 }
 
                 if (tableInitialized[tipe]) {
@@ -115,8 +151,16 @@
                 reloadTable('retur');
             } else if (applied_tab === 'nonstandar') {
                 reloadTable('nonstandar');
+            } else if (applied_tab === 'pembatalan') {
+                reloadTable('pembatalan');
+            } else if (applied_tab === 'koreksi') {
+                reloadTable('koreksi');
+            } else if (applied_tab === 'pending') {
+                reloadTable('pending');
             } else {
-                ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar'].forEach(reloadTable);
+                ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar', 'pembatalan', 'koreksi',
+                    'pending'
+                ].forEach(reloadTable);
             }
         });
 
@@ -206,6 +250,18 @@
                 if (tableInitialized.nonstandar && tableNonStandarDb) {
                     tableNonStandarDb.ajax.reload();
                     setDownloadCounter('nonstandar');
+                }
+                if (tableInitialized.pembatalan && tablePembatalanDb) {
+                    tablePembatalanDb.ajax.reload();
+                    setDownloadCounter('pembatalan');
+                }
+                if (tableInitialized.koreksi && tableKoreksiDb) {
+                    tableKoreksiDb.ajax.reload();
+                    setDownloadCounter('koreksi');
+                }
+                if (tableInitialized.pending && tablePendingDb) {
+                    tablePendingDb.ajax.reload();
+                    setDownloadCounter('pending');
                 }
             });
         }
@@ -377,7 +433,8 @@
         $('#table-nonstandar tbody').on('change', '.row-checkbox-nonstandar', function() {
             const isChecked = $(this).is(':checked') ? 1 : 0;
             const invoice = $(this).data('invoice');
-            const allChecked = $('.row-checkbox-nonstandar').length === $('.row-checkbox-nonstandar:checked')
+            const allChecked = $('.row-checkbox-nonstandar').length === $(
+                    '.row-checkbox-nonstandar:checked')
                 .length;
             $('#select-all-nonstandar').prop('checked', allChecked);
             $.ajax({
@@ -397,6 +454,93 @@
                 }
             });
             showCheckedSummaryDb('nonstandar', nonstandar_data_db);
+        });
+
+        //////// Checkbox Pembatalan ////////
+        $('#select-all-pembatalan').on('change', function() {
+            handleSelectAllDb('pembatalan', this);
+        });
+        $('#table-pembatalan tbody').on('change', '.row-checkbox-pembatalan', function() {
+            const isChecked = $(this).is(':checked') ? 1 : 0;
+            const invoice = $(this).data('invoice');
+            const allChecked = $('.row-checkbox-pembatalan').length === $(
+                '.row-checkbox-pembatalan:checked').length;
+            $('#select-all-pembatalan').prop('checked', allChecked);
+            $.ajax({
+                url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
+                type: "POST",
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    invoice: invoice,
+                    is_checked: isChecked
+                },
+                success: function(response) {
+                    setDownloadCounter('pembatalan');
+                },
+                error: function(xhr) {
+                    console.error(xhr.responseText);
+                    setDownloadCounter('pembatalan');
+                }
+            });
+            showCheckedSummaryDb('pembatalan', pembatalan_data_db);
+        });
+
+        //////// Checkbox Koreksi ////////
+        $('#select-all-koreksi').on('change', function() {
+            handleSelectAllDb('koreksi', this);
+        });
+        $('#table-koreksi tbody').on('change', '.row-checkbox-koreksi', function() {
+            const isChecked = $(this).is(':checked') ? 1 : 0;
+            const invoice = $(this).data('invoice');
+            const allChecked = $('.row-checkbox-koreksi').length === $('.row-checkbox-koreksi:checked')
+                .length;
+            $('#select-all-koreksi').prop('checked', allChecked);
+            $.ajax({
+                url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
+                type: "POST",
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    invoice: invoice,
+                    is_checked: isChecked
+                },
+                success: function(response) {
+                    setDownloadCounter('koreksi');
+                },
+                error: function(xhr) {
+                    console.error(xhr.responseText);
+                    setDownloadCounter('koreksi');
+                }
+            });
+            showCheckedSummaryDb('koreksi', koreksi_data_db);
+        });
+
+        //////// Checkbox Pending ////////
+        $('#select-all-pending').on('change', function() {
+            handleSelectAllDb('pending', this);
+        });
+        $('#table-pending tbody').on('change', '.row-checkbox-pending', function() {
+            const isChecked = $(this).is(':checked') ? 1 : 0;
+            const invoice = $(this).data('invoice');
+            const allChecked = $('.row-checkbox-pending').length === $('.row-checkbox-pending:checked')
+                .length;
+            $('#select-all-pending').prop('checked', allChecked);
+            $.ajax({
+                url: "{{ route('pnl.reguler.pajak-keluaran.updateChecked') }}",
+                type: "POST",
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    invoice: invoice,
+                    is_checked: isChecked
+                },
+                success: function(response) {
+                    setDownloadCounter('pending');
+                },
+                error: function(xhr) {
+                    console.error(xhr.responseText);
+                    setDownloadCounter('pending');
+                }
+            });
+            showCheckedSummaryDb('pending', pending_data_db);
         });
 
         // AJAX request untuk filter brand
@@ -611,7 +755,10 @@
             'npkp': 'Non-PKP',
             'npkpnppn': 'Non-PKP Non-PPN',
             'retur': 'Retur',
-            'nonstandar': 'Non Standar'
+            'nonstandar': 'Non Standar',
+            'pembatalan': 'Pembatalan',
+            'koreksi': 'Koreksi',
+            'pending': 'Pending'
         } [tipe];
 
         $(`.row-checkbox-${tipe}`).prop('checked', isChecked);
@@ -627,6 +774,9 @@
             else if (tipe == 'npkpnppn') dataSrc = npkpnppn_data_db;
             else if (tipe == 'retur') dataSrc = retur_data_db;
             else if (tipe == 'nonstandar') dataSrc = nonstandar_data_db;
+            else if (tipe == 'pembatalan') dataSrc = pembatalan_data_db;
+            else if (tipe == 'koreksi') dataSrc = koreksi_data_db;
+            else if (tipe == 'pending') dataSrc = pending_data_db;
             if (typeof showCheckedSummaryDb === 'function') {
                 showCheckedSummaryDb(tipe, dataSrc);
             }
@@ -670,6 +820,9 @@
                 else if (tipe == 'npkpnppn') table = tableNonPkpDbNppn;
                 else if (tipe == 'retur') table = tableReturDb;
                 else if (tipe == 'nonstandar') table = tableNonStandarDb;
+                else if (tipe == 'pembatalan') table = tablePembatalanDb;
+                else if (tipe == 'koreksi') table = tableKoreksiDb;
+                else if (tipe == 'pending') table = tablePendingDb;
                 if (!table || !table.ajax) {
                     toastr.error('Table belum siap. Silakan apply filter dulu.');
                     return;

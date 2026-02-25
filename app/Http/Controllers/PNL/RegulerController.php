@@ -423,9 +423,9 @@ class RegulerController extends Controller
             "ids" => "required|array|min:1",
             "ids.*" => "integer|distinct|exists:pajak_keluaran_details,id",
             "move_from" =>
-                "required|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar",
+                "required|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar,pembatalan,koreksi,pending",
             "move_to" =>
-                "required|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar|different:move_from",
+                "required|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar,pembatalan,koreksi,pending|different:move_from",
         ]);
 
         try {

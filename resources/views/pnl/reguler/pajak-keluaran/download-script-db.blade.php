@@ -88,6 +88,27 @@
                         setDownloadCounter('nonstandar');
                         break;
 
+                    case 'pembatalan':
+                        if (typeof tablePembatalanDb !== 'undefined' && tablePembatalanDb) {
+                            tablePembatalanDb.ajax.reload();
+                        }
+                        setDownloadCounter('pembatalan');
+                        break;
+
+                    case 'koreksi':
+                        if (typeof tableKoreksiDb !== 'undefined' && tableKoreksiDb) {
+                            tableKoreksiDb.ajax.reload();
+                        }
+                        setDownloadCounter('koreksi');
+                        break;
+
+                    case 'pending':
+                        if (typeof tablePendingDb !== 'undefined' && tablePendingDb) {
+                            tablePendingDb.ajax.reload();
+                        }
+                        setDownloadCounter('pending');
+                        break;
+
                     default:
                         if (typeof tablePkpDb !== 'undefined' && tablePkpDb) tablePkpDb.ajax.reload();
                         setDownloadCounter('pkp');
@@ -102,7 +123,8 @@
                         setDownloadCounter('npkpnppn');
                         if (typeof tableReturDb !== 'undefined' && tableReturDb) tableReturDb.ajax.reload();
                         setDownloadCounter('retur');
-                        if (typeof tableNonStandarDb !== 'undefined' && tableNonStandarDb) tableNonStandarDb.ajax
+                        if (typeof tableNonStandarDb !== 'undefined' && tableNonStandarDb) tableNonStandarDb
+                            .ajax
                             .reload();
                         setDownloadCounter('nonstandar');
                         break;
