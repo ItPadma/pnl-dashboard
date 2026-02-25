@@ -989,6 +989,7 @@ class RegulerController extends Controller
                             $inner->where('tipe_ppn', 'PPN')
                                 ->where('qty_pcs', '>', 0)
                                 ->where('has_moved', 'n')
+                                ->standardNik()
                                 ->whereIn('customer_id', $pkp);
                         })->orWhere(function ($inner) {
                             $inner->where('has_moved', 'y')
@@ -1002,6 +1003,7 @@ class RegulerController extends Controller
                             $inner->where('tipe_ppn', 'NON-PPN')
                                 ->where('qty_pcs', '>', 0)
                                 ->where('has_moved', 'n')
+                                ->standardNik()
                                 ->whereIn('customer_id', $pkp);
                         })->orWhere(function ($inner) {
                             $inner->where('has_moved', 'y')
@@ -1018,6 +1020,7 @@ class RegulerController extends Controller
                                         ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
                                 })
                                 ->where('has_moved', 'n')
+                                ->standardNik()
                                 ->whereNotIn('customer_id', $pkp);
                         })->orWhere(function ($inner) {
                             $inner->where('has_moved', 'y')
@@ -1031,6 +1034,7 @@ class RegulerController extends Controller
                             $inner->where('tipe_ppn', 'NON-PPN')
                                 ->where('qty_pcs', '>', 0)
                                 ->where('has_moved', 'n')
+                                ->standardNik()
                                 ->whereNotIn('customer_id', $pkp);
                         })->orWhere(function ($inner) {
                             $inner->where('has_moved', 'y')
@@ -1043,7 +1047,8 @@ class RegulerController extends Controller
                         $q->where(function ($inner) {
                             $inner->where('qty_pcs', '<', 0)
                                 ->where('hargatotal_sblm_ppn', '>=', -1000000)
-                                ->where('has_moved', 'n');
+                                ->where('has_moved', 'n')
+                                ->standardNik();
                         })->orWhere('moved_to', 'retur');
                     });
                     break;
@@ -1605,6 +1610,7 @@ class RegulerController extends Controller
                         $inner->where('tipe_ppn', 'PPN')
                             ->where('qty_pcs', '>', 0)
                             ->where('has_moved', 'n')
+                            ->standardNik()
                             ->whereIn('customer_id', $pkp);
                     })->orWhere(function ($inner) {
                         $inner->where('has_moved', 'y')
@@ -1622,6 +1628,7 @@ class RegulerController extends Controller
                         $inner->where('tipe_ppn', 'NON-PPN')
                             ->where('qty_pcs', '>', 0)
                             ->where('has_moved', 'n')
+                            ->standardNik()
                             ->whereIn('customer_id', $pkp);
                     })->orWhere(function ($inner) {
                         $inner->where('has_moved', 'y')
@@ -1642,6 +1649,7 @@ class RegulerController extends Controller
                                     ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
                             })
                             ->where('has_moved', 'n')
+                            ->standardNik()
                             ->whereNotIn('customer_id', $pkp);
                     })->orWhere(function ($inner) {
                         $inner->where('has_moved', 'y')
@@ -1659,6 +1667,7 @@ class RegulerController extends Controller
                         $inner->where('tipe_ppn', 'NON-PPN')
                             ->where('qty_pcs', '>', 0)
                             ->where('has_moved', 'n')
+                            ->standardNik()
                             ->whereNotIn('customer_id', $pkp);
                     })->orWhere(function ($inner) {
                         $inner->where('has_moved', 'y')
@@ -1675,7 +1684,8 @@ class RegulerController extends Controller
                     $q->where(function ($inner) {
                         $inner->where('qty_pcs', '<', 0)
                             ->where('hargatotal_sblm_ppn', '>=', -1000000)
-                            ->where('has_moved', 'n');
+                            ->where('has_moved', 'n')
+                            ->standardNik();
                     })->orWhere('moved_to', 'retur');
                 });
             }

@@ -61,6 +61,22 @@ class PajakKeluaranDetail extends Model
         'nik' => 'string'
     ];
 
+    public function scopeStandardNik($query)
+    {
+        $kabupatenIds = cache()->remember('master_kabupaten_kota_ids_scope', 3600, function () {
+            return \App\Models\MasterKabupatenKota::pluck('id')->toArray();
+        });
+
+        $kabsArrayStr = empty($kabupatenIds) ? "''" : implode(',', array_map(function ($id) {
+            return "'" . str_replace("'", "''", $id) . "'";
+        }, $kabupatenIds));
+
+        return $query->whereNotNull('nik_digits')
+            ->whereRaw('LEN(nik_digits) = 16')
+            ->whereRaw("RIGHT(nik_digits, 3) != '000'")
+            ->whereRaw("LEFT(nik_digits, 4) IN ($kabsArrayStr)");
+    }
+
     public static function getFromLive($pt, $brand, $depo, $start, $end, $tipe, $chstatus)
     {
         try {
@@ -92,7 +108,7 @@ class PajakKeluaranDetail extends Model
                 $filter_depo = " AND a.[szWorkplaceId] = '$depo'";
             }
 
-            $query  = "SELECT
+            $query = "SELECT
                     a.[szFInvoiceId] AS 'no_invoice',
                     a.[szDoId] AS 'no_do',
                     b.szProductId AS 'kode_produk',
@@ -213,14 +229,14 @@ class PajakKeluaranDetail extends Model
 
                         // Apply type conversions
                         if (isset($rowArray['qty_pcs'])) {
-                            $rowArray['qty_pcs'] = (int)$rowArray['qty_pcs']; // Convert to integer
+                            $rowArray['qty_pcs'] = (int) $rowArray['qty_pcs']; // Convert to integer
                         }
-                        $rowArray['is_checked'] = (int)$rowArray['is_checked'];
-                        $rowArray['is_downloaded'] = (int)$rowArray['is_downloaded'];
-                        $rowArray['type_pajak'] = (int)$rowArray['type_pajak'];
-                        $rowArray['no_fp'] = (int)$rowArray['no_fp'];
-                        $rowArray['kode_jenis_fp'] = (int)$rowArray['kode_jenis_fp'];
-                        $rowArray['fp_normal_pengganti'] = (int)$rowArray['fp_normal_pengganti'];
+                        $rowArray['is_checked'] = (int) $rowArray['is_checked'];
+                        $rowArray['is_downloaded'] = (int) $rowArray['is_downloaded'];
+                        $rowArray['type_pajak'] = (int) $rowArray['type_pajak'];
+                        $rowArray['no_fp'] = (int) $rowArray['no_fp'];
+                        $rowArray['kode_jenis_fp'] = (int) $rowArray['kode_jenis_fp'];
+                        $rowArray['fp_normal_pengganti'] = (int) $rowArray['fp_normal_pengganti'];
 
                         // Convert any objects or arrays to JSON
                         foreach ($rowArray as $key => $value) {
@@ -263,14 +279,18 @@ class PajakKeluaranDetail extends Model
 
                     DB::commit();
                     Log::info('Berhasil update/insert pajak keluaran detail dari live db');
-                    broadcast(new \App\Events\UserEvent("success", "Pajak Keluaran Detail",
+                    broadcast(new \App\Events\UserEvent(
+                        "success",
+                        "Pajak Keluaran Detail",
                         "Berhasil menyimpan data pajak keluaran detail dari live server.",
                         Auth::user()
                     ));
                     return true;
                 } catch (\Throwable $th) {
                     Log::error("Failed to insert data from live db. " . $th->getMessage());
-                    broadcast(new \App\Events\UserEvent("error", "Pajak Keluaran Detail",
+                    broadcast(new \App\Events\UserEvent(
+                        "error",
+                        "Pajak Keluaran Detail",
                         "Gagal menyimpan data pajak keluaran detail dari live server. Silakan coba lagi.",
                         Auth::user()
                     ));
@@ -279,7 +299,9 @@ class PajakKeluaranDetail extends Model
                 }
             } else {
                 Log::info('No data found from live db for pajak keluaran detail');
-                broadcast(new \App\Events\UserEvent("info", "Pajak Keluaran Detail",
+                broadcast(new \App\Events\UserEvent(
+                    "info",
+                    "Pajak Keluaran Detail",
                     "Tidak ada data pajak keluaran yang ditemukan dari live server.",
                     Auth::user()
                 ));
@@ -287,7 +309,9 @@ class PajakKeluaranDetail extends Model
             }
         } catch (\Throwable $th) {
             Log::error("Failed! " . $th->getMessage());
-            broadcast(new \App\Events\UserEvent("error", "Pajak Keluaran Detail",
+            broadcast(new \App\Events\UserEvent(
+                "error",
+                "Pajak Keluaran Detail",
                 "Gagal mengambil data pajak keluaran detail dari live server. Silakan coba lagi.",
                 Auth::user()
             ));
