@@ -10,69 +10,14 @@ use Maatwebsite\Excel\Events\AfterSheet;
 class DetailFakturSheet implements FromArray, WithTitle, WithEvents
 {
     protected $data;
+    protected $refTipe;
+    protected $refSatuan;
 
-    /**
-     * Mapping dari satuan DB ke kode satuan Coretax.
-     * Referensi: sheet REF pada import-template.xlsx
-     */
-    protected static $satuanMapping = [
-        'METRIK TON'    => 'UM.0001',
-        'WET TON'       => 'UM.0002',
-        'KILOGRAM'      => 'UM.0003',
-        'KG'            => 'UM.0003',
-        'GRAM'          => 'UM.0004',
-        'GR'            => 'UM.0004',
-        'KARAT'         => 'UM.0005',
-        'KILOLITER'     => 'UM.0006',
-        'KL'            => 'UM.0006',
-        'LITER'         => 'UM.0007',
-        'LTR'           => 'UM.0007',
-        'BARREL'        => 'UM.0008',
-        'MMBTU'         => 'UM.0009',
-        'AMPERE'        => 'UM.0010',
-        'CM3'           => 'UM.0011',
-        'M2'            => 'UM.0012',
-        'METER'         => 'UM.0013',
-        'MTR'           => 'UM.0013',
-        'INCI'          => 'UM.0014',
-        'SENTIMETER'    => 'UM.0015',
-        'CM'            => 'UM.0015',
-        'YARD'          => 'UM.0016',
-        'LUSIN'         => 'UM.0017',
-        'LSN'           => 'UM.0017',
-        'UNIT'          => 'UM.0018',
-        'SET'           => 'UM.0019',
-        'LEMBAR'        => 'UM.0020',
-        'LBR'           => 'UM.0020',
-        'PIECE'         => 'UM.0021',
-        'PCS'           => 'UM.0021',
-        'PC'            => 'UM.0021',
-        'BOKS'          => 'UM.0022',
-        'BOX'           => 'UM.0022',
-        'TAHUN'         => 'UM.0023',
-        'BULAN'         => 'UM.0024',
-        'MINGGU'        => 'UM.0025',
-        'HARI'          => 'UM.0026',
-        'JAM'           => 'UM.0027',
-        'MENIT'         => 'UM.0028',
-        'PERSEN'        => 'UM.0029',
-        'KEGIATAN'      => 'UM.0030',
-        'LAPORAN'       => 'UM.0031',
-        'BAHAN'         => 'UM.0032',
-        'LAINNYA'       => 'UM.0033',
-        'M3'            => 'UM.0034',
-        'CM2'           => 'UM.0035',
-        'DRUM'          => 'UM.0036',
-        'KARTON'        => 'UM.0037',
-        'KTN'           => 'UM.0037',
-        'CTN'           => 'UM.0037',
-        'KWH'           => 'UM.0038',
-        'ROLL'          => 'UM.0039',
-    ];
-
-    public function __construct(array $data)
+    public function __construct(array $data, array $refTipe = [], array $refSatuan = [])
     {
         $this->data = $data;
+        $this->refTipe = $refTipe;
+        $this->refSatuan = $refSatuan;
     }
 
     public function title(): string
@@ -81,16 +26,24 @@ class DetailFakturSheet implements FromArray, WithTitle, WithEvents
     }
 
     /**
-     * Map satuan from DB to Coretax code.
+     * Map satuan from DB to Coretax code dynamically using MasterRef
      */
-    public static function mapSatuan(?string $satuan): string
+    public function mapSatuan(?string $satuan): string
     {
         if (empty($satuan)) {
-            return 'UM.0033'; // Lainnya
+            return 'UM.0033'; // Lainnya fallback
         }
 
         $upper = strtoupper(trim($satuan));
-        return self::$satuanMapping[$upper] ?? 'UM.0033';
+
+        // Find match in our reference data (keys are uppercase 'keterangan')
+        // Array from DB pluck is already formatted, but we need to ensure keys match
+        $map = [];
+        foreach ($this->refSatuan as $keterangan => $kode) {
+            $map[strtoupper(trim($keterangan))] = $kode;
+        }
+
+        return $map[$upper] ?? 'UM.0033';
     }
 
     public function array(): array
@@ -127,10 +80,18 @@ class DetailFakturSheet implements FromArray, WithTitle, WithEvents
 
             // Map barang_jasa: default to 'A' (Barang)
             $barangJasa = 'A';
+            if (! empty($this->refTipe) && in_array('A', $this->refTipe)) {
+                $barangJasa = 'A';
+            }
+
             if (isset($detail['barang_jasa'])) {
                 $bj = strtoupper(trim($detail['barang_jasa']));
                 if ($bj === 'B' || $bj === 'JASA') {
-                    $barangJasa = 'B';
+                    if (in_array('B', $this->refTipe)) {
+                        $barangJasa = 'B';
+                    } else { // Fallback if ref misses 'B'
+                        $barangJasa = 'B'; 
+                    }
                 }
             }
 
@@ -139,7 +100,7 @@ class DetailFakturSheet implements FromArray, WithTitle, WithEvents
                 $barangJasa,                                       // Barang/Jasa
                 '000000',                                          // Kode Barang Jasa
                 $detail['nama_produk'] ?? '-',                     // Nama Barang/Jasa
-                self::mapSatuan($detail['satuan'] ?? 'PCS'),       // Nama Satuan Ukur
+                $this->mapSatuan($detail['satuan'] ?? 'PCS'),       // Nama Satuan Ukur
                 $hargaSatuan,                                      // Harga Satuan
                 $qty,                                              // Jumlah Barang Jasa
                 $disc,                                             // Total Diskon
@@ -151,6 +112,9 @@ class DetailFakturSheet implements FromArray, WithTitle, WithEvents
                 0,                                                 // PPnBM
             ];
         }
+
+        $rows[] = array_fill(0, 14, null);
+        $rows[count($rows) - 1][0] = 'End';
 
         return $rows;
     }

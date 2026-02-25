@@ -107,12 +107,26 @@ class PajakKeluaranTemplateExport implements WithMultipleSheets
             }
         }
 
+        // Fetch Master References
+        $refKodeTransaksi = \App\Models\MasterRefKodeTransaksi::where('is_active', true)->pluck('kode')->toArray();
+        $refJenisIdPembeli = \App\Models\MasterRefIdPembeli::where('is_active', true)->pluck('kode')->toArray();
+        $refKodeNegara = \App\Models\MasterRefKodeNegara::where('is_active', true)->pluck('kode')->toArray();
+        $refTipe = \App\Models\MasterRefTipe::where('is_active', true)->pluck('kode')->toArray();
+        $refSatuan = \App\Models\MasterRefSatuanUkur::where('is_active', true)->pluck('kode', 'keterangan')->toArray();
+
         // Mark records as downloaded
         $this->markAsDownloaded();
 
         return [
-            new FakturSheet($fakturData, $this->npwpPenjual, $this->idTkuPenjual),
-            new DetailFakturSheet($detailData),
+            new FakturSheet(
+                $fakturData,
+                $this->npwpPenjual,
+                $this->idTkuPenjual,
+                $refKodeTransaksi,
+                $refJenisIdPembeli,
+                $refKodeNegara
+            ),
+            new DetailFakturSheet($detailData, $refTipe, $refSatuan),
         ];
     }
 
