@@ -239,12 +239,24 @@ class NettInvoiceController extends Controller
             $validatedExtra = $request->validate([
                 'retur_customer_ids' => 'nullable|array|max:200',
                 'retur_customer_ids.*' => 'string|max:255',
+                'retur_invoices' => 'nullable|array|max:200',
+                'retur_invoices.*' => 'string|max:255',
             ]);
 
             $ptFilters = $validatedFilters['pt'];
             $brandFilters = $validatedFilters['brand'];
             $depoFilters = $validatedFilters['depo'];
             $returCustomerIds = $validatedExtra['retur_customer_ids'] ?? [];
+            $returInvoices = $validatedExtra['retur_invoices'] ?? [];
+
+            $returProductCodes = [];
+            if (! empty($returInvoices)) {
+                $returProductCodes = DB::table('pajak_keluaran_details')
+                    ->whereIn('no_invoice', $returInvoices)
+                    ->pluck('kode_produk')
+                    ->unique()
+                    ->toArray();
+            }
 
             $query = DB::table('pajak_keluaran_details')
                 ->select(
@@ -295,17 +307,39 @@ class NettInvoiceController extends Controller
 
             $invoices = $query->orderBy('tgl_faktur_pajak', 'asc')->get();
 
-            // Mark matching customer_ids for prioritization
+            $nonPkpInvoices = $invoices->pluck('no_invoice')->toArray();
+            $invoiceProductMapping = [];
+            if (! empty($nonPkpInvoices) && ! empty($returProductCodes)) {
+                $productMatches = DB::table('pajak_keluaran_details')
+                    ->whereIn('no_invoice', $nonPkpInvoices)
+                    ->whereIn('kode_produk', $returProductCodes)
+                    ->select('no_invoice')
+                    ->distinct()
+                    ->pluck('no_invoice')
+                    ->toArray();
+
+                $invoiceProductMapping = array_fill_keys($productMatches, true);
+            }
+
+            // Mark matching customer_ids and products for prioritization
             foreach ($invoices as &$invoice) {
                 $invoice->is_matching_customer = in_array(
                     $invoice->kode_pelanggan,
                     $returCustomerIds,
                 );
+                $invoice->is_matching_product = isset($invoiceProductMapping[$invoice->no_invoice]);
             }
 
-            // Sort: matching customers first, then by date
+            // Sort: prioritize by product match, then customer match, then date
             $sorted = $invoices->sortBy(function ($item) {
-                return ($item->is_matching_customer ? '0' : '1').'_'.$item->tgl_faktur_pajak;
+                $priority = 3;
+                if ($item->is_matching_product) {
+                    $priority = 1;
+                } elseif ($item->is_matching_customer) {
+                    $priority = 2;
+                }
+
+                return $priority.'_'.$item->tgl_faktur_pajak;
             })->values();
 
             return response()->json([

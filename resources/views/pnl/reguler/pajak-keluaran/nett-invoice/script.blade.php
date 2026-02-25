@@ -672,8 +672,9 @@
         let depoVal = $('#filter_depo').val();
         let periode = $('#modal_filter_periode').val(); // tetap gunakan periode dari modal
 
-        // Get unique customer IDs from selected retur
+        // Get unique customer IDs and invoice numbers from selected retur
         let returCustomerIds = [...new Set(selectedReturData.map(r => r.kode_pelanggan))];
+        let returInvoices = selectedReturData.map(r => r.no_invoice);
 
         $('#npkp-empty').hide();
         $('#npkp-table-wrapper').hide();
@@ -691,7 +692,8 @@
                 brand: (brandVal && brandVal.length > 0) ? brandVal : ['all'],
                 depo: (depoVal && depoVal.length > 0) ? depoVal : ['all'],
                 periode: periode,
-                retur_customer_ids: returCustomerIds
+                retur_customer_ids: returCustomerIds,
+                retur_invoices: returInvoices
             },
             success: function(response) {
                 $('#npkp-loading').hide();
@@ -705,11 +707,14 @@
                         const invoiceNo = escapeAttr(item.no_invoice);
                         const kodePelanggan = escapeHtml(item.kode_pelanggan);
                         const namaPelanggan = escapeHtml(item.nama_pelanggan);
-                        const isMatch = item.is_matching_customer;
-                        const rowClass = isMatch ? 'npkp-match-row' : '';
-                        const matchBadge = isMatch ?
-                            '<span class="badge bg-success npkp-match-badge">Customer Sama</span>' :
-                            '';
+                        const isMatchCustomer = item.is_matching_customer;
+                        const isMatchProduct = item.is_matching_product;
+                        const rowClass = (isMatchCustomer || isMatchProduct) ? 'npkp-match-row' : '';
+                        
+                        let badges = [];
+                        if (isMatchCustomer) badges.push('<span class="badge bg-success npkp-match-badge">Customer Sama</span>');
+                        if (isMatchProduct) badges.push('<span class="badge bg-info npkp-match-badge">Produk Sama</span>');
+                        const matchBadge = badges.join(' ');
 
                         html += `<tr class="${rowClass}">
                             <td class="text-center">
