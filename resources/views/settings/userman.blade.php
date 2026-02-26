@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'User Management | PNL')
+@section('title', 'PNL - User Management')
 
 @section('style')
 @endsection

@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'PNL - Import PKP')
+@section('title', 'TAX - Import PKP')
 
 @section('content')
     <div class="container">

@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'Access Groups | PNL')
+@section('title', 'PNL - Access Groups')
 
 @section('style')
 <style>

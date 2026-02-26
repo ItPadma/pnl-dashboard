@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'Menu Management | PNL')
+@section('title', 'PNL - Menu Management')
 
 @section('style')
 @endsection

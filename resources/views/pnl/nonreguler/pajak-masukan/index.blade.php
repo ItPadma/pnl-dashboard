@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'Pajak Masukan - NonReguler | PNL')
+@section('title', 'PNL - Pajak Masukan - NonReguler')
 
 @section('style')
     <link rel="stylesheet" href="{{ asset('assets/css/daterangepicker.css') }}">

@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'Nett Invoice - Reguler | PNL')
+@section('title', 'PNL - Nett Invoice - Reguler')
 
 @section('style')
     <link rel="stylesheet" href="{{ asset('assets/css/daterangepicker.css') }}">
