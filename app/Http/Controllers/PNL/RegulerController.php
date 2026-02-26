@@ -646,9 +646,15 @@ class RegulerController extends Controller
 
         try {
             DB::transaction(function () use ($validated, $request) {
-                foreach ($validated['pkp_list'] as $pkpData) {
+                foreach ($validated['pkp_list'] as $index => $pkpData) {
                     $normalizedNik = $this->normalizeDigitsOnly($pkpData['NIK'] ?? null);
                     $normalizedNoPkp = $this->normalizeDigitsOnly($pkpData['NoPKP'] ?? null);
+
+                    if (! $this->hasExactSixteenDigits($normalizedNik) && ! $this->hasExactSixteenDigits($normalizedNoPkp)) {
+                        throw ValidationException::withMessages([
+                            "pkp_list.{$index}" => 'NIK atau NoPKP wajib 16 digit.',
+                        ]);
+                    }
 
                     MasterPkp::updateOrCreate(
                         ['IDPelanggan' => $pkpData['IDPelanggan']],
@@ -678,6 +684,17 @@ class RegulerController extends Controller
                 'status' => true,
                 'message' => 'Data Master PKP berhasil disimpan.',
             ]);
+        } catch (ValidationException $th) {
+            $firstError = collect($th->errors())->flatten()->first() ?? 'Validasi data Master PKP gagal.';
+
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => $firstError,
+                    'errors' => $th->errors(),
+                ],
+                422,
+            );
         } catch (\Throwable $th) {
             Log::error('Failed to save bulk Master PKP', [
                 'context' => __METHOD__,
@@ -1924,6 +1941,11 @@ class RegulerController extends Controller
         $digits = preg_replace('/\D+/', '', (string) $value);
 
         return $digits === '' ? null : $digits;
+    }
+
+    private function hasExactSixteenDigits(?string $value): bool
+    {
+        return $value !== null && strlen($value) === 16;
     }
 
     private function hasWriteAccess(): bool

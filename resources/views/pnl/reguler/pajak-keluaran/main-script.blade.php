@@ -754,9 +754,10 @@
         // generate table from summary
         let summaryTableRows = '';
         for (const [customerId, totals] of Object.entries(summaryData)) {
+            const safeCustomerId = escapeHtmlAttr(customerId);
             summaryTableRows += `
                     <tr>
-                        <td>${customerId}</td>
+                        <td>${safeCustomerId}</td>
                         <td>${toDecimal4(totals.total_harga)}</td>
                         <td>${toDecimal4(totals.total_disc)}</td>
                         <td>${toDecimal4(totals.total_dpp)}</td>
@@ -851,6 +852,14 @@
             .replace(/'/g, '&#39;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
+    }
+
+    function normalizeDigitsOnly(value) {
+        return String(value ?? '').replace(/\D+/g, '');
+    }
+
+    function hasExactSixteenDigits(value) {
+        return normalizeDigitsOnly(value).length === 16;
     }
 
     // Event listener untuk tombol apply move-to
@@ -951,7 +960,8 @@
                 }
             },
             error: function(xhr) {
-                toastr.error(xhr.responseText);
+                const message = xhr?.responseJSON?.message || 'Terjadi kesalahan saat memindahkan data.';
+                toastr.error(message);
             }
         });
     }
@@ -976,6 +986,20 @@
                 $(this).find('input[name*="[NamaPKP]"]').removeClass('is-invalid');
             }
 
+            const $nikInput = $(this).find('input[name*="[NIK]"]');
+            const $noPkpInput = $(this).find('input[name*="[NoPKP]"]');
+            const nikValid = hasExactSixteenDigits(nik);
+            const noPkpValid = hasExactSixteenDigits(noPKP);
+
+            if (!nikValid && !noPkpValid) {
+                isValid = false;
+                $nikInput.addClass('is-invalid');
+                $noPkpInput.addClass('is-invalid');
+            } else {
+                $nikInput.removeClass('is-invalid');
+                $noPkpInput.removeClass('is-invalid');
+            }
+
             pkpList.push({
                 IDPelanggan: idPelanggan,
                 NamaPKP: namaPKP,
@@ -987,7 +1011,7 @@
         });
 
         if (!isValid) {
-            toastr.error('Pastikan semua form mandatory terisi.');
+            toastr.error('Nama PKP wajib diisi, dan minimal salah satu NIK atau NoPKP harus 16 digit (separator NPWP tidak dihitung).');
             return;
         }
 

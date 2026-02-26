@@ -19,6 +19,24 @@ class MasterPkpImport implements ToCollection
         return $digits === '' ? null : $digits;
     }
 
+    private function hasExactSixteenDigits(?string $value): bool
+    {
+        return $value !== null && strlen($value) === 16;
+    }
+
+    private function validateNikOrNoPkp(?string $nikDigits, ?string $noPkpDigits, ?int $excelRow = null): void
+    {
+        if ($this->hasExactSixteenDigits($nikDigits) || $this->hasExactSixteenDigits($noPkpDigits)) {
+            return;
+        }
+
+        if ($excelRow !== null) {
+            throw new \InvalidArgumentException("Baris {$excelRow}: NIK atau NoPKP wajib 16 digit.");
+        }
+
+        throw new \InvalidArgumentException('NIK atau NoPKP wajib 16 digit.');
+    }
+
     /**
      * @return void
      */
@@ -35,19 +53,23 @@ class MasterPkpImport implements ToCollection
                 $nikValue = $isNewTemplate ? ($row[3] ?? null) : null;
                 $noPkpValue = $isNewTemplate ? ($row[4] ?? null) : ($row[3] ?? null);
                 $typePajakValue = $isNewTemplate ? ($row[5] ?? null) : ($row[4] ?? null);
+                $normalizedNik = $this->normalizeDigitsOnly($nikValue);
+                $normalizedNoPkp = $this->normalizeDigitsOnly($noPkpValue);
+
+                $this->validateNikOrNoPkp($normalizedNik, $normalizedNoPkp, $index + 1);
 
                 $existingData = MasterPkp::where('IDPelanggan', $row[0])->first();
                 if ($existingData) {
                     $payload = [
                         'NamaPKP' => $row[1],
                         'AlamatPKP' => $row[2],
-                        'NoPKP' => $this->normalizeDigitsOnly($noPkpValue),
+                        'NoPKP' => $normalizedNoPkp,
                         'TypePajak' => $typePajakValue,
                     ];
 
                     // Untuk template lama (tanpa kolom NIK), jangan overwrite NIK existing.
                     if ($isNewTemplate) {
-                        $payload['NIK'] = $this->normalizeDigitsOnly($nikValue);
+                        $payload['NIK'] = $normalizedNik;
                     }
 
                     $existingData->update($payload);
@@ -56,14 +78,18 @@ class MasterPkpImport implements ToCollection
                         'IDPelanggan' => $row[0],
                         'NamaPKP' => $row[1],
                         'AlamatPKP' => $row[2],
-                        'NIK' => $this->normalizeDigitsOnly($nikValue),
-                        'NoPKP' => $this->normalizeDigitsOnly($noPkpValue),
+                        'NIK' => $normalizedNik,
+                        'NoPKP' => $normalizedNoPkp,
                         'TypePajak' => $typePajakValue,
                     ]);
                 }
                 Log::info("Row $index imported or updated successfully.");
             } catch (\Throwable $th) {
                 Log::error("Error on row $index: ".$th->getMessage());
+
+                if ($th instanceof \InvalidArgumentException) {
+                    throw $th;
+                }
             }
         }
     }
@@ -79,13 +105,17 @@ class MasterPkpImport implements ToCollection
                 return null;
             }
 
+            $normalizedNik = $this->normalizeDigitsOnly($row['nik'] ?? null);
+            $normalizedNoPkp = $this->normalizeDigitsOnly($row['nopkp'] ?? null);
+            $this->validateNikOrNoPkp($normalizedNik, $normalizedNoPkp);
+
             $existingData = MasterPkp::where('IDPelanggan', $row['idpelanggan'])->first();
             if ($existingData) {
                 $existingData->update([
                     'NamaPKP' => $row['namapkp'] ?? null,
                     'AlamatPKP' => $row['alamatpkp'] ?? null,
-                    'NIK' => $this->normalizeDigitsOnly($row['nik'] ?? null),
-                    'NoPKP' => $this->normalizeDigitsOnly($row['nopkp'] ?? null),
+                    'NIK' => $normalizedNik,
+                    'NoPKP' => $normalizedNoPkp,
                     'TypePajak' => $row['typepajak'] ?? null,
                 ]);
 
@@ -95,13 +125,17 @@ class MasterPkpImport implements ToCollection
                     'IDPelanggan' => $row['idpelanggan'],
                     'NamaPKP' => $row['namapkp'] ?? null,
                     'AlamatPKP' => $row['alamatpkp'] ?? null,
-                    'NIK' => $this->normalizeDigitsOnly($row['nik'] ?? null),
-                    'NoPKP' => $this->normalizeDigitsOnly($row['nopkp'] ?? null),
+                    'NIK' => $normalizedNik,
+                    'NoPKP' => $normalizedNoPkp,
                     'TypePajak' => $row['typepajak'] ?? null,
                 ]);
             }
         } catch (\Throwable $th) {
             Log::error('Error importing row: '.$th->getMessage());
+
+            if ($th instanceof \InvalidArgumentException) {
+                throw $th;
+            }
 
             return null;
         }
