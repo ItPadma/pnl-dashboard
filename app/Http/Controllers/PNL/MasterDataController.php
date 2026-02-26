@@ -4,6 +4,7 @@ namespace App\Http\Controllers\PNL;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Utilities\LogController;
+use App\Imports\MasterPkpImport;
 use App\Jobs\ImportReferensiJob;
 use App\Models\AccessGroup;
 use App\Models\MasterPkp;
@@ -224,9 +225,13 @@ class MasterDataController extends Controller
             $validated = $request->validate([
                 'NamaPKP' => 'required|string|max:255',
                 'AlamatPKP' => 'nullable|string|max:255',
+                'NIK' => 'nullable|string|max:255',
                 'NoPKP' => 'nullable|string|max:255',
                 'TypePajak' => 'nullable|string|max:255',
             ]);
+
+            $validated['NIK'] = $this->normalizeDigitsOnly($validated['NIK'] ?? null);
+            $validated['NoPKP'] = $this->normalizeDigitsOnly($validated['NoPKP'] ?? null);
 
             $query = MasterPkp::query();
             $this->applyPkpDepoFilter($query);
@@ -365,7 +370,7 @@ class MasterDataController extends Controller
 
             $file = $request->file('file');
             $path = $file->store('public/import');
-            Excel::import(new \App\Imports\MasterPKPImport, $path);
+            Excel::import(new MasterPkpImport, $path);
             LogController::createLog($request->user()->id, 'Import Master PKP', 'Import Master PKP', '-', 'master_pkp', 'info', $request);
 
             return redirect()->back()->with('success', 'Data imported successfully');
@@ -722,6 +727,17 @@ class MasterDataController extends Controller
         }
 
         return $value;
+    }
+
+    private function normalizeDigitsOnly(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', (string) $value);
+
+        return $digits === '' ? null : $digits;
     }
 
     private function resolveReferensiModel(string $type)

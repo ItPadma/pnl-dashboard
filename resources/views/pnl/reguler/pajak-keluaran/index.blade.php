@@ -1879,6 +1879,7 @@
                                 <tr>
                                     <th>ID Pelanggan</th>
                                     <th>Nama PKP</th>
+                                    <th>NIK</th>
                                     <th>NPWP / No PKP</th>
                                     <th>Alamat PKP</th>
                                     <th>Type Pajak</th>

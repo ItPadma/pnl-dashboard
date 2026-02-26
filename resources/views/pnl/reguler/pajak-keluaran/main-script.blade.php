@@ -844,6 +844,15 @@
     // Variabel state untuk menyimpan status move sementara modal PKP diajukan
     let pendingMoveParams = null;
 
+    function escapeHtmlAttr(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
     // Event listener untuk tombol apply move-to
     function applyMoveTo(from) {
         const move_from = from;
@@ -877,16 +886,23 @@
 
                                 let tbodyHtml = '';
                                 response.data.forEach(function(item, index) {
+                                    const idPelanggan = escapeHtmlAttr(item.IDPelanggan);
+                                    const namaPKP = escapeHtmlAttr(item.NamaPKP);
+                                    const nik = escapeHtmlAttr(item.NIK || '');
+                                    const noPKP = escapeHtmlAttr(item.NoPKP || '');
+                                    const alamatPKP = escapeHtmlAttr(item.AlamatPKP || '');
+                                    const typePajak = escapeHtmlAttr(item.TypePajak || 'PPN');
                                     tbodyHtml += `
                                         <tr>
-                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][IDPelanggan]" value="${item.IDPelanggan}" readonly></td>
-                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][NamaPKP]" value="${item.NamaPKP}" required></td>
-                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][NoPKP]" value="${item.NoPKP || ''}"></td>
-                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][AlamatPKP]" value="${item.AlamatPKP || ''}"></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][IDPelanggan]" value="${idPelanggan}" readonly></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][NamaPKP]" value="${namaPKP}" required></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][NIK]" value="${nik}"></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][NoPKP]" value="${noPKP}"></td>
+                                            <td><input type="text" class="form-control form-control-sm" name="pkp_list[${index}][AlamatPKP]" value="${alamatPKP}"></td>
                                             <td>
                                                 <select class="form-select form-select-sm" name="pkp_list[${index}][TypePajak]">
-                                                    <option value="PPN" ${item.TypePajak === 'PPN' ? 'selected' : ''}>PPN</option>
-                                                    <option value="NON-PPN" ${item.TypePajak === 'NON-PPN' ? 'selected' : ''}>NON-PPN</option>
+                                                    <option value="PPN" ${typePajak === 'PPN' ? 'selected' : ''}>PPN</option>
+                                                    <option value="NON-PPN" ${typePajak === 'NON-PPN' ? 'selected' : ''}>NON-PPN</option>
                                                 </select>
                                             </td>
                                         </tr>
@@ -948,6 +964,7 @@
         $('#tbody-missing-pkp tr').each(function() {
             const idPelanggan = $(this).find('input[name*="[IDPelanggan]"]').val();
             const namaPKP = $(this).find('input[name*="[NamaPKP]"]').val();
+            const nik = $(this).find('input[name*="[NIK]"]').val();
             const noPKP = $(this).find('input[name*="[NoPKP]"]').val();
             const alamatPKP = $(this).find('input[name*="[AlamatPKP]"]').val();
             const typePajak = $(this).find('select[name*="[TypePajak]"]').val();
@@ -962,6 +979,7 @@
             pkpList.push({
                 IDPelanggan: idPelanggan,
                 NamaPKP: namaPKP,
+                NIK: nik,
                 NoPKP: noPKP,
                 AlamatPKP: alamatPKP,
                 TypePajak: typePajak

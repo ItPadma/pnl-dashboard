@@ -8,9 +8,18 @@ use Maatwebsite\Excel\Concerns\ToCollection;
 
 class MasterPkpImport implements ToCollection
 {
+    private function normalizeDigitsOnly(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', (string) $value);
+
+        return $digits === '' ? null : $digits;
+    }
+
     /**
-     * @param \Illuminate\Support\Collection $collection
-     *
      * @return void
      */
     public function collection(\Illuminate\Support\Collection $collection)
@@ -22,40 +31,51 @@ class MasterPkpImport implements ToCollection
             }
 
             try {
+                $isNewTemplate = isset($row[5]);
+                $nikValue = $isNewTemplate ? ($row[3] ?? null) : null;
+                $noPkpValue = $isNewTemplate ? ($row[4] ?? null) : ($row[3] ?? null);
+                $typePajakValue = $isNewTemplate ? ($row[5] ?? null) : ($row[4] ?? null);
+
                 $existingData = MasterPkp::where('IDPelanggan', $row[0])->first();
                 if ($existingData) {
-                    $existingData->update([
+                    $payload = [
                         'NamaPKP' => $row[1],
                         'AlamatPKP' => $row[2],
-                        'NoPKP' => $row[3],
-                        'TypePajak' => $row[4],
-                    ]);
+                        'NoPKP' => $this->normalizeDigitsOnly($noPkpValue),
+                        'TypePajak' => $typePajakValue,
+                    ];
+
+                    // Untuk template lama (tanpa kolom NIK), jangan overwrite NIK existing.
+                    if ($isNewTemplate) {
+                        $payload['NIK'] = $this->normalizeDigitsOnly($nikValue);
+                    }
+
+                    $existingData->update($payload);
                 } else {
                     MasterPkp::create([
                         'IDPelanggan' => $row[0],
                         'NamaPKP' => $row[1],
                         'AlamatPKP' => $row[2],
-                        'NoPKP' => $row[3],
-                        'TypePajak' => $row[4],
+                        'NIK' => $this->normalizeDigitsOnly($nikValue),
+                        'NoPKP' => $this->normalizeDigitsOnly($noPkpValue),
+                        'TypePajak' => $typePajakValue,
                     ]);
                 }
                 Log::info("Row $index imported or updated successfully.");
             } catch (\Throwable $th) {
-                Log::error("Error on row $index: " . $th->getMessage());
+                Log::error("Error on row $index: ".$th->getMessage());
             }
         }
     }
 
     /**
-     * @param array $row
-     *
      * @return \Illuminate\Database\Eloquent\Model|null
      */
     public function model(array $row)
     {
         try {
             // Pastikan data tidak kosong
-            if (!isset($row['idpelanggan']) || empty($row['idpelanggan'])) {
+            if (! isset($row['idpelanggan']) || empty($row['idpelanggan'])) {
                 return null;
             }
 
@@ -64,21 +84,25 @@ class MasterPkpImport implements ToCollection
                 $existingData->update([
                     'NamaPKP' => $row['namapkp'] ?? null,
                     'AlamatPKP' => $row['alamatpkp'] ?? null,
-                    'NoPKP' => $row['nopkp'] ?? null,
+                    'NIK' => $this->normalizeDigitsOnly($row['nik'] ?? null),
+                    'NoPKP' => $this->normalizeDigitsOnly($row['nopkp'] ?? null),
                     'TypePajak' => $row['typepajak'] ?? null,
                 ]);
+
                 return null;
             } else {
                 return new MasterPkp([
                     'IDPelanggan' => $row['idpelanggan'],
                     'NamaPKP' => $row['namapkp'] ?? null,
                     'AlamatPKP' => $row['alamatpkp'] ?? null,
-                    'NoPKP' => $row['nopkp'] ?? null,
+                    'NIK' => $this->normalizeDigitsOnly($row['nik'] ?? null),
+                    'NoPKP' => $this->normalizeDigitsOnly($row['nopkp'] ?? null),
                     'TypePajak' => $row['typepajak'] ?? null,
                 ]);
             }
         } catch (\Throwable $th) {
-            Log::error("Error importing row: " . $th->getMessage());
+            Log::error('Error importing row: '.$th->getMessage());
+
             return null;
         }
     }

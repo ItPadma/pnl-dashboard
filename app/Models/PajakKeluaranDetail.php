@@ -47,7 +47,7 @@ class PajakKeluaranDetail extends Model
         'company',
         'is_checked',
         'is_downloaded',
-        'status'
+        'status',
     ];
 
     protected $casts = [
@@ -58,7 +58,7 @@ class PajakKeluaranDetail extends Model
         'ppn' => 'decimal:4',
         'tgl_faktur_pajak' => 'date:d-m-Y',
         'dpp_lain' => 'decimal:4',
-        'nik' => 'string'
+        'nik' => 'string',
     ];
 
     public function scopeStandardNik($query)
@@ -68,41 +68,51 @@ class PajakKeluaranDetail extends Model
         });
 
         $kabsArrayStr = empty($kabupatenIds) ? "''" : implode(',', array_map(function ($id) {
-            return "'" . str_replace("'", "''", $id) . "'";
+            return "'".str_replace("'", "''", $id)."'";
         }, $kabupatenIds));
 
         return $query->whereNotNull('nik_digits')
-            ->whereRaw('LEN(nik_digits) = 16')
-            ->whereRaw("RIGHT(nik_digits, 3) != '000'")
-            ->whereRaw("LEFT(nik_digits, 4) IN ($kabsArrayStr)");
+            ->where(function ($q) use ($kabsArrayStr) {
+                // Valid NIK
+                $q->where(function ($nik) use ($kabsArrayStr) {
+                    $nik->whereRaw('LEN(nik_digits) = 16')
+                        ->whereRaw("RIGHT(nik_digits, 3) != '000'")
+                        ->whereRaw("LEFT(nik_digits, 4) IN ($kabsArrayStr)");
+                })
+                    // Valid NPWP (legacy/new), used by some rows in nik column
+                    ->orWhere(function ($npwp) {
+                        $npwp->whereRaw('LEN(nik_digits) = 15')
+                            ->whereRaw("REPLACE(nik_digits, '0', '') <> ''");
+                    });
+            });
     }
 
     public static function getFromLive($pt, $brand, $depo, $start, $end, $tipe, $chstatus)
     {
         try {
             if (is_array($pt)) {
-                $filter_pt = " AND e.szCategory_9 IN ('" . implode("','", $pt) . "')";
+                $filter_pt = " AND e.szCategory_9 IN ('".implode("','", $pt)."')";
             } else {
-                $filter_pt = $pt !== 'all' ? " AND e.szCategory_9 = '$pt'" : "";
+                $filter_pt = $pt !== 'all' ? " AND e.szCategory_9 = '$pt'" : '';
             }
             if (is_array($brand)) {
-                $filter_brand = " AND e.szCategory_1 IN ('" . implode("','", $brand) . "')";
+                $filter_brand = " AND e.szCategory_1 IN ('".implode("','", $brand)."')";
             } else {
-                $filter_brand = $brand !== 'all' ? " AND e.szCategory_1 = '$brand'" : "";
+                $filter_brand = $brand !== 'all' ? " AND e.szCategory_1 = '$brand'" : '';
             }
             $filter_tanggal = " FORMAT (a.dtmDelivery, 'yyyy-MM-dd') BETWEEN '$start' AND '$end'";
             $filter_tipe = $tipe ?? '';
             if ($depo == 'all') {
                 $currentUserDepo = Auth::user()->depo;
                 if (str_contains($currentUserDepo, '|')) {
-                    $currentUserDepo = explode("|", $currentUserDepo);
+                    $currentUserDepo = explode('|', $currentUserDepo);
                     if (in_array('all', $currentUserDepo)) {
-                        $filter_depo = "";
+                        $filter_depo = '';
                     } else {
-                        $filter_depo = " AND a.[szWorkplaceId] IN (" . implode(',', $currentUserDepo) . ")";
+                        $filter_depo = ' AND a.[szWorkplaceId] IN ('.implode(',', $currentUserDepo).')';
                     }
                 } else {
-                    $filter_depo = "";
+                    $filter_depo = '';
                 }
             } else {
                 $filter_depo = " AND a.[szWorkplaceId] = '$depo'";
@@ -280,41 +290,45 @@ class PajakKeluaranDetail extends Model
                     DB::commit();
                     Log::info('Berhasil update/insert pajak keluaran detail dari live db');
                     broadcast(new \App\Events\UserEvent(
-                        "success",
-                        "Pajak Keluaran Detail",
-                        "Berhasil menyimpan data pajak keluaran detail dari live server.",
+                        'success',
+                        'Pajak Keluaran Detail',
+                        'Berhasil menyimpan data pajak keluaran detail dari live server.',
                         Auth::user()
                     ));
+
                     return true;
                 } catch (\Throwable $th) {
-                    Log::error("Failed to insert data from live db. " . $th->getMessage());
+                    Log::error('Failed to insert data from live db. '.$th->getMessage());
                     broadcast(new \App\Events\UserEvent(
-                        "error",
-                        "Pajak Keluaran Detail",
-                        "Gagal menyimpan data pajak keluaran detail dari live server. Silakan coba lagi.",
+                        'error',
+                        'Pajak Keluaran Detail',
+                        'Gagal menyimpan data pajak keluaran detail dari live server. Silakan coba lagi.',
                         Auth::user()
                     ));
                     DB::rollBack();
+
                     return false;
                 }
             } else {
                 Log::info('No data found from live db for pajak keluaran detail');
                 broadcast(new \App\Events\UserEvent(
-                    "info",
-                    "Pajak Keluaran Detail",
-                    "Tidak ada data pajak keluaran yang ditemukan dari live server.",
+                    'info',
+                    'Pajak Keluaran Detail',
+                    'Tidak ada data pajak keluaran yang ditemukan dari live server.',
                     Auth::user()
                 ));
+
                 return false;
             }
         } catch (\Throwable $th) {
-            Log::error("Failed! " . $th->getMessage());
+            Log::error('Failed! '.$th->getMessage());
             broadcast(new \App\Events\UserEvent(
-                "error",
-                "Pajak Keluaran Detail",
-                "Gagal mengambil data pajak keluaran detail dari live server. Silakan coba lagi.",
+                'error',
+                'Pajak Keluaran Detail',
+                'Gagal mengambil data pajak keluaran detail dari live server. Silakan coba lagi.',
                 Auth::user()
             ));
+
             return false;
         }
     }

@@ -81,6 +81,10 @@
                                     <input type="text" name="AlamatPKP" id="pkp-alamat" class="form-control" @if (! $canEdit) disabled @endif>
                                 </div>
                                 <div class="form-group">
+                                    <label for="pkp-nik" class="form-label">NIK</label>
+                                    <input type="text" name="NIK" id="pkp-nik" class="form-control" @if (! $canEdit) disabled @endif>
+                                </div>
+                                <div class="form-group">
                                     <label for="pkp-no" class="form-label">No PKP</label>
                                     <input type="text" name="NoPKP" id="pkp-no" class="form-control" @if (! $canEdit) disabled @endif>
                                 </div>
@@ -142,6 +146,7 @@
                                                 data-idpelanggan='@json($pkp->IDPelanggan)'
                                                 data-nama='@json($pkp->NamaPKP)'
                                                 data-alamat='@json($pkp->AlamatPKP)'
+                                                data-nik='@json($pkp->NIK)'
                                                 data-no='@json($pkp->NoPKP)'
                                                 data-type='@json($pkp->TypePajak)'>
                                                 <td class="fw-semibold">{{ $pkp->IDPelanggan }}</td>
@@ -245,6 +250,7 @@
             const idPelangganInput = document.getElementById('pkp-idpelanggan');
             const namaInput = document.getElementById('pkp-nama');
             const alamatInput = document.getElementById('pkp-alamat');
+            const nikInput = document.getElementById('pkp-nik');
             const noInput = document.getElementById('pkp-no');
             const typeInput = document.getElementById('pkp-type');
 
@@ -262,6 +268,7 @@
                 idPelangganInput.value = row.dataset.idpelanggan ? safeParse(row.dataset.idpelanggan) : '';
                 namaInput.value = row.dataset.nama ? safeParse(row.dataset.nama) : '';
                 alamatInput.value = row.dataset.alamat ? safeParse(row.dataset.alamat) : '';
+                nikInput.value = row.dataset.nik ? safeParse(row.dataset.nik) : '';
                 noInput.value = row.dataset.no ? safeParse(row.dataset.no) : '';
                 typeInput.value = row.dataset.type ? safeParse(row.dataset.type) : '';
 
@@ -373,6 +380,7 @@
                 editForm.reset();
                 idInput.value = '';
                 idPelangganInput.value = '';
+                nikInput.value = '';
                 editForm.action = '#';
                 document.querySelectorAll('#pkp-table tbody tr').forEach((row) => {
                     row.classList.remove('table-active');
