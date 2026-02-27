@@ -110,7 +110,7 @@ class RegulerController extends Controller
             $chstatus = '';
             $retrieve_count = 0;
             // Query base
-            $dbquery = DB::table('pajak_keluaran_details');
+            $dbquery = PajakKeluaranDetail::query();
             $filters = $this->applyFilters($dbquery, $request);
             Log::info('periode: '.$request->periode);
 
@@ -210,7 +210,7 @@ class RegulerController extends Controller
             $grouped = $request->get('grouped') ?? false;
 
             // Query base
-            $dbquery = DB::table('pajak_keluaran_details');
+            $dbquery = PajakKeluaranDetail::query();
             $this->applyFilters($dbquery, $request);
             Log::info('periode (DB only): '.$request->periode);
 
@@ -232,15 +232,10 @@ class RegulerController extends Controller
 
                 // Step 2: Retrieve only the items for these paginated invoices
                 if (! empty($paginatedInvoices)) {
-                    $allRecords = clone $dbquery;
-                    // Remove group by and select from base query to avoid conflicts
-                    $allRecords->groups = null;
-                    if ($allRecords instanceof \Illuminate\Database\Query\Builder) {
-                        $allRecords->columns = ['*']; // Reset select for query builder
-                    } elseif (method_exists($allRecords, 'getQuery')) {
-                        $allRecords->getQuery()->columns = ['*']; // Reset select for eloquent builder
-                    }
-                    $allRecords = $allRecords->whereIn('no_invoice', $paginatedInvoices)->get();
+                    $allRecords = (clone $dbquery)
+                        ->select('*')
+                        ->whereIn('no_invoice', $paginatedInvoices)
+                        ->get();
                 } else {
                     $allRecords = collect(); // Empty collection if no invoices found
                 }
@@ -795,7 +790,7 @@ class RegulerController extends Controller
 
             // Handle bulk select all (filters applied)
             elseif ((bool) ($validated['select_all'] ?? false)) {
-                $dbquery = DB::table('pajak_keluaran_details');
+                $dbquery = PajakKeluaranDetail::query();
                 $this->applyFilters($dbquery, $request);
                 $dbquery->update(['is_checked' => $isChecked]);
             }
