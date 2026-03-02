@@ -87,10 +87,11 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
                 return $item;
             });
 
-        if (empty($this->chstatus) || $this->chstatus === 'checked-ready2download') {
+        if (empty($this->chstatus) || $this->chstatus === 'checked-ready2download' || $this->chstatus === 'checked-downloaded') {
             $updateQuery = PajakKeluaranDetail::query();
             $this->applyFilters($updateQuery);
             $this->applyTipeFilter($updateQuery);
+            $updateQuery->where('is_downloaded', 0);
             $updateQuery->update(['is_downloaded' => 1]);
         }
 
@@ -165,7 +166,6 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
         }
         if (empty($this->chstatus) || $this->chstatus === 'checked-ready2download') {
             $query->where('is_checked', 1);
-            $query->where('is_downloaded', 0);
         } elseif ($this->chstatus !== 'all') {
             switch ($this->chstatus) {
                 case 'checked-downloaded':

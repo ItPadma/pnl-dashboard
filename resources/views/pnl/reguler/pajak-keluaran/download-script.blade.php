@@ -145,7 +145,10 @@
             success: function(response) {
                 $('#total_ready2download_' + tipe).text(response.data[0].ready2download_count ?? 0);
                 $('#total_downloaded_' + tipe).text(response.data[0].downloaded_count ?? 0);
-                if (parseInt(response.data[0].ready2download_count ?? 0) > 0) {
+
+                var totalChecked = parseInt(response.data[0].ready2download_count ?? 0) + parseInt(response
+                    .data[0].downloaded_count ?? 0);
+                if (totalChecked > 0) {
                     $('#btn-download-' + tipe).prop('hidden', false);
                 } else {
                     $('#btn-download-' + tipe).prop('hidden', true);
