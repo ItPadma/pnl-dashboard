@@ -21,7 +21,6 @@
                     return d;
                 },
                 dataSrc: function(json) {
-                    pending_data = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -235,13 +234,12 @@
                 tablePending.columns.adjust();
             },
             ajaxComplete: function() {
-                setDownloadCounter('pending');
+                // Counter is handled by drawCallback to avoid duplicate calls
             },
             drawCallback: function(settings) {
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
                 setDownloadCounter('pending');
-                showCheckedSummary('pending', pending_data);
             }
         });
     }

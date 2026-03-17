@@ -45,55 +45,55 @@
                 tablePkp.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
-                showCheckedSummary('pkp', pkp_data);
+                showCheckedSummary('pkp');
             }
             if (target === '#tabpanel-nonpkp' && tableInitialized.npkp && tableNonPkp) {
                 tableNonPkp.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
-                showCheckedSummary('npkp', npkp_data);
+                showCheckedSummary('npkp');
             }
             if (target === '#tabpanel-pkpnppn' && tableInitialized.pkpnppn && tablePkpNppn) {
                 tablePkpNppn.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
-                showCheckedSummary('pkpnppn', pkpnppn_data);
+                showCheckedSummary('pkpnppn');
             }
             if (target === '#tabpanel-nonpkpnppn' && tableInitialized.npkpnppn && tableNonPkpNppn) {
                 tableNonPkpNppn.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
-                showCheckedSummary('npkpnppn', npkpnppn_data);
+                showCheckedSummary('npkpnppn');
             }
             if (target === '#tabpanel-retur' && tableInitialized.retur && tableRetur) {
                 tableRetur.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
-                showCheckedSummary('retur', retur_data);
+                showCheckedSummary('retur');
             }
             if (target === '#tabpanel-nonstandar' && tableInitialized.nonstandar && tableNonStandar) {
                 tableNonStandar.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
-                showCheckedSummary('nonstandar', nonstandar_data);
+                showCheckedSummary('nonstandar');
             }
             if (target === '#tabpanel-pembatalan' && tableInitialized.pembatalan && tablePembatalan) {
                 tablePembatalan.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
-                showCheckedSummary('pembatalan', pembatalan_data);
+                showCheckedSummary('pembatalan');
             }
             if (target === '#tabpanel-koreksi' && tableInitialized.koreksi && tableKoreksi) {
                 tableKoreksi.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
-                showCheckedSummary('koreksi', koreksi_data);
+                showCheckedSummary('koreksi');
             }
             if (target === '#tabpanel-pending' && tableInitialized.pending && tablePending) {
                 tablePending.columns.adjust();
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
-                showCheckedSummary('pending', pending_data);
+                showCheckedSummary('pending');
             }
         });
 
@@ -182,7 +182,8 @@
         });
 
         // Variable to store available dates
-        let availableDates = [];
+        let availableDates = new Set();
+        let availableDateSet = availableDates;
 
         // Function to fetch available dates from server
         function fetchAvailableDates() {
@@ -197,7 +198,8 @@
                 },
                 success: function(response) {
                     if (response.status) {
-                        availableDates = response.data;
+                        availableDates.clear();
+                        response.data.forEach(d => availableDates.add(d));
                         // Reinitialize daterangepicker with new available dates
                         initializeDateRangePicker();
                     }
@@ -235,7 +237,7 @@
                 isCustomDate: function(date) {
                     // Check if this date has data
                     const dateStr = date.format('YYYY-MM-DD');
-                    if (availableDates.includes(dateStr)) {
+                    if (availableDateSet.has(dateStr)) {
                         return 'has-data';
                     }
                     return '';
@@ -293,7 +295,7 @@
                     setDownloadCounter('pkp');
                 }
             });
-            showCheckedSummary('pkp', pkp_data);
+            showCheckedSummary('pkp');
         });
 
         //////// Checkbox PKP Non-PPN ////////
@@ -327,7 +329,7 @@
                     setDownloadCounter('pkpnppn');
                 }
             });
-            showCheckedSummary('pkpnppn', pkpnppn_data);
+            showCheckedSummary('pkpnppn');
         });
 
         //////// Checkbox Non-PKP //////////
@@ -361,7 +363,7 @@
                     setDownloadCounter('npkp');
                 }
             });
-            showCheckedSummary('npkp', npkp_data);
+            showCheckedSummary('npkp');
         });
 
         //////// Checkbox Non-PKP Non-PPN ////////
@@ -395,7 +397,7 @@
                     setDownloadCounter('npkpnppn');
                 }
             });
-            showCheckedSummary('npkpnppn', npkpnppn_data);
+            showCheckedSummary('npkpnppn');
         });
 
         //////// Checkbox RETUR ////////
@@ -429,7 +431,7 @@
                     setDownloadCounter('retur');
                 }
             });
-            showCheckedSummary('retur', retur_data);
+            showCheckedSummary('retur');
         });
 
         //////// Checkbox Non Standar ////////
@@ -460,7 +462,7 @@
                     setDownloadCounter('nonstandar');
                 }
             });
-            showCheckedSummary('nonstandar', nonstandar_data);
+            showCheckedSummary('nonstandar');
         });
 
         //////// Checkbox Pembatalan ////////
@@ -490,7 +492,7 @@
                     setDownloadCounter('pembatalan');
                 }
             });
-            showCheckedSummary('pembatalan', pembatalan_data);
+            showCheckedSummary('pembatalan');
         });
 
         //////// Checkbox Koreksi ////////
@@ -520,7 +522,7 @@
                     setDownloadCounter('koreksi');
                 }
             });
-            showCheckedSummary('koreksi', koreksi_data);
+            showCheckedSummary('koreksi');
         });
 
         //////// Checkbox Pending ////////
@@ -550,7 +552,7 @@
                     setDownloadCounter('pending');
                 }
             });
-            showCheckedSummary('pending', pending_data);
+            showCheckedSummary('pending');
         });
 
         // AJAX request untuk filter brand
@@ -699,7 +701,8 @@
         });
     }
 
-    function showCheckedSummary(tipe, src_data) {
+    function showCheckedSummary(tipe) {
+        const table = $('#table-' + tipe).DataTable();
         const checkedRows = $('#table-' + tipe + ' tbody .row-checkbox-' + tipe + ':checked');
         // Hapus summary row lama di table jika masih ada (cleanup)
         $('#table-' + tipe + ' tbody tr.summary-row').remove();
@@ -711,17 +714,18 @@
             return;
         }
 
-        // Summary harga_total, disc, dpp, dpp_lain, ppn by customer id
+        // Use DataTable's internal row data instead of global array lookup
+        const tableData = table.rows({search: 'applied'}).data();
         const summaryData = checkedRows.toArray().reduce((acc, row) => {
-            const item = src_data.find(d => d.id == $(row).data('id'));
-            if (!item) return acc;
+            const rowData = tableData[$(row).index()];
+            if (!rowData) return acc;
 
-            const customerId = item.customer_id || 'Unknown';
-            const hargaTotal = parseFloat(item.hargatotal_sblm_ppn || 0);
-            const disc = parseFloat(item.disc || 0);
-            const dpp = parseFloat(item.dpp || 0);
-            const dppLain = parseFloat(item.dpp_lain || 0);
-            const ppn = parseFloat(item.ppn || 0);
+            const customerId = rowData.customer_id || 'Unknown';
+            const hargaTotal = parseFloat(rowData.hargatotal_sblm_ppn || 0);
+            const disc = parseFloat(rowData.disc || 0);
+            const dpp = parseFloat(rowData.dpp || 0);
+            const dppLain = parseFloat(rowData.dpp_lain || 0);
+            const ppn = parseFloat(rowData.ppn || 0);
 
             if (!acc[customerId]) {
                 acc[customerId] = {
@@ -742,41 +746,39 @@
             return acc;
         }, {});
 
-        // generate table from summary
         let summaryTableRows = '';
         for (const [customerId, totals] of Object.entries(summaryData)) {
-            const safeCustomerId = escapeHtmlAttr(customerId);
             summaryTableRows += `
-                    <tr>
-                        <td>${safeCustomerId}</td>
-                        <td>${toDecimal4(totals.total_harga)}</td>
-                        <td>${toDecimal4(totals.total_disc)}</td>
-                        <td>${toDecimal4(totals.total_dpp)}</td>
-                        <td>${toDecimal4(totals.total_dpp_lain)}</td>
-                        <td>${toDecimal4(totals.total_ppn)}</td>
-                    </tr>
-                `;
+                <tr>
+                    <td>${customerId}</td>
+                    <td>${toDecimal4(totals.total_harga)}</td>
+                    <td>${toDecimal4(totals.total_disc)}</td>
+                    <td>${toDecimal4(totals.total_dpp)}</td>
+                    <td>${toDecimal4(totals.total_dpp_lain)}</td>
+                    <td>${toDecimal4(totals.total_ppn)}</td>
+                </tr>
+            `;
         }
 
         const summaryTable = `
-                <div class="table-responsive">
-                    <table class="table table-bordered table-sm table-striped table-hover">
-                        <thead class="bg-primary text-white">
-                            <tr>
-                                <th>Customer ID</th>
-                                <th>Total Harga</th>
-                                <th>Total Disc</th>
-                                <th>Total DPP</th>
-                                <th>Total DPP Lain</th>
-                                <th>Total PPN</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${summaryTableRows}
-                        </tbody>
-                    </table>
-                </div>
-            `;
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm table-striped table-hover">
+                    <thead class="bg-primary text-white">
+                        <tr>
+                            <th>Customer ID</th>
+                            <th>Total Harga</th>
+                            <th>Total Disc</th>
+                            <th>Total DPP</th>
+                            <th>Total DPP Lain</th>
+                            <th>Total PPN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${summaryTableRows}
+                    </tbody>
+                </table>
+            </div>
+        `;
 
         summaryContainer.html(summaryTable);
     }
@@ -1061,15 +1063,8 @@
 
         // Helper to update summary
         const updateSummary = () => {
-            let dataSrc;
-            if (tipe == 'pkp') dataSrc = pkp_data;
-            else if (tipe == 'pkpnppn') dataSrc = pkpnppn_data;
-            else if (tipe == 'npkp') dataSrc = npkp_data;
-            else if (tipe == 'npkpnppn') dataSrc = npkpnppn_data;
-            else if (tipe == 'retur') dataSrc = retur_data;
-            else if (tipe == 'nonstandar') dataSrc = nonstandar_data;
             if (typeof showCheckedSummary === 'function') {
-                showCheckedSummary(tipe, dataSrc);
+                showCheckedSummary(tipe);
             }
         };
         updateSummary();

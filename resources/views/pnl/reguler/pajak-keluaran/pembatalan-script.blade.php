@@ -21,7 +21,6 @@
                     return d;
                 },
                 dataSrc: function(json) {
-                    pembatalan_data = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -236,13 +235,12 @@
                 tablePembatalan.columns.adjust();
             },
             ajaxComplete: function() {
-                setDownloadCounter('pembatalan');
+                // Counter is handled by drawCallback to avoid duplicate calls
             },
             drawCallback: function(settings) {
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
                 setDownloadCounter('pembatalan');
-                showCheckedSummary('pembatalan', pembatalan_data);
             }
         });
     }

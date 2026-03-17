@@ -58,7 +58,6 @@
                     return d;
                 },
                 dataSrc: function(json) {
-                    pembatalan_data_db = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -262,7 +261,7 @@
                 var api = this.api();
                 $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
                 setDownloadCounter('pembatalan');
-                showCheckedSummaryDb('pembatalan', pembatalan_data_db);
+                showCheckedSummaryDb('pembatalan');
             },
         });
 

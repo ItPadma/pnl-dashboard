@@ -67,7 +67,6 @@
                     return d;
                 },
                 dataSrc: function(json) {
-                    npkp_data_db = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -285,7 +284,7 @@
                 var api = this.api();
                 $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
                 setDownloadCounter('npkp');
-                showCheckedSummaryDb('npkp', npkp_data_db);
+                showCheckedSummaryDb('npkp');
             },
         });
 

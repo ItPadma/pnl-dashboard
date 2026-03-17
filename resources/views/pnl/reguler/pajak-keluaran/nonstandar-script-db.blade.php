@@ -70,7 +70,6 @@
                     return d;
                 },
                 dataSrc: function(json) {
-                    nonstandar_data_db = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -288,7 +287,7 @@
             drawCallback: function(settings) {
                 $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
                 setDownloadCounter('nonstandar');
-                showCheckedSummaryDb('nonstandar', nonstandar_data_db);
+                showCheckedSummaryDb('nonstandar');
             },
         });
 

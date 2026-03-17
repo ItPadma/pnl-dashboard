@@ -47,63 +47,63 @@
                 if (tableInitialized['pkp'] && tablePkpDb) {
                     tablePkpDb.columns.adjust();
                     $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
-                    showCheckedSummaryDb('pkp', pkp_data_db);
+                    showCheckedSummaryDb('pkp');
                 }
             }
             if (target === '#tabpanel-pkpnppn') {
                 if (tableInitialized['pkpnppn'] && tablePkpDbNppn) {
                     tablePkpDbNppn.columns.adjust();
                     $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
-                    showCheckedSummaryDb('pkpnppn', pkpnppn_data_db);
+                    showCheckedSummaryDb('pkpnppn');
                 }
             }
             if (target === '#tabpanel-npkp') {
                 if (tableInitialized['npkp'] && tableNonPkpDb) {
                     tableNonPkpDb.columns.adjust();
                     $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
-                    showCheckedSummaryDb('npkp', npkp_data_db);
+                    showCheckedSummaryDb('npkp');
                 }
             }
             if (target === '#tabpanel-npkpnppn') {
                 if (tableInitialized['npkpnppn'] && tableNonPkpDbNppn) {
                     tableNonPkpDbNppn.columns.adjust();
                     $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
-                    showCheckedSummaryDb('npkpnppn', npkpnppn_data_db);
+                    showCheckedSummaryDb('npkpnppn');
                 }
             }
             if (target === '#tabpanel-retur') {
                 if (tableInitialized['retur'] && tableReturDb) {
                     tableReturDb.columns.adjust();
                     $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
-                    showCheckedSummaryDb('retur', retur_data_db);
+                    showCheckedSummaryDb('retur');
                 }
             }
             if (target === '#tabpanel-nonstandar') {
                 if (tableInitialized['nonstandar'] && tableNonStandarDb) {
                     tableNonStandarDb.columns.adjust();
                     $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
-                    showCheckedSummaryDb('nonstandar', nonstandar_data_db);
+                    showCheckedSummaryDb('nonstandar');
                 }
             }
             if (target === '#tabpanel-pembatalan') {
                 if (tableInitialized['pembatalan'] && tablePembatalanDb) {
                     tablePembatalanDb.columns.adjust();
                     $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
-                    showCheckedSummaryDb('pembatalan', pembatalan_data_db);
+                    showCheckedSummaryDb('pembatalan');
                 }
             }
             if (target === '#tabpanel-koreksi') {
                 if (tableInitialized['koreksi'] && tableKoreksiDb) {
                     tableKoreksiDb.columns.adjust();
                     $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
-                    showCheckedSummaryDb('koreksi', koreksi_data_db);
+                    showCheckedSummaryDb('koreksi');
                 }
             }
             if (target === '#tabpanel-pending') {
                 if (tableInitialized['pending'] && tablePendingDb) {
                     tablePendingDb.columns.adjust();
                     $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
-                    showCheckedSummaryDb('pending', pending_data_db);
+                    showCheckedSummaryDb('pending');
                 }
             }
         });
@@ -193,7 +193,8 @@
         });
 
         // Variable to store available dates
-        let availableDates = [];
+        let availableDates = new Set();
+        let availableDateSet = availableDates;
 
         // Function to fetch available dates from server
         function fetchAvailableDates() {
@@ -208,7 +209,8 @@
                 },
                 success: function(response) {
                     if (response.status) {
-                        availableDates = response.data;
+                        availableDates.clear();
+                        response.data.forEach(d => availableDates.add(d));
                         initializeDateRangePicker();
                     }
                 },
@@ -244,7 +246,7 @@
                 },
                 isCustomDate: function(date) {
                     const dateStr = date.format('YYYY-MM-DD');
-                    if (availableDates.includes(dateStr)) {
+                    if (availableDateSet.has(dateStr)) {
                         return 'has-data';
                     }
                     return '';
@@ -299,7 +301,7 @@
                     setDownloadCounter('pkp');
                 }
             });
-            showCheckedSummaryDb('pkp', pkp_data_db);
+            showCheckedSummaryDb('pkp');
         });
 
         //////// Checkbox PKP Non-PPN ////////
@@ -328,7 +330,7 @@
                     setDownloadCounter('pkpnppn');
                 }
             });
-            showCheckedSummaryDb('pkpnppn', pkpnppn_data_db);
+            showCheckedSummaryDb('pkpnppn');
         });
 
         //////// Checkbox Non-PKP //////////
@@ -357,7 +359,7 @@
                     setDownloadCounter('npkp');
                 }
             });
-            showCheckedSummaryDb('npkp', npkp_data_db);
+            showCheckedSummaryDb('npkp');
         });
 
         //////// Checkbox Non-PKP Non-PPN ////////
@@ -386,7 +388,7 @@
                     setDownloadCounter('npkpnppn');
                 }
             });
-            showCheckedSummaryDb('npkpnppn', npkpnppn_data_db);
+            showCheckedSummaryDb('npkpnppn');
         });
 
         //////// Checkbox RETUR ////////
@@ -415,7 +417,7 @@
                     setDownloadCounter('retur');
                 }
             });
-            showCheckedSummaryDb('retur', retur_data_db);
+            showCheckedSummaryDb('retur');
         });
 
         //////// Checkbox Non Standar ////////
@@ -445,7 +447,7 @@
                     setDownloadCounter('nonstandar');
                 }
             });
-            showCheckedSummaryDb('nonstandar', nonstandar_data_db);
+            showCheckedSummaryDb('nonstandar');
         });
 
         //////// Checkbox Pembatalan ////////
@@ -474,7 +476,7 @@
                     setDownloadCounter('pembatalan');
                 }
             });
-            showCheckedSummaryDb('pembatalan', pembatalan_data_db);
+            showCheckedSummaryDb('pembatalan');
         });
 
         //////// Checkbox Koreksi ////////
@@ -503,7 +505,7 @@
                     setDownloadCounter('koreksi');
                 }
             });
-            showCheckedSummaryDb('koreksi', koreksi_data_db);
+            showCheckedSummaryDb('koreksi');
         });
 
         //////// Checkbox Pending ////////
@@ -532,7 +534,7 @@
                     setDownloadCounter('pending');
                 }
             });
-            showCheckedSummaryDb('pending', pending_data_db);
+            showCheckedSummaryDb('pending');
         });
 
         // AJAX request untuk filter brand
@@ -674,7 +676,8 @@
         });
     }
 
-    function showCheckedSummaryDb(tipe, src_data) {
+    function showCheckedSummaryDb(tipe) {
+        const table = $('#table-' + tipe).DataTable();
         const checkedRows = $('#table-' + tipe + ' tbody .row-checkbox-' + tipe + ':checked');
         $('#table-' + tipe + ' tbody tr.summary-row').remove();
 
@@ -685,21 +688,18 @@
             return;
         }
 
-        // Summary by customer id for invoices
+        // Use DataTable's internal row data instead of global array lookup
+        const tableData = table.rows({search: 'applied'}).data();
         const summaryData = checkedRows.toArray().reduce((acc, row) => {
-            const invoice = $(row).data('invoice');
-            const item = src_data.find(d => d.no_invoice == invoice);
-            if (!item) return acc;
+            const rowData = tableData[$(row).index()];
+            if (!rowData) return acc;
 
-            const customerId = item.customer_id || 'Unknown';
-            const dpp = parseFloat(item.total_dpp || 0);
-            const ppn = parseFloat(item.total_ppn || 0);
+            const customerId = rowData.customer_id || 'Unknown';
+            const dpp = parseFloat(rowData.total_dpp || 0);
+            const ppn = parseFloat(rowData.total_ppn || 0);
 
             if (!acc[customerId]) {
-                acc[customerId] = {
-                    total_dpp: 0,
-                    total_ppn: 0
-                };
+                acc[customerId] = { total_dpp: 0, total_ppn: 0 };
             }
 
             acc[customerId].total_dpp += dpp;
@@ -711,30 +711,30 @@
         let summaryTableRows = '';
         for (const [customerId, totals] of Object.entries(summaryData)) {
             summaryTableRows += `
-                    <tr>
-                        <td>${customerId}</td>
-                        <td>${toDecimal4(totals.total_dpp)}</td>
-                        <td>${toDecimal4(totals.total_ppn)}</td>
-                    </tr>
-                `;
+                <tr>
+                    <td>${customerId}</td>
+                    <td>${toDecimal4(totals.total_dpp)}</td>
+                    <td>${toDecimal4(totals.total_ppn)}</td>
+                </tr>
+            `;
         }
 
         const summaryTable = `
-                <div class="table-responsive">
-                    <table class="table table-bordered table-sm table-striped table-hover">
-                        <thead class="bg-primary text-white">
-                            <tr>
-                                <th>Customer ID</th>
-                                <th>Total DPP</th>
-                                <th>Total PPN</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${summaryTableRows}
-                        </tbody>
-                    </table>
-                </div>
-            `;
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm table-striped table-hover">
+                    <thead class="bg-primary text-white">
+                        <tr>
+                            <th>Customer ID</th>
+                            <th>Total DPP</th>
+                            <th>Total PPN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${summaryTableRows}
+                    </tbody>
+                </table>
+            </div>
+        `;
 
         summaryContainer.html(summaryTable);
     }
@@ -759,18 +759,8 @@
         }).get();
 
         const updateSummary = () => {
-            let dataSrc;
-            if (tipe == 'pkp') dataSrc = pkp_data_db;
-            else if (tipe == 'pkpnppn') dataSrc = pkpnppn_data_db;
-            else if (tipe == 'npkp') dataSrc = npkp_data_db;
-            else if (tipe == 'npkpnppn') dataSrc = npkpnppn_data_db;
-            else if (tipe == 'retur') dataSrc = retur_data_db;
-            else if (tipe == 'nonstandar') dataSrc = nonstandar_data_db;
-            else if (tipe == 'pembatalan') dataSrc = pembatalan_data_db;
-            else if (tipe == 'koreksi') dataSrc = koreksi_data_db;
-            else if (tipe == 'pending') dataSrc = pending_data_db;
             if (typeof showCheckedSummaryDb === 'function') {
-                showCheckedSummaryDb(tipe, dataSrc);
+                showCheckedSummaryDb(tipe);
             }
         };
         updateSummary();

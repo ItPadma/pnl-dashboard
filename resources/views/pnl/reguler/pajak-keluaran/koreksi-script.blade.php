@@ -21,7 +21,6 @@
                     return d;
                 },
                 dataSrc: function(json) {
-                    koreksi_data = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -235,13 +234,12 @@
                 tableKoreksi.columns.adjust();
             },
             ajaxComplete: function() {
-                setDownloadCounter('koreksi');
+                // Counter is handled by drawCallback to avoid duplicate calls
             },
             drawCallback: function(settings) {
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
                 setDownloadCounter('koreksi');
-                showCheckedSummary('koreksi', koreksi_data);
             }
         });
     }

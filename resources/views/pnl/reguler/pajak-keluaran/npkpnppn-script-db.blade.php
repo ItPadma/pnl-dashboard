@@ -58,7 +58,6 @@
                     return d;
                 },
                 dataSrc: function(json) {
-                    npkpnppn_data_db = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -263,7 +262,7 @@
                 var api = this.api();
                 $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
                 setDownloadCounter('npkpnppn');
-                showCheckedSummaryDb('npkpnppn', npkpnppn_data_db);
+                showCheckedSummaryDb('npkpnppn');
             },
         });
 

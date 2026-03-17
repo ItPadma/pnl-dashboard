@@ -21,7 +21,6 @@
                     return d;
                 },
                 dataSrc: function(json) {
-                    nonstandar_data = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -244,13 +243,12 @@
                 tableNonStandar.columns.adjust();
             },
             ajaxComplete: function() {
-                setDownloadCounter('nonstandar');
+                // Counter is handled by drawCallback to avoid duplicate calls
             },
             drawCallback: function(settings) {
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
                 setDownloadCounter('nonstandar');
-                showCheckedSummary('nonstandar', nonstandar_data);
             }
         });
     }

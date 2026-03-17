@@ -58,7 +58,6 @@
                     return d;
                 },
                 dataSrc: function(json) {
-                    koreksi_data_db = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -260,7 +259,7 @@
             drawCallback: function(settings) {
                 $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
                 setDownloadCounter('koreksi');
-                showCheckedSummaryDb('koreksi', koreksi_data_db);
+                showCheckedSummaryDb('koreksi');
             },
         });
 

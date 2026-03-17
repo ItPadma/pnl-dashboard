@@ -21,7 +21,6 @@
                     return d;
                 },
                 dataSrc: function(json) {
-                    retur_data = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -240,14 +239,13 @@
                 tableNonPkpNppn.columns.adjust();
             },
             ajaxComplete: function() {
-                setDownloadCounter('retur');
+                // Counter is handled by drawCallback to avoid duplicate calls
             },
             drawCallback: function(settings) {
                 // Remove thead from .dataTables_scrollBody
                 $('.dataTables_scrollBody thead').remove();
                 $('.dataTables_scrollBody tfoot').remove();
                 setDownloadCounter('retur');
-                showCheckedSummary('retur', retur_data);
             }
         });
     }

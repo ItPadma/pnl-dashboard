@@ -10,16 +10,6 @@
     let tablePending;
 
     $.fn.dataTable.ext.errMode = 'none';
-
-    let pkp_data = [];
-    let pkpnppn_data = [];
-    let npkp_data = [];
-    let npkpnppn_data = [];
-    let retur_data = [];
-    let nonstandar_data = [];
-    let pembatalan_data = [];
-    let koreksi_data = [];
-    let pending_data = [];
 </script>
 <script>
     // Initialize new DataTable for PKP
@@ -44,7 +34,6 @@
                     return d;
                 },
                 dataSrc: function(json) {
-                    pkp_data = json.aaData;
                     return json.aaData;
                 },
                 headers: {
@@ -395,7 +384,7 @@
                 api.columns.adjust();
             },
             ajaxComplete: function() {
-                setDownloadCounter('pkp');
+                // Counter is handled by drawCallback to avoid duplicate calls
             },
             drawCallback: function(settings) {
                 var api = this.api();
@@ -404,7 +393,6 @@
                 $('.dataTables_scrollBody thead, .dataTables_scrollBody tfoot').remove();
 
                 setDownloadCounter('pkp');
-                showCheckedSummary('pkp', pkp_data);
             },
         });
     }
