@@ -1008,9 +1008,9 @@ class RegulerController extends Controller
                                 ->where('qty_pcs', '>', 0)
                                 ->where('has_moved', 'n')
                                 ->standardNik();
-                            // Use cached array instead of subquery
+                            // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                             if (! $pkpEmpty) {
-                                $inner->whereIn('customer_id', $pkpIds);
+                                $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
                             } else {
                                 $inner->whereRaw('1 = 0');
                             }
@@ -1027,8 +1027,9 @@ class RegulerController extends Controller
                                 ->where('qty_pcs', '>', 0)
                                 ->where('has_moved', 'n')
                                 ->standardNik();
+                            // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                             if (! $pkpEmpty) {
-                                $inner->whereIn('customer_id', $pkpIds);
+                                $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
                             } else {
                                 $inner->whereRaw('1 = 0');
                             }
@@ -1048,9 +1049,9 @@ class RegulerController extends Controller
                                 })
                                 ->where('has_moved', 'n')
                                 ->standardNik();
-                            // For NOT IN, if PKP is empty, all records match
+                            // For NOT IN, use whereRaw with escaped ID list to avoid SQL Server parameter limit
                             if (! empty($pkpIds)) {
-                                $inner->whereNotIn('customer_id', $pkpIds);
+                                $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
                             }
                         })->orWhere(function ($inner) {
                             $inner->where('has_moved', 'y')
@@ -1065,8 +1066,9 @@ class RegulerController extends Controller
                                 ->where('qty_pcs', '>', 0)
                                 ->where('has_moved', 'n')
                                 ->standardNik();
+                            // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                             if (! empty($pkpIds)) {
-                                $inner->whereNotIn('customer_id', $pkpIds);
+                                $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
                             }
                         })->orWhere(function ($inner) {
                             $inner->where('has_moved', 'y')
@@ -1635,9 +1637,9 @@ class RegulerController extends Controller
                             ->where('qty_pcs', '>', 0)
                             ->where('has_moved', 'n')
                             ->standardNik();
-                        // Use cached array instead of subquery
+                        // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                         if (! $pkpEmpty) {
-                            $inner->whereIn('customer_id', $pkp);
+                            $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkp).')');
                         } else {
                             $inner->whereRaw('1 = 0'); // No PKP = no results
                         }
@@ -1656,8 +1658,9 @@ class RegulerController extends Controller
                             ->where('qty_pcs', '>', 0)
                             ->where('has_moved', 'n')
                             ->standardNik();
+                        // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                         if (! $pkpEmpty) {
-                            $inner->whereIn('customer_id', $pkp);
+                            $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkp).')');
                         } else {
                             $inner->whereRaw('1 = 0');
                         }
@@ -1678,9 +1681,9 @@ class RegulerController extends Controller
                             })
                             ->where('has_moved', 'n')
                             ->standardNik();
-                        // For NOT IN, if PKP is empty, all records match
+                        // For NOT IN, use whereRaw with escaped ID list to avoid SQL Server parameter limit
                         if (! empty($pkp)) {
-                            $inner->whereNotIn('customer_id', $pkp);
+                            $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkp).')');
                         }
                     })->orWhere(function ($inner) {
                         $inner->where('has_moved', 'y')
@@ -1696,8 +1699,9 @@ class RegulerController extends Controller
                             ->where('qty_pcs', '>', 0)
                             ->where('has_moved', 'n')
                             ->standardNik();
+                        // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                         if (! empty($pkp)) {
-                            $inner->whereNotIn('customer_id', $pkp);
+                            $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkp).')');
                         }
                     })->orWhere(function ($inner) {
                         $inner->where('has_moved', 'y')

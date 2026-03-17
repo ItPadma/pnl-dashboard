@@ -115,6 +115,20 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
     }
 
     /**
+     * Escape an array of IDs for safe SQL IN clause usage.
+     * Prevents SQL injection by escaping single quotes.
+     *
+     * @param  array  $ids  Array of ID strings
+     * @return string Comma-separated, quoted and escaped ID list
+     */
+    protected function escapeSqlIdList(array $ids): string
+    {
+        return implode(',', array_map(function ($id) {
+            return "'".str_replace("'", "''", (string) $id)."'";
+        }, $ids));
+    }
+
+    /**
      * @return \Illuminate\Support\Collection
      */
     public function collection()
@@ -242,8 +256,9 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
                                     ->where('qty_pcs', '>', 0)
                                     ->where('has_moved', 'n')
                                     ->standardNik();
+                                // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                                 if (! $pkpEmpty) {
-                                    $inner->whereIn('customer_id', $pkpIds);
+                                    $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
                                 } else {
                                     $inner->whereRaw('1 = 0');
                                 }
@@ -258,8 +273,9 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
                                     ->where('qty_pcs', '>', 0)
                                     ->where('has_moved', 'n')
                                     ->standardNik();
+                                // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                                 if (! $pkpEmpty) {
-                                    $inner->whereIn('customer_id', $pkpIds);
+                                    $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
                                 } else {
                                     $inner->whereRaw('1 = 0');
                                 }
@@ -277,8 +293,9 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
                                     })
                                     ->where('has_moved', 'n')
                                     ->standardNik();
+                                // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                                 if (! empty($pkpIds)) {
-                                    $inner->whereNotIn('customer_id', $pkpIds);
+                                    $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
                                 }
                             })->orWhere(function ($inner) {
                                 $inner->where('has_moved', 'y')
@@ -291,8 +308,9 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
                                     ->where('qty_pcs', '>', 0)
                                     ->where('has_moved', 'n')
                                     ->standardNik();
+                                // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                                 if (! empty($pkpIds)) {
-                                    $inner->whereNotIn('customer_id', $pkpIds);
+                                    $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
                                 }
                             })->orWhere(function ($inner) {
                                 $inner->where('has_moved', 'y')

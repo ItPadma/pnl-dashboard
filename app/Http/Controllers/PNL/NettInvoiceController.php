@@ -278,7 +278,10 @@ class NettInvoiceController extends Controller
 
             // Force Non-PKP only
             $pkp = MasterPkp::where('is_active', true)->pluck('IDPelanggan')->toArray();
-            $query->whereNotIn('customer_id', $pkp);
+            // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
+            if (! empty($pkp)) {
+                $query->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkp).')');
+            }
             $query->where('tipe_ppn', 'PPN');
             $query->where('qty_pcs', '>', 0);
             $query->where(function ($subQuery) {
@@ -1208,7 +1211,7 @@ class NettInvoiceController extends Controller
             ->whereIn('no_invoice', $invoiceNumbers)
             ->where('is_downloaded', 0)
             ->whereBetween('tgl_faktur_pajak', $periodeRange)
-            ->whereNotIn('customer_id', $pkp)
+            ->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkp).')')
             ->where('tipe_ppn', 'PPN')
             ->where('qty_pcs', '>', 0)
             ->where(function ($subQuery) {
@@ -1276,5 +1279,19 @@ class NettInvoiceController extends Controller
                 'retur_invoices' => ['Sebagian invoice retur berada di luar periode terpilih atau tidak valid.'],
             ]);
         }
+    }
+
+    /**
+     * Escape an array of IDs for safe SQL IN clause usage.
+     * Prevents SQL injection by escaping single quotes.
+     *
+     * @param  array  $ids  Array of ID strings
+     * @return string Comma-separated, quoted and escaped ID list
+     */
+    private function escapeSqlIdList(array $ids): string
+    {
+        return implode(',', array_map(function ($id) {
+            return "'".str_replace("'", "''", (string) $id)."'";
+        }, $ids));
     }
 }
