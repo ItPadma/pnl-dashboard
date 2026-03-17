@@ -9,11 +9,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Utilities\LogController;
 use App\Imports\PajakMasukanCoretaxImport;
 use App\Models\AccessGroup;
-use App\Models\MasterDepo;
 use App\Models\MasterKabupatenKota;
 use App\Models\MasterPkp;
 use App\Models\NettInvoiceHeader;
 use App\Models\PajakKeluaranDetail;
+use App\Services\MasterDataCacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
@@ -33,6 +33,24 @@ class RegulerController extends Controller
      * Cached MasterKabupatenKota IDs (per-request).
      */
     private ?array $cachedKabupatenKotaIds = null;
+
+    /**
+     * Cached allowed depo names (per-request).
+     */
+    private ?array $cachedAllowedDepoNames = null;
+
+    /**
+     * Master data cache service.
+     */
+    private MasterDataCacheService $cacheService;
+
+    /**
+     * Create a new controller instance.
+     */
+    public function __construct(MasterDataCacheService $cacheService)
+    {
+        $this->cacheService = $cacheService;
+    }
 
     /**
      * Get active PKP customer IDs, cached for the lifetime of this request.
@@ -926,16 +944,10 @@ class RegulerController extends Controller
             }
 
             if ($userInfo && ! in_array('all', $userDepos)) {
-                $allowedDepos = MasterDepo::whereIn('code', $userDepos)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
+                $allowedDepos = $this->cacheService->getDepoNamesByCodes($userDepos);
 
                 if (! in_array('all', $depo)) {
-                    $requestedDepos = MasterDepo::whereIn('code', $depo)
-                        ->get()
-                        ->pluck('name')
-                        ->toArray();
+                    $requestedDepos = $this->cacheService->getDepoNamesByCodes($depo);
                     $validDepos = array_intersect(
                         $requestedDepos,
                         $allowedDepos,
@@ -953,10 +965,7 @@ class RegulerController extends Controller
                     }
                 }
             } elseif (! in_array('all', $depo)) {
-                $depoNames = MasterDepo::whereIn('code', $depo)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
+                $depoNames = $this->cacheService->getDepoNamesByCodes($depo);
                 if (! empty($depoNames)) {
                     $query->whereIn('depo', $depoNames);
                 } else {
@@ -1253,16 +1262,10 @@ class RegulerController extends Controller
             }
 
             if ($userInfo && ! in_array('all', $userDepos)) {
-                $allowedDepos = MasterDepo::whereIn('code', $userDepos)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
+                $allowedDepos = $this->cacheService->getDepoNamesByCodes($userDepos);
 
                 if ($request->has('depo') && ! in_array('all', $depo)) {
-                    $requestedDepos = MasterDepo::whereIn('code', $depo)
-                        ->get()
-                        ->pluck('name')
-                        ->toArray();
+                    $requestedDepos = $this->cacheService->getDepoNamesByCodes($depo);
                     $validDepos = array_intersect(
                         $requestedDepos,
                         $allowedDepos,
@@ -1280,10 +1283,7 @@ class RegulerController extends Controller
                     }
                 }
             } elseif ($request->has('depo') && ! in_array('all', $depo)) {
-                $depos = MasterDepo::whereIn('code', $depo)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
+                $depos = $this->cacheService->getDepoNamesByCodes($depo);
                 if (! empty($depos)) {
                     $query->whereIn('depo', $depos);
                 } else {
@@ -1495,16 +1495,10 @@ class RegulerController extends Controller
             // If user has specific depo access, intersect requested depos with allowed depos
             if ($userInfo && ! in_array('all', $userInfo->depo)) {
                 // Filter requested depos that user actually has access to
-                $allowedDepos = MasterDepo::whereIn('code', $userInfo->depo)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
+                $allowedDepos = $this->cacheService->getDepoNamesByCodes($userInfo->depo);
 
                 // Get names of requested depos
-                $requestedDepos = MasterDepo::whereIn('code', $depo)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
+                $requestedDepos = $this->cacheService->getDepoNamesByCodes($depo);
 
                 // Intersect to ensure user only accesses allowed depos
                 $validDepos = array_intersect($requestedDepos, $allowedDepos);
@@ -1517,29 +1511,20 @@ class RegulerController extends Controller
                 }
             } else {
                 // User has 'all' access, so just use requested depos
-                $depos = MasterDepo::whereIn('code', $depo)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
+                $depos = $this->cacheService->getDepoNamesByCodes($depo);
                 $dbquery->whereIn('depo', $depos);
             }
         } elseif ($request->has('depo') && in_array('all', $depo)) {
             // Logic for 'all' selection
             $userInfo = getLoggedInUserInfo();
             if ($userInfo && ! in_array('all', $userInfo->depo)) {
-                $depo = MasterDepo::whereIn('code', $userInfo->depo)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
+                $depo = $this->cacheService->getDepoNamesByCodes($userInfo->depo);
                 $dbquery->whereIn('depo', $depo);
             }
         } else {
             $userInfo = getLoggedInUserInfo();
             if ($userInfo && ! in_array('all', $userInfo->depo)) {
-                $allowedDepo = MasterDepo::whereIn('code', $userInfo->depo)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
+                $allowedDepo = $this->cacheService->getDepoNamesByCodes($userInfo->depo);
                 if (! empty($allowedDepo)) {
                     $dbquery->whereIn('depo', $allowedDepo);
                 } else {
@@ -1959,9 +1944,7 @@ class RegulerController extends Controller
         $userDepos = $userInfo ? Arr::wrap($userInfo->depo) : ['all'];
 
         if (! in_array('all', $userDepos, true)) {
-            $allowedDepoNames = MasterDepo::whereIn('code', $userDepos)
-                ->pluck('name')
-                ->toArray();
+            $allowedDepoNames = $this->cacheService->getDepoNamesByCodes($userDepos);
 
             if (empty($allowedDepoNames)) {
                 $query->whereRaw('1 = 0');

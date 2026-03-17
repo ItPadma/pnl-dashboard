@@ -14,6 +14,7 @@ use App\Models\MasterRefKodeNegara;
 use App\Models\MasterRefKodeTransaksi;
 use App\Models\MasterRefSatuanUkur;
 use App\Models\MasterRefTipe;
+use App\Services\MasterDataCacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
@@ -25,22 +26,25 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class MasterDataController extends Controller
 {
+    private MasterDataCacheService $cacheService;
+
+    public function __construct(MasterDataCacheService $cacheService)
+    {
+        $this->cacheService = $cacheService;
+    }
+
     public function getBrands(Request $request)
     {
         try {
             if ($request->has('companies') && ! empty($request->companies)) {
                 $companies = $request->companies;
-                $brands = \App\Models\MasterBrand::whereHas('multiCompProdMappings', function ($query) use ($companies) {
-                    $query->whereIn('szCompanyID', $companies);
-                })->get();
+                $brands = $this->cacheService->getBrands($companies);
                 $msg = 'Data retrieved successfully for specified companies: '.implode(', ', $companies);
             } elseif ($request->has('company') && ! empty($request->company)) {
-                $brands = \App\Models\MasterBrand::whereHas('multiCompProdMappings', function ($query) use ($request) {
-                    $query->where('szCompanyID', $request->company);
-                })->get();
+                $brands = $this->cacheService->getBrandsByCompany($request->company);
                 $msg = 'Data retrieved successfully for company: '.$request->company;
             } else {
-                $brands = \App\Models\MasterBrand::all();
+                $brands = $this->cacheService->getBrands();
                 $msg = 'All brands retrieved successfully';
             }
 
@@ -61,7 +65,7 @@ class MasterDataController extends Controller
     public function getDepo(Request $request)
     {
         try {
-            $depos = \App\Models\MasterDepo::all();
+            $depos = $this->cacheService->getDepos();
 
             return response()->json([
                 'status' => true,
@@ -80,7 +84,7 @@ class MasterDataController extends Controller
     public function getCompanies(Request $request)
     {
         try {
-            $companies = \App\Models\MasterCompany::all();
+            $companies = $this->cacheService->getCompanies();
 
             return response()->json([
                 'status' => true,
