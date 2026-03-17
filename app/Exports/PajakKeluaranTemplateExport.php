@@ -5,6 +5,8 @@ namespace App\Exports;
 use App\Exports\Sheets\DetailFakturSheet;
 use App\Exports\Sheets\FakturSheet;
 use App\Models\MasterDepo;
+use App\Models\MasterKabupatenKota;
+use App\Models\MasterPkp;
 use App\Models\PajakKeluaranDetail;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
@@ -223,13 +225,7 @@ class PajakKeluaranTemplateExport implements WithMultipleSheets
                             })->orWhere('moved_to', 'retur');
                             break;
                         case 'nonstandar':
-                            $q->where(function ($inner) {
-                                $inner->where('jenis', 'non-standar')
-                                    ->where('has_moved', 'n');
-                            })->orWhere(function ($inner) {
-                                $inner->where('has_moved', 'y')
-                                    ->where('moved_to', 'nonstandar');
-                            });
+                            $this->applyNonStandarScope($q);
                             break;
                         case 'pembatalan':
                             $q->where('has_moved', 'y')->where('moved_to', 'pembatalan');
@@ -343,5 +339,103 @@ class PajakKeluaranTemplateExport implements WithMultipleSheets
                     break;
             }
         }
+    }
+
+    /**
+     * Apply nonstandar scope (same logic as RegulerController).
+     */
+    protected function applyNonStandarScope($query): void
+    {
+        $pkpIds = $this->getActivePkpIds();
+
+        $query->where(function ($q) use ($pkpIds) {
+            // Condition 1: manually moved to nonstandar
+            $q->orWhere(function ($manual) {
+                $manual->where('has_moved', 'y')
+                    ->where('moved_to', 'nonstandar');
+            });
+
+            // Condition 2: NIK format issues
+            $kabupatenIds = $this->getKabupatenKotaIds();
+            $kabsArrayStr = empty($kabupatenIds) ? "''" : implode(',', array_map(function ($id) {
+                return "'".str_replace("'", "''", $id)."'";
+            }, $kabupatenIds));
+
+            $q->orWhere(function ($nikIssue) use ($kabsArrayStr) {
+                $nikIssue->where('has_moved', 'n')
+                    ->where(function ($nikCondition) use ($kabsArrayStr) {
+                        $nikCondition->where(function ($invalidId) {
+                            $invalidId->whereRaw('LEN(nik_digits) NOT IN (15, 16)')
+                                ->orWhereRaw("REPLACE(nik_digits, '0', '') = ''");
+                        })
+                            ->orWhere(function ($nikOnly) use ($kabsArrayStr) {
+                                $nikOnly->whereRaw('LEN(nik_digits) = 16')
+                                    ->where(function ($nikRule) use ($kabsArrayStr) {
+                                        $nikRule->whereRaw("RIGHT(nik_digits, 3) = '000'")
+                                            ->orWhereRaw("LEFT(nik_digits, 4) NOT IN ($kabsArrayStr)");
+                                    });
+                            });
+                    });
+            });
+
+            // Condition 3: fallback — doesn't match any standard category
+            $q->orWhereRaw($this->nonStandarFallbackConditionSql($pkpIds));
+        });
+    }
+
+    /**
+     * Get active PKP customer IDs.
+     */
+    protected function getActivePkpIds(): array
+    {
+        return MasterPkp::where('is_active', true)
+            ->whereNotNull('IDPelanggan')
+            ->pluck('IDPelanggan')
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->toArray();
+    }
+
+    /**
+     * Get MasterKabupatenKota IDs.
+     */
+    protected function getKabupatenKotaIds(): array
+    {
+        return MasterKabupatenKota::pluck('id')->toArray();
+    }
+
+    /**
+     * Build nonstandar fallback condition SQL.
+     */
+    protected function nonStandarFallbackConditionSql(array $pkpIds = []): string
+    {
+        if (empty($pkpIds)) {
+            return "(has_moved = 'n' AND NOT ("
+                ."(tipe_ppn = 'PPN' AND qty_pcs > 0 AND 1=0)"
+                ." OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND 1=0)"
+                ." OR (tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000))"
+                ." OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0)"
+                .' OR (qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000)'
+                .'))';
+        }
+
+        $idList = $this->escapeSqlIdList($pkpIds);
+
+        return "(has_moved = 'n' AND NOT ("
+            ."(tipe_ppn = 'PPN' AND qty_pcs > 0 AND customer_id IN ($idList))"
+            ." OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND customer_id IN ($idList))"
+            ." OR (tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000) AND customer_id NOT IN ($idList))"
+            ." OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND customer_id NOT IN ($idList))"
+            .' OR (qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000)'
+            .'))';
+    }
+
+    /**
+     * Escape an array of IDs for safe SQL IN clause usage.
+     */
+    protected function escapeSqlIdList(array $ids): string
+    {
+        return implode(',', array_map(function ($id) {
+            return "'".str_replace("'", "''", (string) $id)."'";
+        }, $ids));
     }
 }
