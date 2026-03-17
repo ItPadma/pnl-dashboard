@@ -44,91 +44,77 @@
                 $('#sp-' + tipe).hide();
                 $('.fa-download').show();
 
-                // reload the table
+                // reload the table and refresh all counters in a single request
                 switch (tipe) {
                     case 'pkp':
                         if (typeof tablePkpDb !== 'undefined' && tablePkpDb) {
                             tablePkpDb.ajax.reload();
                         }
-                        setDownloadCounter('pkp');
                         break;
 
                     case 'pkpnppn':
                         if (typeof tablePkpDbNppn !== 'undefined' && tablePkpDbNppn) {
                             tablePkpDbNppn.ajax.reload();
                         }
-                        setDownloadCounter('pkpnppn');
                         break;
 
                     case 'npkp':
                         if (typeof tableNonPkpDb !== 'undefined' && tableNonPkpDb) {
                             tableNonPkpDb.ajax.reload();
                         }
-                        setDownloadCounter('npkp');
                         break;
 
                     case 'npkpnppn':
                         if (typeof tableNonPkpDbNppn !== 'undefined' && tableNonPkpDbNppn) {
                             tableNonPkpDbNppn.ajax.reload();
                         }
-                        setDownloadCounter('npkpnppn');
                         break;
 
                     case 'retur':
                         if (typeof tableReturDb !== 'undefined' && tableReturDb) {
                             tableReturDb.ajax.reload();
                         }
-                        setDownloadCounter('retur');
                         break;
 
                     case 'nonstandar':
                         if (typeof tableNonStandarDb !== 'undefined' && tableNonStandarDb) {
                             tableNonStandarDb.ajax.reload();
                         }
-                        setDownloadCounter('nonstandar');
                         break;
 
                     case 'pembatalan':
                         if (typeof tablePembatalanDb !== 'undefined' && tablePembatalanDb) {
                             tablePembatalanDb.ajax.reload();
                         }
-                        setDownloadCounter('pembatalan');
                         break;
 
                     case 'koreksi':
                         if (typeof tableKoreksiDb !== 'undefined' && tableKoreksiDb) {
                             tableKoreksiDb.ajax.reload();
                         }
-                        setDownloadCounter('koreksi');
                         break;
 
                     case 'pending':
                         if (typeof tablePendingDb !== 'undefined' && tablePendingDb) {
                             tablePendingDb.ajax.reload();
                         }
-                        setDownloadCounter('pending');
                         break;
 
                     default:
                         if (typeof tablePkpDb !== 'undefined' && tablePkpDb) tablePkpDb.ajax.reload();
-                        setDownloadCounter('pkp');
-                        if (typeof tablePkpDbNppn !== 'undefined' && tablePkpDbNppn) tablePkpDbNppn.ajax
-                            .reload();
-                        setDownloadCounter('pkpnppn');
-                        if (typeof tableNonPkpDb !== 'undefined' && tableNonPkpDb) tableNonPkpDb.ajax
-                            .reload();
-                        setDownloadCounter('npkp');
-                        if (typeof tableNonPkpDbNppn !== 'undefined' && tableNonPkpDbNppn) tableNonPkpDbNppn
-                            .ajax.reload();
-                        setDownloadCounter('npkpnppn');
+                        if (typeof tablePkpDbNppn !== 'undefined' && tablePkpDbNppn) tablePkpDbNppn.ajax.reload();
+                        if (typeof tableNonPkpDb !== 'undefined' && tableNonPkpDb) tableNonPkpDb.ajax.reload();
+                        if (typeof tableNonPkpDbNppn !== 'undefined' && tableNonPkpDbNppn) tableNonPkpDbNppn.ajax.reload();
                         if (typeof tableReturDb !== 'undefined' && tableReturDb) tableReturDb.ajax.reload();
-                        setDownloadCounter('retur');
-                        if (typeof tableNonStandarDb !== 'undefined' && tableNonStandarDb) tableNonStandarDb
-                            .ajax
-                            .reload();
-                        setDownloadCounter('nonstandar');
+                        if (typeof tableNonStandarDb !== 'undefined' && tableNonStandarDb) tableNonStandarDb.ajax.reload();
+                        if (typeof tablePembatalanDb !== 'undefined' && tablePembatalanDb) tablePembatalanDb.ajax.reload();
+                        if (typeof tableKoreksiDb !== 'undefined' && tableKoreksiDb) tableKoreksiDb.ajax.reload();
+                        if (typeof tablePendingDb !== 'undefined' && tablePendingDb) tablePendingDb.ajax.reload();
                         break;
                 }
+
+                // Single request for all counters instead of 9 separate calls
+                setAllDownloadCounters();
             },
             error: function(xhr, status, error) {
                 console.error('Error:', error);
@@ -139,6 +125,66 @@
         });
     }
 
+    /**
+     * Fetch ALL tipe counters in a single request (replaces 9 separate setDownloadCounter calls).
+     */
+    function setAllDownloadCounters() {
+        var tipes = ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar', 'pembatalan', 'koreksi', 'pending'];
+        tipes.forEach(function(tipe) {
+            toggleSpinnerDownload(tipe, true);
+        });
+
+        $.ajax({
+            url: "{{ route('pnl.reguler.pajak-keluaran.count-all') }}",
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            data: {
+                pt: $('#filter_pt').val(),
+                brand: $('#filter_brand').val(),
+                depo: $('#filter_depo').val(),
+                periode: $('#filter_periode').val(),
+                chstatus: 'checked-ready2download'
+            },
+            success: function(response) {
+                if (!response.status || !response.data) {
+                    tipes.forEach(function(tipe) {
+                        toggleSpinnerDownload(tipe, false);
+                    });
+                    return;
+                }
+
+                var data = response.data;
+                tipes.forEach(function(tipe) {
+                    var counts = data[tipe] || {};
+                    var ready = counts.ready2download_count || 0;
+                    var downloaded = counts.downloaded_count || 0;
+
+                    $('#total_ready2download_' + tipe).text(ready);
+                    $('#total_downloaded_' + tipe).text(downloaded);
+
+                    if (parseInt(ready) > 0) {
+                        $('#btn-download-' + tipe).prop('hidden', false);
+                    } else {
+                        $('#btn-download-' + tipe).prop('hidden', true);
+                    }
+
+                    toggleSpinnerDownload(tipe, false);
+                });
+            },
+            error: function(error) {
+                console.error('Error:', error);
+                tipes.forEach(function(tipe) {
+                    toggleSpinnerDownload(tipe, false);
+                });
+            }
+        });
+    }
+
+    /**
+     * Fetch a single tipe counter (kept for backward compatibility).
+     */
     function setDownloadCounter(tipe) {
         $.ajax({
             url: "{{ route('pnl.reguler.pajak-keluaran.count') }}?tipe=" + tipe,

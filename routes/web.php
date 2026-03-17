@@ -39,6 +39,7 @@ Route::controller(RegulerController::class)->group(function () {
         Route::get('/pnl/reguler/pajak-keluaran/export', 'download')->name('pnl.reguler.pajak-keluaran.download');
         Route::get('/pnl/reguler/pajak-keluaran-db/export', 'downloadDb')->name('pnl.reguler.pajak-keluaran-db.download');
         Route::post('/pnl/reguler/pajak-keluaran/count', 'count')->name('pnl.reguler.pajak-keluaran.count');
+        Route::post('/pnl/reguler/pajak-keluaran/count-all', 'countAll')->name('pnl.reguler.pajak-keluaran.count-all');
         Route::post('/pnl/reguler/pajak-keluaran/available-dates', 'getAvailableDates')->name('pnl.reguler.pajak-keluaran.available-dates');
     });
 

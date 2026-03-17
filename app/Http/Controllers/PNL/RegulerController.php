@@ -1129,6 +1129,252 @@ class RegulerController extends Controller
         }
     }
 
+    public function countAll(Request $request)
+    {
+        if (! Auth::guard('web')->check()) {
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => 'Unauthorized',
+                ],
+                401,
+            );
+        }
+
+        try {
+            $pt = $this->normalizeFilter($request->pt ?? ['all']);
+            $brand = $this->normalizeFilter($request->brand ?? ['all']);
+            $depo = $this->normalizeFilter($request->depo ?? ['all']);
+            $periode = $request->periode;
+            $chstatus = $request->chstatus ?? 'checked-ready2download';
+
+            $tipes = ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar', 'pembatalan', 'koreksi', 'pending'];
+            $result = [];
+
+            // Cache PKP IDs once for ALL tipe queries
+            $pkpIds = $this->getActivePkpIds();
+            $pkpEmpty = empty($pkpIds);
+
+            foreach ($tipes as $tipe) {
+                $query = PajakKeluaranDetail::query();
+                $query->selectRaw('
+                    ISNULL(SUM(CASE WHEN is_downloaded = 0 AND is_checked = 1 THEN 1 ELSE 0 END), 0) AS ready2download_count,
+                    ISNULL(SUM(CASE WHEN is_downloaded = 1 AND is_checked = 1 THEN 1 ELSE 0 END), 0) AS downloaded_count
+                ');
+
+                // Apply common filters (same logic as count())
+                $this->applyCommonCountFilters($query, $pt, $brand, $depo, $periode, $chstatus);
+
+                // Apply tipe-specific conditions
+                $this->applyTipeCountConditions($query, $tipe, $pkpIds, $pkpEmpty);
+
+                $counts = $query->first();
+                $result[$tipe] = [
+                    'ready2download_count' => (int) ($counts->ready2download_count ?? 0),
+                    'downloaded_count' => (int) ($counts->downloaded_count ?? 0),
+                ];
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'All counts retrieved successfully',
+                'data' => $result,
+            ]);
+        } catch (\Throwable $th) {
+            Log::error('Failed to count all pajak keluaran data', [
+                'context' => __METHOD__,
+                'exception' => $th,
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'error' => 'Terjadi kesalahan saat menghitung data.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Apply common count filters (pt, brand, depo, periode, chstatus) to a query.
+     * Extracted from count() to be shared with countAll().
+     */
+    private function applyCommonCountFilters($query, array $pt, array $brand, array $depo, ?string $periode, string $chstatus): void
+    {
+        if (! in_array('all', $pt)) {
+            $query->whereIn('company', $pt);
+        }
+        if (! in_array('all', $brand)) {
+            $query->whereIn('brand', $brand);
+        }
+
+        $userInfo = getLoggedInUserInfo();
+        $userDepos = $userInfo ? $userInfo->depo : ['all'];
+        if (! is_array($userDepos)) {
+            $userDepos = [$userDepos];
+        }
+
+        if ($userInfo && ! in_array('all', $userDepos)) {
+            $allowedDepos = $this->cacheService->getDepoNamesByCodes($userDepos);
+
+            if (! in_array('all', $depo)) {
+                $requestedDepos = $this->cacheService->getDepoNamesByCodes($depo);
+                $validDepos = array_intersect(
+                    $requestedDepos,
+                    $allowedDepos,
+                );
+                if (! empty($validDepos)) {
+                    $query->whereIn('depo', $validDepos);
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            } else {
+                if (! empty($allowedDepos)) {
+                    $query->whereIn('depo', $allowedDepos);
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            }
+        } elseif (! in_array('all', $depo)) {
+            $depoNames = $this->cacheService->getDepoNamesByCodes($depo);
+            if (! empty($depoNames)) {
+                $query->whereIn('depo', $depoNames);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        if (! empty($periode)) {
+            $periodeParts = explode(' - ', $periode);
+            if (count($periodeParts) === 2) {
+                $periodeAwal = \Carbon\Carbon::createFromFormat('d/m/Y', $periodeParts[0])->format('Y-m-d');
+                $periodeAkhir = \Carbon\Carbon::createFromFormat('d/m/Y', $periodeParts[1])->format('Y-m-d');
+            } else {
+                $periodeAwal = \Carbon\Carbon::createFromFormat('d/m/Y', $periode)->format('Y-m-d');
+                $periodeAkhir = \Carbon\Carbon::createFromFormat('d/m/Y', $periode)->format('Y-m-d');
+            }
+            $query->whereBetween('tgl_faktur_pajak', [$periodeAwal, $periodeAkhir]);
+        }
+
+        switch ($chstatus) {
+            case 'checked-ready2download':
+                $query->where('is_checked', '1');
+                break;
+            case 'unchecked':
+                $query->where('is_checked', '0');
+                break;
+            case 'checked-downloaded':
+                $query->where('is_downloaded', '1');
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * Apply tipe-specific WHERE conditions to a count query.
+     * Extracted from count() to be shared with countAll().
+     */
+    private function applyTipeCountConditions($query, string $tipe, array $pkpIds, bool $pkpEmpty): void
+    {
+        switch ($tipe) {
+            case 'pkp':
+                $query->where(function ($q) use ($pkpIds, $pkpEmpty) {
+                    $q->where(function ($inner) use ($pkpIds, $pkpEmpty) {
+                        $inner->where('tipe_ppn', 'PPN')
+                            ->where('qty_pcs', '>', 0)
+                            ->where('has_moved', 'n')
+                            ->standardNik();
+                        if (! $pkpEmpty) {
+                            $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
+                        } else {
+                            $inner->whereRaw('1 = 0');
+                        }
+                    })->orWhere(function ($inner) {
+                        $inner->where('has_moved', 'y')
+                            ->where('moved_to', 'pkp');
+                    });
+                });
+                break;
+            case 'pkpnppn':
+                $query->where(function ($q) use ($pkpIds, $pkpEmpty) {
+                    $q->where(function ($inner) use ($pkpIds, $pkpEmpty) {
+                        $inner->where('tipe_ppn', 'NON-PPN')
+                            ->where('qty_pcs', '>', 0)
+                            ->where('has_moved', 'n')
+                            ->standardNik();
+                        if (! $pkpEmpty) {
+                            $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
+                        } else {
+                            $inner->whereRaw('1 = 0');
+                        }
+                    })->orWhere(function ($inner) {
+                        $inner->where('has_moved', 'y')
+                            ->where('moved_to', 'pkpnppn');
+                    });
+                });
+                break;
+            case 'npkp':
+                $query->where(function ($q) use ($pkpIds) {
+                    $q->where(function ($inner) use ($pkpIds) {
+                        $inner->where('tipe_ppn', 'PPN')
+                            ->where(function ($harga) {
+                                $harga->where('hargatotal_sblm_ppn', '>', 0)
+                                    ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
+                            })
+                            ->where('has_moved', 'n')
+                            ->standardNik();
+                        if (! empty($pkpIds)) {
+                            $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
+                        }
+                    })->orWhere(function ($inner) {
+                        $inner->where('has_moved', 'y')
+                            ->where('moved_to', 'npkp');
+                    });
+                });
+                break;
+            case 'npkpnppn':
+                $query->where(function ($q) use ($pkpIds) {
+                    $q->where(function ($inner) use ($pkpIds) {
+                        $inner->where('tipe_ppn', 'NON-PPN')
+                            ->where('qty_pcs', '>', 0)
+                            ->where('has_moved', 'n')
+                            ->standardNik();
+                        if (! empty($pkpIds)) {
+                            $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
+                        }
+                    })->orWhere(function ($inner) {
+                        $inner->where('has_moved', 'y')
+                            ->where('moved_to', 'npkpnppn');
+                    });
+                });
+                break;
+            case 'retur':
+                $query->where(function ($q) {
+                    $q->where(function ($inner) {
+                        $inner->where('qty_pcs', '<', 0)
+                            ->where('hargatotal_sblm_ppn', '>=', -1000000)
+                            ->where('has_moved', 'n')
+                            ->standardNik();
+                    })->orWhere('moved_to', 'retur');
+                });
+                break;
+            case 'nonstandar':
+                $this->applyNonStandarScope($query);
+                break;
+            case 'pembatalan':
+                $query->where('has_moved', 'y')
+                    ->where('moved_to', 'pembatalan');
+                break;
+            case 'koreksi':
+                $query->where('has_moved', 'y')
+                    ->where('moved_to', 'koreksi');
+                break;
+            case 'pending':
+                $query->where('has_moved', 'y')
+                    ->where('moved_to', 'pending');
+                break;
+        }
+    }
+
     public function download(Request $request)
     {
         try {
