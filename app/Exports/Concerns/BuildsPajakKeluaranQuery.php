@@ -1,35 +1,19 @@
 <?php
 
-namespace App\Exports;
+namespace App\Exports\Concerns;
 
 use App\Models\MasterKabupatenKota;
 use App\Models\MasterPkp;
 use App\Models\PajakKeluaranDetail;
 use App\Services\MasterDataCacheService;
-use Illuminate\Support\Facades\Schema;
-use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\WithChunkReading;
-use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Events\AfterSheet;
+use Illuminate\Database\Eloquent\Builder;
 
-class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEvents, WithHeadings, WithMapping
+trait BuildsPajakKeluaranQuery
 {
     /**
-     * Array of tipe values to filter.
+     * All available tipe values.
      */
-    protected array $tipe;
-
-    protected $pt;
-
-    protected $brand;
-
-    protected $depo;
-
-    protected $periode;
-
-    protected $chstatus;
+    protected const ALL_TIPES = ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar', 'pembatalan', 'koreksi', 'pending'];
 
     /**
      * Cached PKP IDs for the export.
@@ -37,145 +21,37 @@ class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEven
     protected ?array $cachedPkpIds = null;
 
     /**
-     * Cache service for master data.
+     * Cache service for master data lookups.
      */
     protected MasterDataCacheService $cacheService;
 
     /**
-     * All available tipe values.
+     * Initialize the cache service (call from constructor).
      */
-    protected const ALL_TIPES = ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar', 'pembatalan', 'koreksi', 'pending'];
-
-    public function __construct(
-        $tipe,
-        $pt = [],
-        $brand = [],
-        $depo = [],
-        $periode = null,
-        $chstatus = null
-    ) {
-        // Normalize tipe to array for consistent handling
-        if (is_array($tipe)) {
-            $this->tipe = $tipe;
-        } else {
-            $this->tipe = [$tipe];
-        }
-
-        // Remove 'all' and dedupe
-        $this->tipe = array_unique(array_filter($this->tipe, fn ($t) => $t !== 'all'));
-
-        // If empty after filtering, treat as all
-        if (empty($this->tipe)) {
-            $this->tipe = self::ALL_TIPES;
-        }
-
-        $this->pt = $pt;
-        $this->brand = $brand;
-        $this->depo = $depo;
-        $this->periode = $periode;
-        $this->chstatus = $chstatus;
+    protected function initQueryBuilder(): void
+    {
         $this->cacheService = app(MasterDataCacheService::class);
     }
 
-    public function headings(): array
-    {
-        // Ambil nama kolom dari tabel pajak_keluaran_details
-        $columns = Schema::getColumnListing('pajak_keluaran_details');
-
-        // Jika Anda ingin mengabaikan beberapa kolom tertentu, Anda dapat menggunakan array_filter
-        // sebagai contoh untuk mengabaikan kolom 'id' dan 'created_at':
-        $columns = array_filter($columns, function ($column) {
-            return ! in_array($column, ['id', 'is_checked', 'is_downloaded', 'created_at', 'updated_at']);
-        });
-
-        return $columns;
-    }
-
-    public function registerEvents(): array
-    {
-        return [
-            AfterSheet::class => function (AfterSheet $event) {
-                $event->sheet->getDelegate()->getStyle('AB:AB')->getNumberFormat()->setFormatCode('@');
-            },
-        ];
-    }
-
     /**
-     * Get active PKP customer IDs, cached for the export.
+     * Create a base query for PajakKeluaranDetail with all filters applied.
      */
-    protected function getActivePkpIds(): array
+    protected function buildBaseQuery(): Builder
     {
-        if ($this->cachedPkpIds === null) {
-            // Include whereNotNull to prevent NULL values in IN clause
-            $this->cachedPkpIds = MasterPkp::where('is_active', true)
-                ->whereNotNull('IDPelanggan')
-                ->pluck('IDPelanggan')
-                ->filter(fn ($id) => $id !== null && $id !== '')
-                ->toArray();
-        }
-
-        return $this->cachedPkpIds;
-    }
-
-    /**
-     * Escape an array of IDs for safe SQL IN clause usage.
-     * Prevents SQL injection by escaping single quotes.
-     *
-     * @param  array  $ids  Array of ID strings
-     * @return string Comma-separated, quoted and escaped ID list
-     */
-    protected function escapeSqlIdList(array $ids): string
-    {
-        return implode(',', array_map(function ($id) {
-            return "'".str_replace("'", "''", (string) $id)."'";
-        }, $ids));
-    }
-
-    public function query()
-    {
-        $query = PajakKeluaranDetail::query()
-            ->select(
-                array_diff(
-                    Schema::getColumnListing((new PajakKeluaranDetail)->getTable()),
-                    ['id', 'is_checked', 'is_downloaded', 'created_at', 'updated_at'],
-                ),
-            );
+        $query = PajakKeluaranDetail::query();
         $this->applyFilters($query);
         $this->applyTipeFilter($query);
 
         return $query;
     }
 
-    public function chunkSize(): int
-    {
-        return 1000;
-    }
-
-    public function map($row): array
-    {
-        $row->nik = "'{$row->nik}";
-        $row->kode_produk = "'{$row->kode_produk}";
-
-        return $row->toArray();
-    }
-
     /**
-     * Mark exported records as downloaded.
+     * Apply common filters (pt, brand, depo, periode, chstatus).
      *
-     * Call this from the controller after the download succeeds.
+     * When $useDownloadCheck is true (template export), the default status
+     * also requires is_downloaded = 0. When false (detail export), it does not.
      */
-    public function markAsDownloaded(): void
-    {
-        if (empty($this->chstatus) || $this->chstatus === 'checked-ready2download' || $this->chstatus === 'checked-downloaded') {
-            $updateQuery = PajakKeluaranDetail::query();
-            $this->applyFilters($updateQuery);
-            $this->applyTipeFilter($updateQuery);
-            $updateQuery->where('is_downloaded', 0);
-            $updateQuery->update(['is_downloaded' => 1]);
-        }
-    }
-
-    protected function applyFilters($query): void
+    protected function applyFilters($query, bool $useDownloadCheck = false): void
     {
         $pt = is_array($this->pt) ? $this->pt : [$this->pt];
         $brand = is_array($this->brand) ? $this->brand : [$this->brand];
@@ -188,7 +64,7 @@ class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEven
             $query->whereIn('brand', $brand);
         }
 
-        // OPTIMIZED: Use cached depo names
+        // Use cached depo names via MasterDataCacheService
         $userInfo = getLoggedInUserInfo();
         $userDepos = $userInfo ? $userInfo->depo : ['all'];
         if (! is_array($userDepos)) {
@@ -196,7 +72,6 @@ class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEven
         }
 
         if ($userInfo && ! in_array('all', $userDepos)) {
-            // Use cache service instead of direct query
             $allowedDepos = $this->cacheService->getDepoNamesByCodes($userDepos);
 
             if (! empty($depo) && ! in_array('all', $depo)) {
@@ -236,8 +111,12 @@ class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEven
             }
             $query->whereBetween('tgl_faktur_pajak', [$periodeAwal, $periodeAkhir]);
         }
+
         if (empty($this->chstatus) || $this->chstatus === 'checked-ready2download') {
             $query->where('is_checked', 1);
+            if ($useDownloadCheck) {
+                $query->where('is_downloaded', 0);
+            }
         } elseif ($this->chstatus !== 'all') {
             switch ($this->chstatus) {
                 case 'checked-downloaded':
@@ -251,13 +130,15 @@ class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEven
         }
     }
 
+    /**
+     * Apply type-based filter to the query (supports multiple tipe values with OR logic).
+     * Uses cached PKP IDs instead of subqueries.
+     */
     protected function applyTipeFilter($query): void
     {
-        // OPTIMIZED: Cache PKP IDs once for the entire export
         $pkpIds = $this->getActivePkpIds();
         $pkpEmpty = empty($pkpIds);
 
-        // Use OR logic to combine multiple tipe filters
         $query->where(function ($mainQuery) use ($pkpIds, $pkpEmpty) {
             foreach ($this->tipe as $tipe) {
                 $mainQuery->orWhere(function ($q) use ($tipe, $pkpIds, $pkpEmpty) {
@@ -268,7 +149,6 @@ class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEven
                                     ->where('qty_pcs', '>', 0)
                                     ->where('has_moved', 'n')
                                     ->standardNik();
-                                // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                                 if (! $pkpEmpty) {
                                     $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
                                 } else {
@@ -285,7 +165,6 @@ class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEven
                                     ->where('qty_pcs', '>', 0)
                                     ->where('has_moved', 'n')
                                     ->standardNik();
-                                // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                                 if (! $pkpEmpty) {
                                     $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
                                 } else {
@@ -305,7 +184,6 @@ class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEven
                                     })
                                     ->where('has_moved', 'n')
                                     ->standardNik();
-                                // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                                 if (! empty($pkpIds)) {
                                     $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
                                 }
@@ -320,7 +198,6 @@ class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEven
                                     ->where('qty_pcs', '>', 0)
                                     ->where('has_moved', 'n')
                                     ->standardNik();
-                                // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
                                 if (! empty($pkpIds)) {
                                     $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
                                 }
@@ -392,9 +269,25 @@ class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEven
                     });
             });
 
-            // Condition 3: fallback — doesn't match any standard category
+            // Condition 3: fallback - doesn't match any standard category
             $q->orWhereRaw($this->nonStandarFallbackConditionSql($pkpIds));
         });
+    }
+
+    /**
+     * Get active PKP customer IDs, cached for the export.
+     */
+    protected function getActivePkpIds(): array
+    {
+        if ($this->cachedPkpIds === null) {
+            $this->cachedPkpIds = MasterPkp::where('is_active', true)
+                ->whereNotNull('IDPelanggan')
+                ->pluck('IDPelanggan')
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->toArray();
+        }
+
+        return $this->cachedPkpIds;
     }
 
     /**
@@ -407,6 +300,9 @@ class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEven
 
     /**
      * Build nonstandar fallback condition SQL.
+     *
+     * Records that have has_moved = 'n' but don't match any standard
+     * category (pkp, pkpnppn, npkp, npkpnppn, or retur).
      */
     protected function nonStandarFallbackConditionSql(array $pkpIds = []): string
     {
@@ -429,5 +325,33 @@ class PajakKeluaranDetailExport implements FromQuery, WithChunkReading, WithEven
             ." OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND customer_id NOT IN ($idList))"
             .' OR (qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000)'
             .'))';
+    }
+
+    /**
+     * Escape an array of IDs for safe SQL IN clause usage.
+     * Prevents SQL injection by escaping single quotes.
+     *
+     * @param  array  $ids  Array of ID strings
+     * @return string Comma-separated, quoted and escaped ID list
+     */
+    protected function escapeSqlIdList(array $ids): string
+    {
+        return implode(',', array_map(function ($id) {
+            return "'".str_replace("'", "''", (string) $id)."'";
+        }, $ids));
+    }
+
+    /**
+     * Normalize tipe parameter into a validated array.
+     *
+     * @param  mixed  $tipe  Single tipe string or array of tipe strings
+     * @return array Validated, deduplicated tipe array
+     */
+    protected function normalizeTipe($tipe): array
+    {
+        $tipes = is_array($tipe) ? $tipe : [$tipe];
+        $tipes = array_unique(array_filter($tipes, fn ($t) => $t !== 'all'));
+
+        return empty($tipes) ? self::ALL_TIPES : array_values($tipes);
     }
 }

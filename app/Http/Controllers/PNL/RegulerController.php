@@ -1171,19 +1171,24 @@ class RegulerController extends Controller
             ];
             $writerType = 'Xlsx';
 
-            return Excel::download(
-                new PajakKeluaranDetailExport(
-                    $tipe,
-                    $pt,
-                    $brand,
-                    $depo,
-                    $periode,
-                    $chstatus,
-                ),
+            $export = new PajakKeluaranDetailExport(
+                $tipe,
+                $pt,
+                $brand,
+                $depo,
+                $periode,
+                $chstatus,
+            );
+            $response = Excel::download(
+                $export,
                 'pajak_keluaran_'.$tipeFilename.'.xlsx',
                 $writerType,
                 $headers,
             );
+
+            $export->markAsDownloaded();
+
+            return $response;
         } catch (\Throwable $th) {
             Log::error('Failed to download pajak keluaran', [
                 'context' => __METHOD__,
@@ -1241,19 +1246,24 @@ class RegulerController extends Controller
                 'Content-Disposition' => 'attachment; filename="pajak_keluaran_'.$tipeFilename.'.xlsx"',
             ];
 
-            return Excel::download(
-                new PajakKeluaranTemplateExport(
-                    $tipe,
-                    $pt,
-                    $brand,
-                    $depo,
-                    $periode,
-                    $chstatus,
-                ),
+            $exportDb = new PajakKeluaranTemplateExport(
+                $tipe,
+                $pt,
+                $brand,
+                $depo,
+                $periode,
+                $chstatus,
+            );
+            $response = Excel::download(
+                $exportDb,
                 'pajak_keluaran_'.$tipeFilename.'.xlsx',
                 'Xlsx',
                 $headers,
             );
+
+            $exportDb->markAsDownloaded();
+
+            return $response;
         } catch (\Throwable $th) {
             Log::error('Failed to download pajak keluaran db', [
                 'context' => __METHOD__,

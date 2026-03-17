@@ -2,16 +2,21 @@
 
 namespace App\Exports;
 
-use App\Exports\Sheets\DetailFakturSheet;
-use App\Exports\Sheets\FakturSheet;
-use App\Models\MasterDepo;
-use App\Models\MasterKabupatenKota;
-use App\Models\MasterPkp;
+use App\Exports\Concerns\BuildsPajakKeluaranQuery;
+use App\Exports\Sheets\StreamingDetailFakturSheet;
+use App\Exports\Sheets\StreamingFakturSheet;
+use App\Models\MasterRefIdPembeli;
+use App\Models\MasterRefKodeNegara;
+use App\Models\MasterRefKodeTransaksi;
+use App\Models\MasterRefSatuanUkur;
+use App\Models\MasterRefTipe;
 use App\Models\PajakKeluaranDetail;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 class PajakKeluaranTemplateExport implements WithMultipleSheets
 {
+    use BuildsPajakKeluaranQuery;
+
     /**
      * Array of tipe values to filter.
      */
@@ -27,14 +32,9 @@ class PajakKeluaranTemplateExport implements WithMultipleSheets
 
     protected $chstatus;
 
-    protected $npwpPenjual = '0027139484612000';
+    protected string $npwpPenjual = '0027139484612000';
 
-    protected $idTkuPenjual = '0027139484612000000000';
-
-    /**
-     * All available tipe values.
-     */
-    protected const ALL_TIPES = ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar', 'pembatalan', 'koreksi', 'pending'];
+    protected string $idTkuPenjual = '0027139484612000000000';
 
     public function __construct(
         $tipe,
@@ -44,398 +44,72 @@ class PajakKeluaranTemplateExport implements WithMultipleSheets
         $periode = null,
         $chstatus = null
     ) {
-        // Normalize tipe to array for consistent handling
-        if (is_array($tipe)) {
-            $this->tipe = $tipe;
-        } else {
-            $this->tipe = [$tipe];
-        }
-
-        // Remove 'all' and dedupe
-        $this->tipe = array_unique(array_filter($this->tipe, fn ($t) => $t !== 'all'));
-
-        // If empty after filtering, treat as all
-        if (empty($this->tipe)) {
-            $this->tipe = self::ALL_TIPES;
-        }
-
+        $this->tipe = $this->normalizeTipe($tipe);
         $this->pt = $pt;
         $this->brand = $brand;
         $this->depo = $depo;
         $this->periode = $periode;
         $this->chstatus = $chstatus;
+        $this->cachedPkpIds = null;
+        $this->initQueryBuilder();
     }
 
+    /**
+     * Return sheet instances that stream data from the database
+     * instead of loading everything into memory.
+     */
     public function sheets(): array
     {
-        // Build query: checked, not downloaded, filtered by tipe
-        $query = PajakKeluaranDetail::query();
-        $this->applyFilters($query);
-
-        $this->applyTipeFilter($query);
-
-        $records = $query->get();
-
-        // Group by invoice for Faktur sheet
-        $invoiceGroups = [];
-        $invoiceOrder = [];
-
-        foreach ($records as $record) {
-            $invoiceKey = $record->no_invoice;
-
-            if (! isset($invoiceGroups[$invoiceKey])) {
-                $invoiceOrder[] = $invoiceKey;
-                $invoiceGroups[$invoiceKey] = [
-                    'no_invoice' => $record->no_invoice,
-                    'no_do' => $record->no_do,
-                    'tgl_faktur_pajak' => $record->tgl_faktur_pajak,
-                    'npwp_customer' => $record->npwp_customer,
-                    'nik' => $record->nik,
-                    'nama_sesuai_npwp' => $record->nama_sesuai_npwp,
-                    'nama_customer_sistem' => $record->nama_customer_sistem,
-                    'alamat_npwp_lengkap' => $record->alamat_npwp_lengkap,
-                    'alamat_sistem' => $record->alamat_sistem,
-                    'id_tku_pembeli' => $record->id_tku_pembeli,
-                    'kode_jenis_fp' => $record->kode_jenis_fp,
-                    'products' => [],
-                ];
-            }
-
-            $invoiceGroups[$invoiceKey]['products'][] = $record;
-        }
-
-        // Build Faktur data (ordered, indexed from 0)
-        $fakturData = [];
-        foreach ($invoiceOrder as $invoiceKey) {
-            $fakturData[] = $invoiceGroups[$invoiceKey];
-        }
-
-        // Build DetailFaktur data with baris_faktur reference
-        $detailData = [];
-        foreach ($fakturData as $fakturIndex => $invoice) {
-            $barisFaktur = $fakturIndex + 1; // 1-indexed to match Faktur row
-
-            foreach ($invoice['products'] as $product) {
-                $detailData[] = [
-                    'baris_faktur' => $barisFaktur,
-                    'barang_jasa' => $product->barang_jasa,
-                    'nama_produk' => $product->nama_produk,
-                    'satuan' => $product->satuan,
-                    'hargasatuan_sblm_ppn' => $product->hargasatuan_sblm_ppn,
-                    'qty_pcs' => $product->qty_pcs,
-                    'disc' => $product->disc,
-                    'dpp' => $product->dpp,
-                    'dpp_lain' => $product->dpp_lain,
-                    'ppn' => $product->ppn,
-                ];
-            }
-        }
-
-        // Fetch Master References
-        $refKodeTransaksi = \App\Models\MasterRefKodeTransaksi::where('is_active', true)->pluck('kode')->toArray();
-        $refJenisIdPembeli = \App\Models\MasterRefIdPembeli::where('is_active', true)->pluck('kode')->toArray();
-        $refKodeNegara = \App\Models\MasterRefKodeNegara::where('is_active', true)->pluck('kode')->toArray();
-        $refTipe = \App\Models\MasterRefTipe::where('is_active', true)->pluck('kode')->toArray();
-        $refSatuan = \App\Models\MasterRefSatuanUkur::where('is_active', true)->pluck('kode', 'keterangan')->toArray();
-
-        // Mark records as downloaded
-        $this->markAsDownloaded();
+        $refKodeTransaksi = MasterRefKodeTransaksi::where('is_active', true)->pluck('kode')->toArray();
+        $refJenisIdPembeli = MasterRefIdPembeli::where('is_active', true)->pluck('kode')->toArray();
+        $refKodeNegara = MasterRefKodeNegara::where('is_active', true)->pluck('kode')->toArray();
+        $refTipe = MasterRefTipe::where('is_active', true)->pluck('kode')->toArray();
+        $refSatuan = MasterRefSatuanUkur::where('is_active', true)->pluck('kode', 'keterangan')->toArray();
 
         return [
-            new FakturSheet(
-                $fakturData,
+            new StreamingFakturSheet(
+                $this->tipe,
+                $this->pt,
+                $this->brand,
+                $this->depo,
+                $this->periode,
+                $this->chstatus,
                 $this->npwpPenjual,
                 $this->idTkuPenjual,
                 $refKodeTransaksi,
                 $refJenisIdPembeli,
-                $refKodeNegara
+                $refKodeNegara,
             ),
-            new DetailFakturSheet($detailData, $refTipe, $refSatuan),
+            new StreamingDetailFakturSheet(
+                $this->tipe,
+                $this->pt,
+                $this->brand,
+                $this->depo,
+                $this->periode,
+                $this->chstatus,
+                $refTipe,
+                $refSatuan,
+            ),
         ];
     }
 
     /**
-     * Apply type-based filter to the query (same logic as RegulerController).
-     * Now supports multiple tipe values using OR logic.
-     */
-    protected function applyTipeFilter($query): void
-    {
-        // Use OR logic to combine multiple tipe filters
-        $query->where(function ($mainQuery) {
-            foreach ($this->tipe as $tipe) {
-                $mainQuery->orWhere(function ($q) use ($tipe) {
-                    switch ($tipe) {
-                        case 'pkp':
-                            $q->where(function ($inner) {
-                                $inner->where('tipe_ppn', 'PPN')
-                                    ->where('qty_pcs', '>', 0)
-                                    ->where('has_moved', 'n')
-                                    ->whereRaw('customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)')
-                                    ->standardNik();
-                            })->orWhere(function ($inner) {
-                                $inner->where('has_moved', 'y')
-                                    ->where('moved_to', 'pkp');
-                            });
-                            break;
-                        case 'pkpnppn':
-                            $q->where(function ($inner) {
-                                $inner->where('tipe_ppn', 'NON-PPN')
-                                    ->where('qty_pcs', '>', 0)
-                                    ->where('has_moved', 'n')
-                                    ->whereRaw('customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)')
-                                    ->standardNik();
-                            })->orWhere(function ($inner) {
-                                $inner->where('has_moved', 'y')
-                                    ->where('moved_to', 'pkpnppn');
-                            });
-                            break;
-                        case 'npkp':
-                            $q->where(function ($inner) {
-                                $inner->where('tipe_ppn', 'PPN')
-                                    ->where(function ($harga) {
-                                        $harga->where('hargatotal_sblm_ppn', '>', 0)
-                                            ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
-                                    })
-                                    ->where('has_moved', 'n')
-                                    ->whereRaw('customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)')
-                                    ->standardNik();
-                            })->orWhere(function ($inner) {
-                                $inner->where('has_moved', 'y')
-                                    ->where('moved_to', 'npkp');
-                            });
-                            break;
-                        case 'npkpnppn':
-                            $q->where(function ($inner) {
-                                $inner->where('tipe_ppn', 'NON-PPN')
-                                    ->where('qty_pcs', '>', 0)
-                                    ->where('has_moved', 'n')
-                                    ->whereRaw('customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)')
-                                    ->standardNik();
-                            })->orWhere(function ($inner) {
-                                $inner->where('has_moved', 'y')
-                                    ->where('moved_to', 'npkpnppn');
-                            });
-                            break;
-                        case 'retur':
-                            $q->where(function ($inner) {
-                                $inner->where('qty_pcs', '<', 0)
-                                    ->where('hargatotal_sblm_ppn', '>=', -1000000)
-                                    ->where('has_moved', 'n')
-                                    ->standardNik();
-                            })->orWhere('moved_to', 'retur');
-                            break;
-                        case 'nonstandar':
-                            $this->applyNonStandarScope($q);
-                            break;
-                        case 'pembatalan':
-                            $q->where('has_moved', 'y')->where('moved_to', 'pembatalan');
-                            break;
-                        case 'koreksi':
-                            $q->where('has_moved', 'y')->where('moved_to', 'koreksi');
-                            break;
-                        case 'pending':
-                            $q->where('has_moved', 'y')->where('moved_to', 'pending');
-                            break;
-                    }
-                });
-            }
-        });
-    }
-
-    /**
      * Mark exported records as downloaded.
+     *
+     * Call this from the controller after the download succeeds.
      */
-    protected function markAsDownloaded(): void
+    public function markAsDownloaded(): void
     {
         if (! empty($this->chstatus) && $this->chstatus !== 'checked-ready2download') {
             return;
         }
 
         $query = PajakKeluaranDetail::query();
-        $this->applyFilters($query);
-
+        $this->applyFilters($query, useDownloadCheck: true);
         $this->applyTipeFilter($query);
 
+        // Guard: only update records not yet marked as downloaded
+        $query->where('is_downloaded', 0);
         $query->update(['is_downloaded' => 1]);
-    }
-
-    protected function applyFilters($query): void
-    {
-        $pt = is_array($this->pt) ? $this->pt : [$this->pt];
-        $brand = is_array($this->brand) ? $this->brand : [$this->brand];
-        $depo = is_array($this->depo) ? $this->depo : [$this->depo];
-
-        if (! empty($pt) && ! in_array('all', $pt)) {
-            $query->whereIn('company', $pt);
-        }
-        if (! empty($brand) && ! in_array('all', $brand)) {
-            $query->whereIn('brand', $brand);
-        }
-        $userInfo = getLoggedInUserInfo();
-        $userDepos = $userInfo ? $userInfo->depo : ['all'];
-        if (! is_array($userDepos)) {
-            $userDepos = [$userDepos];
-        }
-
-        if ($userInfo && ! in_array('all', $userDepos)) {
-            $allowedDepos = MasterDepo::whereIn('code', $userDepos)
-                ->get()
-                ->pluck('name')
-                ->toArray();
-
-            if (! empty($depo) && ! in_array('all', $depo)) {
-                $requestedDepos = MasterDepo::whereIn('code', $depo)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
-                $validDepos = array_intersect($requestedDepos, $allowedDepos);
-                if (! empty($validDepos)) {
-                    $query->whereIn('depo', $validDepos);
-                } else {
-                    $query->whereRaw('1 = 0');
-                }
-            } else {
-                if (! empty($allowedDepos)) {
-                    $query->whereIn('depo', $allowedDepos);
-                } else {
-                    $query->whereRaw('1 = 0');
-                }
-            }
-        } else {
-            if (! empty($depo) && ! in_array('all', $depo)) {
-                $depoNames = MasterDepo::whereIn('code', $depo)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
-                if (! empty($depoNames)) {
-                    $query->whereIn('depo', $depoNames);
-                } else {
-                    $query->whereRaw('1 = 0');
-                }
-            }
-        }
-        if (! empty($this->periode)) {
-            $periodeParts = explode(' - ', $this->periode);
-            if (count($periodeParts) === 2) {
-                $periodeAwal = \Carbon\Carbon::createFromFormat('d/m/Y', $periodeParts[0])->format('Y-m-d');
-                $periodeAkhir = \Carbon\Carbon::createFromFormat('d/m/Y', $periodeParts[1])->format('Y-m-d');
-            } else {
-                $periodeAwal = \Carbon\Carbon::createFromFormat('d/m/Y', $this->periode)->format('Y-m-d');
-                $periodeAkhir = \Carbon\Carbon::createFromFormat('d/m/Y', $this->periode)->format('Y-m-d');
-            }
-            $query->whereBetween('tgl_faktur_pajak', [$periodeAwal, $periodeAkhir]);
-        }
-        if (empty($this->chstatus) || $this->chstatus === 'checked-ready2download') {
-            $query->where('is_checked', 1);
-            $query->where('is_downloaded', 0);
-        } elseif ($this->chstatus !== 'all') {
-            switch ($this->chstatus) {
-                case 'checked-downloaded':
-                    $query->where('is_checked', 1);
-                    $query->where('is_downloaded', 1);
-                    break;
-                case 'unchecked':
-                    $query->where('is_checked', 0);
-                    break;
-            }
-        }
-    }
-
-    /**
-     * Apply nonstandar scope (same logic as RegulerController).
-     */
-    protected function applyNonStandarScope($query): void
-    {
-        $pkpIds = $this->getActivePkpIds();
-
-        $query->where(function ($q) use ($pkpIds) {
-            // Condition 1: manually moved to nonstandar
-            $q->orWhere(function ($manual) {
-                $manual->where('has_moved', 'y')
-                    ->where('moved_to', 'nonstandar');
-            });
-
-            // Condition 2: NIK format issues
-            $kabupatenIds = $this->getKabupatenKotaIds();
-            $kabsArrayStr = empty($kabupatenIds) ? "''" : implode(',', array_map(function ($id) {
-                return "'".str_replace("'", "''", $id)."'";
-            }, $kabupatenIds));
-
-            $q->orWhere(function ($nikIssue) use ($kabsArrayStr) {
-                $nikIssue->where('has_moved', 'n')
-                    ->where(function ($nikCondition) use ($kabsArrayStr) {
-                        $nikCondition->where(function ($invalidId) {
-                            $invalidId->whereRaw('LEN(nik_digits) NOT IN (15, 16)')
-                                ->orWhereRaw("REPLACE(nik_digits, '0', '') = ''");
-                        })
-                            ->orWhere(function ($nikOnly) use ($kabsArrayStr) {
-                                $nikOnly->whereRaw('LEN(nik_digits) = 16')
-                                    ->where(function ($nikRule) use ($kabsArrayStr) {
-                                        $nikRule->whereRaw("RIGHT(nik_digits, 3) = '000'")
-                                            ->orWhereRaw("LEFT(nik_digits, 4) NOT IN ($kabsArrayStr)");
-                                    });
-                            });
-                    });
-            });
-
-            // Condition 3: fallback — doesn't match any standard category
-            $q->orWhereRaw($this->nonStandarFallbackConditionSql($pkpIds));
-        });
-    }
-
-    /**
-     * Get active PKP customer IDs.
-     */
-    protected function getActivePkpIds(): array
-    {
-        return MasterPkp::where('is_active', true)
-            ->whereNotNull('IDPelanggan')
-            ->pluck('IDPelanggan')
-            ->filter(fn ($id) => $id !== null && $id !== '')
-            ->toArray();
-    }
-
-    /**
-     * Get MasterKabupatenKota IDs.
-     */
-    protected function getKabupatenKotaIds(): array
-    {
-        return MasterKabupatenKota::pluck('id')->toArray();
-    }
-
-    /**
-     * Build nonstandar fallback condition SQL.
-     */
-    protected function nonStandarFallbackConditionSql(array $pkpIds = []): string
-    {
-        if (empty($pkpIds)) {
-            return "(has_moved = 'n' AND NOT ("
-                ."(tipe_ppn = 'PPN' AND qty_pcs > 0 AND 1=0)"
-                ." OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND 1=0)"
-                ." OR (tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000))"
-                ." OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0)"
-                .' OR (qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000)'
-                .'))';
-        }
-
-        $idList = $this->escapeSqlIdList($pkpIds);
-
-        return "(has_moved = 'n' AND NOT ("
-            ."(tipe_ppn = 'PPN' AND qty_pcs > 0 AND customer_id IN ($idList))"
-            ." OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND customer_id IN ($idList))"
-            ." OR (tipe_ppn = 'PPN' AND (hargatotal_sblm_ppn > 0 OR hargatotal_sblm_ppn <= -1000000) AND customer_id NOT IN ($idList))"
-            ." OR (tipe_ppn = 'NON-PPN' AND qty_pcs > 0 AND customer_id NOT IN ($idList))"
-            .' OR (qty_pcs < 0 AND hargatotal_sblm_ppn >= -1000000)'
-            .'))';
-    }
-
-    /**
-     * Escape an array of IDs for safe SQL IN clause usage.
-     */
-    protected function escapeSqlIdList(array $ids): string
-    {
-        return implode(',', array_map(function ($id) {
-            return "'".str_replace("'", "''", (string) $id)."'";
-        }, $ids));
     }
 }
