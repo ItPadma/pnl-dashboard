@@ -2,9 +2,9 @@
 
 namespace App\Exports;
 
-use App\Models\MasterDepo;
 use App\Models\MasterPkp;
 use App\Models\PajakKeluaranDetail;
+use App\Services\MasterDataCacheService;
 use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -13,7 +13,10 @@ use Maatwebsite\Excel\Events\AfterSheet;
 
 class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadings
 {
-    protected $tipe;
+    /**
+     * Array of tipe values to filter.
+     */
+    protected array $tipe;
 
     protected $pt;
 
@@ -25,6 +28,21 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
 
     protected $chstatus;
 
+    /**
+     * Cached PKP IDs for the export.
+     */
+    protected ?array $cachedPkpIds = null;
+
+    /**
+     * Cache service for master data.
+     */
+    protected MasterDataCacheService $cacheService;
+
+    /**
+     * All available tipe values.
+     */
+    protected const ALL_TIPES = ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar', 'pembatalan', 'koreksi', 'pending'];
+
     public function __construct(
         $tipe,
         $pt = [],
@@ -33,12 +51,27 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
         $periode = null,
         $chstatus = null
     ) {
-        $this->tipe = $tipe;
+        // Normalize tipe to array for consistent handling
+        if (is_array($tipe)) {
+            $this->tipe = $tipe;
+        } else {
+            $this->tipe = [$tipe];
+        }
+
+        // Remove 'all' and dedupe
+        $this->tipe = array_unique(array_filter($this->tipe, fn ($t) => $t !== 'all'));
+
+        // If empty after filtering, treat as all
+        if (empty($this->tipe)) {
+            $this->tipe = self::ALL_TIPES;
+        }
+
         $this->pt = $pt;
         $this->brand = $brand;
         $this->depo = $depo;
         $this->periode = $periode;
         $this->chstatus = $chstatus;
+        $this->cacheService = app(MasterDataCacheService::class);
     }
 
     public function headings(): array
@@ -65,6 +98,23 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
     }
 
     /**
+     * Get active PKP customer IDs, cached for the export.
+     */
+    protected function getActivePkpIds(): array
+    {
+        if ($this->cachedPkpIds === null) {
+            // Include whereNotNull to prevent NULL values in IN clause
+            $this->cachedPkpIds = MasterPkp::where('is_active', true)
+                ->whereNotNull('IDPelanggan')
+                ->pluck('IDPelanggan')
+                ->filter(fn ($id) => $id !== null && $id !== '')
+                ->toArray();
+        }
+
+        return $this->cachedPkpIds;
+    }
+
+    /**
      * @return \Illuminate\Support\Collection
      */
     public function collection()
@@ -88,6 +138,7 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
             });
 
         if (empty($this->chstatus) || $this->chstatus === 'checked-ready2download' || $this->chstatus === 'checked-downloaded') {
+            // Single UPDATE statement is efficient for marking records as downloaded
             $updateQuery = PajakKeluaranDetail::query();
             $this->applyFilters($updateQuery);
             $this->applyTipeFilter($updateQuery);
@@ -110,6 +161,8 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
         if (! empty($brand) && ! in_array('all', $brand)) {
             $query->whereIn('brand', $brand);
         }
+
+        // OPTIMIZED: Use cached depo names
         $userInfo = getLoggedInUserInfo();
         $userDepos = $userInfo ? $userInfo->depo : ['all'];
         if (! is_array($userDepos)) {
@@ -117,16 +170,11 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
         }
 
         if ($userInfo && ! in_array('all', $userDepos)) {
-            $allowedDepos = MasterDepo::whereIn('code', $userDepos)
-                ->get()
-                ->pluck('name')
-                ->toArray();
+            // Use cache service instead of direct query
+            $allowedDepos = $this->cacheService->getDepoNamesByCodes($userDepos);
 
             if (! empty($depo) && ! in_array('all', $depo)) {
-                $requestedDepos = MasterDepo::whereIn('code', $depo)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
+                $requestedDepos = $this->cacheService->getDepoNamesByCodes($depo);
                 $validDepos = array_intersect($requestedDepos, $allowedDepos);
                 if (! empty($validDepos)) {
                     $query->whereIn('depo', $validDepos);
@@ -142,10 +190,7 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
             }
         } else {
             if (! empty($depo) && ! in_array('all', $depo)) {
-                $depoNames = MasterDepo::whereIn('code', $depo)
-                    ->get()
-                    ->pluck('name')
-                    ->toArray();
+                $depoNames = $this->cacheService->getDepoNamesByCodes($depo);
                 if (! empty($depoNames)) {
                     $query->whereIn('depo', $depoNames);
                 } else {
@@ -153,6 +198,7 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
                 }
             }
         }
+
         if (! empty($this->periode)) {
             $periodeParts = explode(' - ', $this->periode);
             if (count($periodeParts) === 2) {
@@ -181,96 +227,107 @@ class PajakKeluaranDetailExport implements FromCollection, WithEvents, WithHeadi
 
     protected function applyTipeFilter($query): void
     {
-        switch ($this->tipe) {
-            case 'pkp':
-                $query->where(function ($q) {
-                    $q->where(function ($inner) {
-                        $inner->where('tipe_ppn', 'PPN')
-                            ->where('qty_pcs', '>', 0)
-                            ->where('has_moved', 'n')
-                            ->whereRaw("customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)")
-                            ->standardNik();
-                    })->orWhere(function ($inner) {
-                        $inner->where('has_moved', 'y')
-                            ->where('moved_to', 'pkp');
-                    });
+        // OPTIMIZED: Cache PKP IDs once for the entire export
+        $pkpIds = $this->getActivePkpIds();
+        $pkpEmpty = empty($pkpIds);
+
+        // Use OR logic to combine multiple tipe filters
+        $query->where(function ($mainQuery) use ($pkpIds, $pkpEmpty) {
+            foreach ($this->tipe as $tipe) {
+                $mainQuery->orWhere(function ($q) use ($tipe, $pkpIds, $pkpEmpty) {
+                    switch ($tipe) {
+                        case 'pkp':
+                            $q->where(function ($inner) use ($pkpIds, $pkpEmpty) {
+                                $inner->where('tipe_ppn', 'PPN')
+                                    ->where('qty_pcs', '>', 0)
+                                    ->where('has_moved', 'n')
+                                    ->standardNik();
+                                if (! $pkpEmpty) {
+                                    $inner->whereIn('customer_id', $pkpIds);
+                                } else {
+                                    $inner->whereRaw('1 = 0');
+                                }
+                            })->orWhere(function ($inner) {
+                                $inner->where('has_moved', 'y')
+                                    ->where('moved_to', 'pkp');
+                            });
+                            break;
+                        case 'pkpnppn':
+                            $q->where(function ($inner) use ($pkpIds, $pkpEmpty) {
+                                $inner->where('tipe_ppn', 'NON-PPN')
+                                    ->where('qty_pcs', '>', 0)
+                                    ->where('has_moved', 'n')
+                                    ->standardNik();
+                                if (! $pkpEmpty) {
+                                    $inner->whereIn('customer_id', $pkpIds);
+                                } else {
+                                    $inner->whereRaw('1 = 0');
+                                }
+                            })->orWhere(function ($inner) {
+                                $inner->where('has_moved', 'y')
+                                    ->where('moved_to', 'pkpnppn');
+                            });
+                            break;
+                        case 'npkp':
+                            $q->where(function ($inner) use ($pkpIds) {
+                                $inner->where('tipe_ppn', 'PPN')
+                                    ->where(function ($harga) {
+                                        $harga->where('hargatotal_sblm_ppn', '>', 0)
+                                            ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
+                                    })
+                                    ->where('has_moved', 'n')
+                                    ->standardNik();
+                                if (! empty($pkpIds)) {
+                                    $inner->whereNotIn('customer_id', $pkpIds);
+                                }
+                            })->orWhere(function ($inner) {
+                                $inner->where('has_moved', 'y')
+                                    ->where('moved_to', 'npkp');
+                            });
+                            break;
+                        case 'npkpnppn':
+                            $q->where(function ($inner) use ($pkpIds) {
+                                $inner->where('tipe_ppn', 'NON-PPN')
+                                    ->where('qty_pcs', '>', 0)
+                                    ->where('has_moved', 'n')
+                                    ->standardNik();
+                                if (! empty($pkpIds)) {
+                                    $inner->whereNotIn('customer_id', $pkpIds);
+                                }
+                            })->orWhere(function ($inner) {
+                                $inner->where('has_moved', 'y')
+                                    ->where('moved_to', 'npkpnppn');
+                            });
+                            break;
+                        case 'retur':
+                            $q->where(function ($inner) {
+                                $inner->where('qty_pcs', '<', 0)
+                                    ->where('hargatotal_sblm_ppn', '>=', -1000000)
+                                    ->where('has_moved', 'n')
+                                    ->standardNik();
+                            })->orWhere('moved_to', 'retur');
+                            break;
+                        case 'nonstandar':
+                            $q->where(function ($inner) {
+                                $inner->where('jenis', 'non-standar')
+                                    ->where('has_moved', 'n');
+                            })->orWhere(function ($inner) {
+                                $inner->where('has_moved', 'y')
+                                    ->where('moved_to', 'nonstandar');
+                            });
+                            break;
+                        case 'pembatalan':
+                            $q->where('has_moved', 'y')->where('moved_to', 'pembatalan');
+                            break;
+                        case 'koreksi':
+                            $q->where('has_moved', 'y')->where('moved_to', 'koreksi');
+                            break;
+                        case 'pending':
+                            $q->where('has_moved', 'y')->where('moved_to', 'pending');
+                            break;
+                    }
                 });
-                break;
-            case 'pkpnppn':
-                $query->where(function ($q) {
-                    $q->where(function ($inner) {
-                        $inner->where('tipe_ppn', 'NON-PPN')
-                            ->where('qty_pcs', '>', 0)
-                            ->where('has_moved', 'n')
-                            ->whereRaw("customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)")
-                            ->standardNik();
-                    })->orWhere(function ($inner) {
-                        $inner->where('has_moved', 'y')
-                            ->where('moved_to', 'pkpnppn');
-                    });
-                });
-                break;
-            case 'npkp':
-                $query->where(function ($q) {
-                    $q->where(function ($inner) {
-                        $inner->where('tipe_ppn', 'PPN')
-                            ->where(function ($harga) {
-                                $harga->where('hargatotal_sblm_ppn', '>', 0)
-                                    ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
-                            })
-                            ->where('has_moved', 'n')
-                            ->whereRaw("customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)")
-                            ->standardNik();
-                    })->orWhere(function ($inner) {
-                        $inner->where('has_moved', 'y')
-                            ->where('moved_to', 'npkp');
-                    });
-                });
-                break;
-            case 'npkpnppn':
-                $query->where(function ($q) {
-                    $q->where(function ($inner) {
-                        $inner->where('tipe_ppn', 'NON-PPN')
-                            ->where('qty_pcs', '>', 0)
-                            ->where('has_moved', 'n')
-                            ->whereRaw("customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)")
-                            ->standardNik();
-                    })->orWhere(function ($inner) {
-                        $inner->where('has_moved', 'y')
-                            ->where('moved_to', 'npkpnppn');
-                    });
-                });
-                break;
-            case 'retur':
-                $query->where(function ($q) {
-                    $q->where(function ($inner) {
-                        $inner->where('qty_pcs', '<', 0)
-                            ->where('hargatotal_sblm_ppn', '>=', -1000000)
-                            ->where('has_moved', 'n')
-                            ->standardNik();
-                    })->orWhere('moved_to', 'retur');
-                });
-                break;
-            case 'nonstandar':
-                $query->where(function ($q) {
-                    $q->where(function ($inner) {
-                        $inner->where('jenis', 'non-standar')
-                            ->where('has_moved', 'n');
-                    })->orWhere(function ($inner) {
-                        $inner->where('has_moved', 'y')
-                            ->where('moved_to', 'nonstandar');
-                    });
-                });
-                break;
-            case 'pembatalan':
-                $query->where('has_moved', 'y')->where('moved_to', 'pembatalan');
-                break;
-            case 'koreksi':
-                $query->where('has_moved', 'y')->where('moved_to', 'koreksi');
-                break;
-            case 'pending':
-                $query->where('has_moved', 'y')->where('moved_to', 'pending');
-                break;
-        }
+            }
+        });
     }
 }

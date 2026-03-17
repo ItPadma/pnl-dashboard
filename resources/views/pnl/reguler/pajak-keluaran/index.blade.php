@@ -172,19 +172,57 @@
                 </div>
                 <div class="col-xm-12 col-sm-12 col-md-9 col-lg-9 mb-3">
                     <div class="input-group">
-                        <label class="input-group-text" for="inputGroupFilter">Terapkan filter ke:</label>
-                        <select class="form-select" id="inputGroupFilter" aria-label="Terapkan filter ke:">
-                            <option value='all'>--ALL--</option>
-                            <option value="pkp">PKP</option>
-                            <option value="pkpnppn">PKP (Non-PPN)</option>
-                            <option value="npkp">Non-PKP</option>
-                            <option value="npkpnppn">Non-PKP (Non-PPN)</option>
-                            <option value="retur">Retur</option>
-                            <option value="nonstandar">Non Standar</option>
-                            <option value="pembatalan">Pembatalan</option>
-                            <option value="koreksi">Koreksi</option>
-                            <option value="pending">Pending</option>
-                        </select>
+                        <label class="input-group-text">Terapkan filter ke:</label>
+                        <div class="dropdown flex-grow-1">
+                            <button class="form-select text-start d-flex justify-content-between align-items-center"
+                                    type="button" id="inputGroupFilterDropdown"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="inputGroupFilterLabel">--ALL--</span>
+                                <i class="fas fa-chevron-down ms-2"></i>
+                            </button>
+                            <div class="dropdown-menu p-2" style="min-width: 280px; max-height: 350px; overflow-y: auto;">
+                                <div class="form-check mb-2 border-bottom pb-2">
+                                    <input class="form-check-input" type="checkbox" value="all" id="filter-all" checked>
+                                    <label class="form-check-label fw-bold" for="filter-all">--ALL--</label>
+                                </div>
+                                <div class="form-check py-1">
+                                    <input class="form-check-input filter-checkbox" type="checkbox" value="pkp" id="filter-pkp">
+                                    <label class="form-check-label" for="filter-pkp">PKP</label>
+                                </div>
+                                <div class="form-check py-1">
+                                    <input class="form-check-input filter-checkbox" type="checkbox" value="pkpnppn" id="filter-pkpnppn">
+                                    <label class="form-check-label" for="filter-pkpnppn">PKP (Non-PPN)</label>
+                                </div>
+                                <div class="form-check py-1">
+                                    <input class="form-check-input filter-checkbox" type="checkbox" value="npkp" id="filter-npkp">
+                                    <label class="form-check-label" for="filter-npkp">Non-PKP</label>
+                                </div>
+                                <div class="form-check py-1">
+                                    <input class="form-check-input filter-checkbox" type="checkbox" value="npkpnppn" id="filter-npkpnppn">
+                                    <label class="form-check-label" for="filter-npkpnppn">Non-PKP (Non-PPN)</label>
+                                </div>
+                                <div class="form-check py-1">
+                                    <input class="form-check-input filter-checkbox" type="checkbox" value="retur" id="filter-retur">
+                                    <label class="form-check-label" for="filter-retur">Retur</label>
+                                </div>
+                                <div class="form-check py-1">
+                                    <input class="form-check-input filter-checkbox" type="checkbox" value="nonstandar" id="filter-nonstandar">
+                                    <label class="form-check-label" for="filter-nonstandar">Non Standar</label>
+                                </div>
+                                <div class="form-check py-1">
+                                    <input class="form-check-input filter-checkbox" type="checkbox" value="pembatalan" id="filter-pembatalan">
+                                    <label class="form-check-label" for="filter-pembatalan">Pembatalan</label>
+                                </div>
+                                <div class="form-check py-1">
+                                    <input class="form-check-input filter-checkbox" type="checkbox" value="koreksi" id="filter-koreksi">
+                                    <label class="form-check-label" for="filter-koreksi">Koreksi</label>
+                                </div>
+                                <div class="form-check py-1">
+                                    <input class="form-check-input filter-checkbox" type="checkbox" value="pending" id="filter-pending">
+                                    <label class="form-check-label" for="filter-pending">Pending</label>
+                                </div>
+                            </div>
+                        </div>
                         <button class="btn btn-outline-primary" id="btn-apply-filter"><i class="fas fa-check"></i>
                             Filter</button>
                         @if (Auth::user()->canAccessMenu('reguler-pajak-keluaran', \App\Models\AccessGroup::LEVEL_READ_WRITE))

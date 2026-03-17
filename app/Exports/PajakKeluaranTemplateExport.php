@@ -10,7 +10,10 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 class PajakKeluaranTemplateExport implements WithMultipleSheets
 {
-    protected $tipe;
+    /**
+     * Array of tipe values to filter.
+     */
+    protected array $tipe;
 
     protected $pt;
 
@@ -26,15 +29,34 @@ class PajakKeluaranTemplateExport implements WithMultipleSheets
 
     protected $idTkuPenjual = '0027139484612000000000';
 
+    /**
+     * All available tipe values.
+     */
+    protected const ALL_TIPES = ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar', 'pembatalan', 'koreksi', 'pending'];
+
     public function __construct(
-        string $tipe,
+        $tipe,
         $pt = [],
         $brand = [],
         $depo = [],
         $periode = null,
         $chstatus = null
     ) {
-        $this->tipe = $tipe;
+        // Normalize tipe to array for consistent handling
+        if (is_array($tipe)) {
+            $this->tipe = $tipe;
+        } else {
+            $this->tipe = [$tipe];
+        }
+
+        // Remove 'all' and dedupe
+        $this->tipe = array_unique(array_filter($this->tipe, fn ($t) => $t !== 'all'));
+
+        // If empty after filtering, treat as all
+        if (empty($this->tipe)) {
+            $this->tipe = self::ALL_TIPES;
+        }
+
         $this->pt = $pt;
         $this->brand = $brand;
         $this->depo = $depo;
@@ -132,100 +154,96 @@ class PajakKeluaranTemplateExport implements WithMultipleSheets
 
     /**
      * Apply type-based filter to the query (same logic as RegulerController).
+     * Now supports multiple tipe values using OR logic.
      */
     protected function applyTipeFilter($query): void
     {
-        switch ($this->tipe) {
-            case 'pkp':
-                $query->where(function ($q) {
-                    $q->where(function ($inner) {
-                        $inner->where('tipe_ppn', 'PPN')
-                            ->where('qty_pcs', '>', 0)
-                            ->where('has_moved', 'n')
-                            ->whereRaw("customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)")
-                            ->standardNik();
-                    })->orWhere(function ($inner) {
-                        $inner->where('has_moved', 'y')
-                            ->where('moved_to', 'pkp');
-                    });
+        // Use OR logic to combine multiple tipe filters
+        $query->where(function ($mainQuery) {
+            foreach ($this->tipe as $tipe) {
+                $mainQuery->orWhere(function ($q) use ($tipe) {
+                    switch ($tipe) {
+                        case 'pkp':
+                            $q->where(function ($inner) {
+                                $inner->where('tipe_ppn', 'PPN')
+                                    ->where('qty_pcs', '>', 0)
+                                    ->where('has_moved', 'n')
+                                    ->whereRaw('customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)')
+                                    ->standardNik();
+                            })->orWhere(function ($inner) {
+                                $inner->where('has_moved', 'y')
+                                    ->where('moved_to', 'pkp');
+                            });
+                            break;
+                        case 'pkpnppn':
+                            $q->where(function ($inner) {
+                                $inner->where('tipe_ppn', 'NON-PPN')
+                                    ->where('qty_pcs', '>', 0)
+                                    ->where('has_moved', 'n')
+                                    ->whereRaw('customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)')
+                                    ->standardNik();
+                            })->orWhere(function ($inner) {
+                                $inner->where('has_moved', 'y')
+                                    ->where('moved_to', 'pkpnppn');
+                            });
+                            break;
+                        case 'npkp':
+                            $q->where(function ($inner) {
+                                $inner->where('tipe_ppn', 'PPN')
+                                    ->where(function ($harga) {
+                                        $harga->where('hargatotal_sblm_ppn', '>', 0)
+                                            ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
+                                    })
+                                    ->where('has_moved', 'n')
+                                    ->whereRaw('customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)')
+                                    ->standardNik();
+                            })->orWhere(function ($inner) {
+                                $inner->where('has_moved', 'y')
+                                    ->where('moved_to', 'npkp');
+                            });
+                            break;
+                        case 'npkpnppn':
+                            $q->where(function ($inner) {
+                                $inner->where('tipe_ppn', 'NON-PPN')
+                                    ->where('qty_pcs', '>', 0)
+                                    ->where('has_moved', 'n')
+                                    ->whereRaw('customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)')
+                                    ->standardNik();
+                            })->orWhere(function ($inner) {
+                                $inner->where('has_moved', 'y')
+                                    ->where('moved_to', 'npkpnppn');
+                            });
+                            break;
+                        case 'retur':
+                            $q->where(function ($inner) {
+                                $inner->where('qty_pcs', '<', 0)
+                                    ->where('hargatotal_sblm_ppn', '>=', -1000000)
+                                    ->where('has_moved', 'n')
+                                    ->standardNik();
+                            })->orWhere('moved_to', 'retur');
+                            break;
+                        case 'nonstandar':
+                            $q->where(function ($inner) {
+                                $inner->where('jenis', 'non-standar')
+                                    ->where('has_moved', 'n');
+                            })->orWhere(function ($inner) {
+                                $inner->where('has_moved', 'y')
+                                    ->where('moved_to', 'nonstandar');
+                            });
+                            break;
+                        case 'pembatalan':
+                            $q->where('has_moved', 'y')->where('moved_to', 'pembatalan');
+                            break;
+                        case 'koreksi':
+                            $q->where('has_moved', 'y')->where('moved_to', 'koreksi');
+                            break;
+                        case 'pending':
+                            $q->where('has_moved', 'y')->where('moved_to', 'pending');
+                            break;
+                    }
                 });
-                break;
-            case 'pkpnppn':
-                $query->where(function ($q) {
-                    $q->where(function ($inner) {
-                        $inner->where('tipe_ppn', 'NON-PPN')
-                            ->where('qty_pcs', '>', 0)
-                            ->where('has_moved', 'n')
-                            ->whereRaw("customer_id IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)")
-                            ->standardNik();
-                    })->orWhere(function ($inner) {
-                        $inner->where('has_moved', 'y')
-                            ->where('moved_to', 'pkpnppn');
-                    });
-                });
-                break;
-            case 'npkp':
-                $query->where(function ($q) {
-                    $q->where(function ($inner) {
-                        $inner->where('tipe_ppn', 'PPN')
-                            ->where(function ($harga) {
-                                $harga->where('hargatotal_sblm_ppn', '>', 0)
-                                    ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
-                            })
-                            ->where('has_moved', 'n')
-                            ->whereRaw("customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)")
-                            ->standardNik();
-                    })->orWhere(function ($inner) {
-                        $inner->where('has_moved', 'y')
-                            ->where('moved_to', 'npkp');
-                    });
-                });
-                break;
-            case 'npkpnppn':
-                $query->where(function ($q) {
-                    $q->where(function ($inner) {
-                        $inner->where('tipe_ppn', 'NON-PPN')
-                            ->where('qty_pcs', '>', 0)
-                            ->where('has_moved', 'n')
-                            ->whereRaw("customer_id NOT IN (SELECT IDPelanggan FROM master_pkp WHERE is_active = 1)")
-                            ->standardNik();
-                    })->orWhere(function ($inner) {
-                        $inner->where('has_moved', 'y')
-                            ->where('moved_to', 'npkpnppn');
-                    });
-                });
-                break;
-            case 'retur':
-                $query->where(function ($q) {
-                    $q->where(function ($inner) {
-                        $inner->where('qty_pcs', '<', 0)
-                            ->where('hargatotal_sblm_ppn', '>=', -1000000)
-                            ->where('has_moved', 'n')
-                            ->standardNik();
-                    })->orWhere('moved_to', 'retur');
-                });
-                break;
-            case 'nonstandar':
-                $query->where(function ($q) {
-                    $q->where(function ($inner) {
-                        $inner->where('jenis', 'non-standar')
-                            ->where('has_moved', 'n');
-                    })->orWhere(function ($inner) {
-                        $inner->where('has_moved', 'y')
-                            ->where('moved_to', 'nonstandar');
-                    });
-                });
-                break;
-            case 'pembatalan':
-                $query->where('has_moved', 'y')->where('moved_to', 'pembatalan');
-                break;
-            case 'koreksi':
-                $query->where('has_moved', 'y')->where('moved_to', 'koreksi');
-                break;
-            case 'pending':
-                $query->where('has_moved', 'y')->where('moved_to', 'pending');
-                break;
-        }
+            }
+        });
     }
 
     /**

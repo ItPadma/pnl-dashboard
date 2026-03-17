@@ -35,11 +35,6 @@ class RegulerController extends Controller
     private ?array $cachedKabupatenKotaIds = null;
 
     /**
-     * Cached allowed depo names (per-request).
-     */
-    private ?array $cachedAllowedDepoNames = null;
-
-    /**
      * Master data cache service.
      */
     private MasterDataCacheService $cacheService;
@@ -58,8 +53,11 @@ class RegulerController extends Controller
     private function getActivePkpIds(): array
     {
         if ($this->cachedPkpIds === null) {
+            // Include whereNotNull to prevent NULL values in IN clause
             $this->cachedPkpIds = MasterPkp::where('is_active', true)
+                ->whereNotNull('IDPelanggan')
                 ->pluck('IDPelanggan')
+                ->filter(fn ($id) => $id !== null && $id !== '')
                 ->toArray();
         }
 
@@ -124,19 +122,19 @@ class RegulerController extends Controller
             $columnSortOrder =
                 strtolower($columnSortOrder) === 'asc' ? 'asc' : 'desc';
             $searchValue = $request->get('search')['value'] ?? '';
-            $tipe = '';
-            $chstatus = '';
-            $retrieve_count = 0;
+
             // Query base
             $dbquery = PajakKeluaranDetail::query();
             $filters = $this->applyFilters($dbquery, $request);
             Log::info('periode: '.$request->periode);
 
-            // Retrieve from live if no records found
-            while ($retrieve_count == 0 && $dbquery->count() == 0) {
-                Log::info(
-                    'No records found in database, please sync from live',
-                );
+            // OPTIMIZED: Single COUNT query instead of multiple calls
+            $totalRecords = $dbquery->count();
+            $totalRecordswithFilter = $totalRecords;
+
+            // Notify if no records found (without loop)
+            if ($totalRecords == 0) {
+                Log::info('No records found in database, please sync from live');
                 broadcast(
                     new UserEvent(
                         'info',
@@ -145,12 +143,8 @@ class RegulerController extends Controller
                         Auth::user()->id,
                     ),
                 );
-                // PajakKeluaranDetail::getFromLive($request->pt, $request->brand, $request->depo, $filters['periode_awal'], $filters['periode_akhir'], $filters['tipe'], $filters['chstatus']);
-                $retrieve_count = 1;
             }
-            // Total records
-            $totalRecords = $dbquery->count();
-            $totalRecordswithFilter = $totalRecords;
+
             $records = $dbquery
                 ->orderBy($columnName, $columnSortOrder)
                 ->skip($start)
@@ -233,6 +227,9 @@ class RegulerController extends Controller
             Log::info('periode (DB only): '.$request->periode);
 
             if ($grouped) {
+                // OPTIMIZED: Cache PKP IDs once before loop
+                $pkpIds = $this->getActivePkpIds();
+
                 // To paginate effectively, we need to first group by the invoice numbers
                 // Since there can be multiple items per invoice, total records = distinct invoices
                 $totalRecords = (clone $dbquery)->distinct('no_invoice')->count('no_invoice');
@@ -291,6 +288,7 @@ class RegulerController extends Controller
                             'is_downloaded' => $record->is_downloaded,
                             'has_moved' => $record->has_moved,
                             'moved_to' => $record->moved_to,
+                            // OPTIMIZED: Use cached PKP IDs instead of calling getActivePkpIds() in loop
                             'nonstandar_keterangan' => $this->buildNonStandarReason(
                                 $record->nik ?? null,
                                 $record->has_moved ?? null,
@@ -299,7 +297,7 @@ class RegulerController extends Controller
                                 $record->qty_pcs ?? null,
                                 $record->hargatotal_sblm_ppn ?? null,
                                 $record->customer_id ?? null,
-                                $this->getActivePkpIds(),
+                                $pkpIds,
                             ),
                             'total_hargatotal' => 0,
                             'total_disc' => 0,
@@ -376,8 +374,9 @@ class RegulerController extends Controller
                 // Original ungrouped logic
                 $totalRecords = $dbquery->count();
                 $totalRecordswithFilter = $totalRecords;
+                // OPTIMIZED: Add sort direction to orderBy
                 $records = $dbquery
-                    ->orderBy($columnName)
+                    ->orderBy($columnName, $columnSortOrder)
                     ->skip($start)
                     ->take($rowperpage)
                     ->get();
@@ -997,16 +996,24 @@ class RegulerController extends Controller
             }
 
             // Additional conditions based on the type
-            $pkp = $this->getActivePkpIds();
+            // OPTIMIZED: Cache PKP IDs once per request
+            $pkpIds = $this->getActivePkpIds();
+            $pkpEmpty = empty($pkpIds);
+
             switch ($tipe) {
                 case 'pkp':
-                    $query->where(function ($q) use ($pkp) {
-                        $q->where(function ($inner) use ($pkp) {
+                    $query->where(function ($q) use ($pkpIds, $pkpEmpty) {
+                        $q->where(function ($inner) use ($pkpIds, $pkpEmpty) {
                             $inner->where('tipe_ppn', 'PPN')
                                 ->where('qty_pcs', '>', 0)
                                 ->where('has_moved', 'n')
-                                ->standardNik()
-                                ->whereIn('customer_id', $pkp);
+                                ->standardNik();
+                            // Use cached array instead of subquery
+                            if (! $pkpEmpty) {
+                                $inner->whereIn('customer_id', $pkpIds);
+                            } else {
+                                $inner->whereRaw('1 = 0');
+                            }
                         })->orWhere(function ($inner) {
                             $inner->where('has_moved', 'y')
                                 ->where('moved_to', 'pkp');
@@ -1014,13 +1021,17 @@ class RegulerController extends Controller
                     });
                     break;
                 case 'pkpnppn':
-                    $query->where(function ($q) use ($pkp) {
-                        $q->where(function ($inner) use ($pkp) {
+                    $query->where(function ($q) use ($pkpIds, $pkpEmpty) {
+                        $q->where(function ($inner) use ($pkpIds, $pkpEmpty) {
                             $inner->where('tipe_ppn', 'NON-PPN')
                                 ->where('qty_pcs', '>', 0)
                                 ->where('has_moved', 'n')
-                                ->standardNik()
-                                ->whereIn('customer_id', $pkp);
+                                ->standardNik();
+                            if (! $pkpEmpty) {
+                                $inner->whereIn('customer_id', $pkpIds);
+                            } else {
+                                $inner->whereRaw('1 = 0');
+                            }
                         })->orWhere(function ($inner) {
                             $inner->where('has_moved', 'y')
                                 ->where('moved_to', 'pkpnppn');
@@ -1028,16 +1039,19 @@ class RegulerController extends Controller
                     });
                     break;
                 case 'npkp':
-                    $query->where(function ($q) use ($pkp) {
-                        $q->where(function ($inner) use ($pkp) {
+                    $query->where(function ($q) use ($pkpIds) {
+                        $q->where(function ($inner) use ($pkpIds) {
                             $inner->where('tipe_ppn', 'PPN')
                                 ->where(function ($harga) {
                                     $harga->where('hargatotal_sblm_ppn', '>', 0)
                                         ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
                                 })
                                 ->where('has_moved', 'n')
-                                ->standardNik()
-                                ->whereNotIn('customer_id', $pkp);
+                                ->standardNik();
+                            // For NOT IN, if PKP is empty, all records match
+                            if (! empty($pkpIds)) {
+                                $inner->whereNotIn('customer_id', $pkpIds);
+                            }
                         })->orWhere(function ($inner) {
                             $inner->where('has_moved', 'y')
                                 ->where('moved_to', 'npkp');
@@ -1045,13 +1059,15 @@ class RegulerController extends Controller
                     });
                     break;
                 case 'npkpnppn':
-                    $query->where(function ($q) use ($pkp) {
-                        $q->where(function ($inner) use ($pkp) {
+                    $query->where(function ($q) use ($pkpIds) {
+                        $q->where(function ($inner) use ($pkpIds) {
                             $inner->where('tipe_ppn', 'NON-PPN')
                                 ->where('qty_pcs', '>', 0)
                                 ->where('has_moved', 'n')
-                                ->standardNik()
-                                ->whereNotIn('customer_id', $pkp);
+                                ->standardNik();
+                            if (! empty($pkpIds)) {
+                                $inner->whereNotIn('customer_id', $pkpIds);
+                            }
                         })->orWhere(function ($inner) {
                             $inner->where('has_moved', 'y')
                                 ->where('moved_to', 'npkpnppn');
@@ -1115,7 +1131,8 @@ class RegulerController extends Controller
     {
         try {
             $request->validate([
-                'tipe' => 'nullable|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar,pembatalan,koreksi,pending,all',
+                'tipe' => 'nullable|array',
+                'tipe.*' => 'in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar,pembatalan,koreksi,pending,all',
                 'chstatus' => 'nullable|in:checked-ready2download,checked-downloaded,unchecked,all',
                 'periode' => [
                     'nullable',
@@ -1130,15 +1147,25 @@ class RegulerController extends Controller
             ) {
                 abort(403, 'Unauthorized action.');
             }
-            $tipe = $request->query('tipe') ?? 'all';
+            $tipe = $request->query('tipe', ['all']);
+            // Normalize to array for backward compatibility with single string input
+            if (! is_array($tipe)) {
+                $tipe = [$tipe];
+            }
+            // Handle empty array case
+            if (empty($tipe)) {
+                $tipe = ['all'];
+            }
             $pt = $request->query('pt', []);
             $brand = $request->query('brand', []);
             $depo = $request->query('depo', []);
             $periode = $request->query('periode');
             $chstatus = $request->query('chstatus', 'checked-ready2download');
+            // Generate filename based on selected types
+            $tipeFilename = in_array('all', $tipe) ? 'all' : implode('_', $tipe);
             $headers = [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'Content-Disposition' => 'attachment; filename="pajak_keluaran_'.$tipe.'.xlsx"',
+                'Content-Disposition' => 'attachment; filename="pajak_keluaran_'.$tipeFilename.'.xlsx"',
             ];
             $writerType = 'Xlsx';
 
@@ -1151,7 +1178,7 @@ class RegulerController extends Controller
                     $periode,
                     $chstatus,
                 ),
-                'pajak_keluaran_'.$tipe.'.xlsx',
+                'pajak_keluaran_'.$tipeFilename.'.xlsx',
                 $writerType,
                 $headers,
             );
@@ -1175,7 +1202,8 @@ class RegulerController extends Controller
     {
         try {
             $request->validate([
-                'tipe' => 'nullable|in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar,pembatalan,koreksi,pending,all',
+                'tipe' => 'nullable|array',
+                'tipe.*' => 'in:pkp,pkpnppn,npkp,npkpnppn,retur,nonstandar,pembatalan,koreksi,pending,all',
                 'chstatus' => 'nullable|in:checked-ready2download,checked-downloaded,unchecked,all',
                 'periode' => [
                     'nullable',
@@ -1190,15 +1218,25 @@ class RegulerController extends Controller
             ) {
                 abort(403, 'Unauthorized action.');
             }
-            $tipe = $request->query('tipe') ?? 'all';
+            $tipe = $request->query('tipe', ['all']);
+            // Normalize to array for backward compatibility with single string input
+            if (! is_array($tipe)) {
+                $tipe = [$tipe];
+            }
+            // Handle empty array case
+            if (empty($tipe)) {
+                $tipe = ['all'];
+            }
             $pt = $request->query('pt', []);
             $brand = $request->query('brand', []);
             $depo = $request->query('depo', []);
             $periode = $request->query('periode');
             $chstatus = $request->query('chstatus', 'checked-ready2download');
+            // Generate filename based on selected types
+            $tipeFilename = in_array('all', $tipe) ? 'all' : implode('_', $tipe);
             $headers = [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'Content-Disposition' => 'attachment; filename="pajak_keluaran_'.$tipe.'.xlsx"',
+                'Content-Disposition' => 'attachment; filename="pajak_keluaran_'.$tipeFilename.'.xlsx"',
             ];
 
             return Excel::download(
@@ -1210,7 +1248,7 @@ class RegulerController extends Controller
                     $periode,
                     $chstatus,
                 ),
-                'pajak_keluaran_'.$tipe.'.xlsx',
+                'pajak_keluaran_'.$tipeFilename.'.xlsx',
                 'Xlsx',
                 $headers,
             );
@@ -1586,42 +1624,49 @@ class RegulerController extends Controller
             }
         }
         if ($request->has('tipe')) {
+            // OPTIMIZED: Cache PKP IDs once per request, use array instead of subquery
             $pkp = $this->getActivePkpIds();
+            $pkpEmpty = empty($pkp);
+
             if ($request->tipe == 'pkp') {
-                $dbquery->where(function ($q) use ($pkp) {
-                    $q->where(function ($inner) use ($pkp) {
+                $dbquery->where(function ($q) use ($pkp, $pkpEmpty) {
+                    $q->where(function ($inner) use ($pkp, $pkpEmpty) {
                         $inner->where('tipe_ppn', 'PPN')
                             ->where('qty_pcs', '>', 0)
                             ->where('has_moved', 'n')
-                            ->standardNik()
-                            ->whereIn('customer_id', $pkp);
+                            ->standardNik();
+                        // Use cached array instead of subquery
+                        if (! $pkpEmpty) {
+                            $inner->whereIn('customer_id', $pkp);
+                        } else {
+                            $inner->whereRaw('1 = 0'); // No PKP = no results
+                        }
                     })->orWhere(function ($inner) {
                         $inner->where('has_moved', 'y')
                             ->where('moved_to', 'pkp');
                     });
                 });
-                $metadata['tipe'] =
-                    " AND e.szTaxTypeId = 'PPN' AND a.szCustId IN ('".
-                    implode("','", $pkp).
-                    "')";
+                // SAFETY: Escape single quotes to prevent SQL injection
+                $metadata['tipe'] = $pkpEmpty ? '' : " AND e.szTaxTypeId = 'PPN' AND a.szCustId IN (".$this->escapeSqlIdList($pkp).')';
             }
             if ($request->tipe == 'pkpnppn') {
-                $dbquery->where(function ($q) use ($pkp) {
-                    $q->where(function ($inner) use ($pkp) {
+                $dbquery->where(function ($q) use ($pkp, $pkpEmpty) {
+                    $q->where(function ($inner) use ($pkp, $pkpEmpty) {
                         $inner->where('tipe_ppn', 'NON-PPN')
                             ->where('qty_pcs', '>', 0)
                             ->where('has_moved', 'n')
-                            ->standardNik()
-                            ->whereIn('customer_id', $pkp);
+                            ->standardNik();
+                        if (! $pkpEmpty) {
+                            $inner->whereIn('customer_id', $pkp);
+                        } else {
+                            $inner->whereRaw('1 = 0');
+                        }
                     })->orWhere(function ($inner) {
                         $inner->where('has_moved', 'y')
                             ->where('moved_to', 'pkpnppn');
                     });
                 });
-                $metadata['tipe'] =
-                    " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId IN ('".
-                    implode("','", $pkp).
-                    "')";
+                $metadata['tipe'] = $pkpEmpty ? '' : " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId IN (".$this->escapeSqlIdList($pkp).')';
             }
             if ($request->tipe == 'npkp') {
                 $dbquery->where(function ($q) use ($pkp) {
@@ -1632,17 +1677,17 @@ class RegulerController extends Controller
                                     ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
                             })
                             ->where('has_moved', 'n')
-                            ->standardNik()
-                            ->whereNotIn('customer_id', $pkp);
+                            ->standardNik();
+                        // For NOT IN, if PKP is empty, all records match
+                        if (! empty($pkp)) {
+                            $inner->whereNotIn('customer_id', $pkp);
+                        }
                     })->orWhere(function ($inner) {
                         $inner->where('has_moved', 'y')
                             ->where('moved_to', 'npkp');
                     });
                 });
-                $metadata['tipe'] =
-                    " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN ('".
-                    implode("','", $pkp).
-                    "')";
+                $metadata['tipe'] = empty($pkp) ? '' : " AND e.szTaxTypeId = 'PPN' AND a.szCustId NOT IN (".$this->escapeSqlIdList($pkp).')';
             }
             if ($request->tipe == 'npkpnppn') {
                 $dbquery->where(function ($q) use ($pkp) {
@@ -1650,17 +1695,16 @@ class RegulerController extends Controller
                         $inner->where('tipe_ppn', 'NON-PPN')
                             ->where('qty_pcs', '>', 0)
                             ->where('has_moved', 'n')
-                            ->standardNik()
-                            ->whereNotIn('customer_id', $pkp);
+                            ->standardNik();
+                        if (! empty($pkp)) {
+                            $inner->whereNotIn('customer_id', $pkp);
+                        }
                     })->orWhere(function ($inner) {
                         $inner->where('has_moved', 'y')
                             ->where('moved_to', 'npkpnppn');
                     });
                 });
-                $metadata['tipe'] =
-                    " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId NOT IN ('".
-                    implode("','", $pkp).
-                    "')";
+                $metadata['tipe'] = empty($pkp) ? '' : " AND e.szTaxTypeId = 'NON-PPN' AND a.szCustId NOT IN (".$this->escapeSqlIdList($pkp).')';
             }
             if ($request->tipe == 'retur') {
                 $dbquery->where(function ($q) {
@@ -2049,5 +2093,19 @@ class RegulerController extends Controller
         }
 
         return $value === [] ? ['all'] : $value;
+    }
+
+    /**
+     * Escape an array of IDs for safe SQL IN clause usage.
+     * Prevents SQL injection by escaping single quotes.
+     *
+     * @param  array  $ids  Array of ID strings
+     * @return string Comma-separated, quoted and escaped ID list
+     */
+    private function escapeSqlIdList(array $ids): string
+    {
+        return implode(',', array_map(function ($id) {
+            return "'".str_replace("'", "''", (string) $id)."'";
+        }, $ids));
     }
 }

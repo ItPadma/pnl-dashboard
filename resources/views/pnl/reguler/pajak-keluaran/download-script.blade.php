@@ -175,7 +175,8 @@
     }
 
     function downloadFilteredData() {
-        const tipe = $('#inputGroupFilter').val() || 'all';
+        // Use getSelectedTipeValues() from main-script.blade.php
+        const tipe = typeof getSelectedTipeValues === 'function' ? getSelectedTipeValues() : ['all'];
         const params = {
             tipe: tipe,
             pt: $('#filter_pt').val(),

@@ -108,9 +108,55 @@
             }
         });
 
+        // ===== Multi-select filter helper functions =====
+        const allTipes = ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar', 'pembatalan', 'koreksi', 'pending'];
+
+        // Get selected tipe values from checkboxes
+        function getSelectedTipeValues() {
+            const allChecked = $('#filter-all').is(':checked');
+            if (allChecked) {
+                return ['all'];
+            }
+            const selected = [];
+            $('.filter-checkbox:checked').each(function() {
+                selected.push($(this).val());
+            });
+            return selected.length > 0 ? selected : ['all'];
+        }
+
+        // Update dropdown label based on selection
+        function updateFilterLabel() {
+            const selected = getSelectedTipeValues();
+            const label = $('#inputGroupFilterLabel');
+            if (selected.includes('all') || selected.length === allTipes.length) {
+                label.text('--ALL--');
+            } else if (selected.length === 1) {
+                const text = $(`label[for="filter-${selected[0]}"]`).text();
+                label.text(text);
+            } else {
+                label.text(`${selected.length} dipilih`);
+            }
+        }
+
+        // Handle "all" checkbox behavior
+        $(document).on('change', '#filter-all', function() {
+            if ($(this).is(':checked')) {
+                $('.filter-checkbox').prop('checked', false);
+            }
+            updateFilterLabel();
+        });
+
+        $(document).on('change', '.filter-checkbox', function() {
+            $('#filter-all').prop('checked', false);
+            if ($('.filter-checkbox:checked').length === 0) {
+                $('#filter-all').prop('checked', true);
+            }
+            updateFilterLabel();
+        });
+
         // Add change event listeners to filters
         $('#btn-apply-filter').on('click', function() {
-            let applied_tab = $('#inputGroupFilter').val();
+            const appliedTabs = getSelectedTipeValues();
 
             const reloadTable = (tipe) => {
                 initTableIfNeeded(tipe);
@@ -139,28 +185,10 @@
                 }
             };
 
-            if (applied_tab == 'pkp') {
-                reloadTable('pkp');
-            } else if (applied_tab === 'pkpnppn') {
-                reloadTable('pkpnppn');
-            } else if (applied_tab === 'npkp') {
-                reloadTable('npkp');
-            } else if (applied_tab === 'npkpnppn') {
-                reloadTable('npkpnppn');
-            } else if (applied_tab === 'retur') {
-                reloadTable('retur');
-            } else if (applied_tab === 'nonstandar') {
-                reloadTable('nonstandar');
-            } else if (applied_tab === 'pembatalan') {
-                reloadTable('pembatalan');
-            } else if (applied_tab === 'koreksi') {
-                reloadTable('koreksi');
-            } else if (applied_tab === 'pending') {
-                reloadTable('pending');
+            if (appliedTabs.includes('all')) {
+                allTipes.forEach(reloadTable);
             } else {
-                ['pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar', 'pembatalan', 'koreksi',
-                    'pending'
-                ].forEach(reloadTable);
+                appliedTabs.forEach(reloadTable);
             }
         });
 
@@ -225,45 +253,9 @@
                 console.log('Date selected:', start.format('DD/MM/YYYY'));
             });
 
-            // Add event listener for date change
-            $periodeInput.on('apply.daterangepicker', function(ev, picker) {
-                if (tableInitialized.pkp && tablePkpDb) {
-                    tablePkpDb.ajax.reload();
-                    setDownloadCounter('pkp');
-                }
-                if (tableInitialized.pkpnppn && tablePkpDbNppn) {
-                    tablePkpDbNppn.ajax.reload();
-                    setDownloadCounter('pkpnppn');
-                }
-                if (tableInitialized.npkp && tableNonPkpDb) {
-                    tableNonPkpDb.ajax.reload();
-                    setDownloadCounter('npkp');
-                }
-                if (tableInitialized.npkpnppn && tableNonPkpDbNppn) {
-                    tableNonPkpDbNppn.ajax.reload();
-                    setDownloadCounter('npkpnppn');
-                }
-                if (tableInitialized.retur && tableReturDb) {
-                    tableReturDb.ajax.reload();
-                    setDownloadCounter('retur');
-                }
-                if (tableInitialized.nonstandar && tableNonStandarDb) {
-                    tableNonStandarDb.ajax.reload();
-                    setDownloadCounter('nonstandar');
-                }
-                if (tableInitialized.pembatalan && tablePembatalanDb) {
-                    tablePembatalanDb.ajax.reload();
-                    setDownloadCounter('pembatalan');
-                }
-                if (tableInitialized.koreksi && tableKoreksiDb) {
-                    tableKoreksiDb.ajax.reload();
-                    setDownloadCounter('koreksi');
-                }
-                if (tableInitialized.pending && tablePendingDb) {
-                    tablePendingDb.ajax.reload();
-                    setDownloadCounter('pending');
-                }
-            });
+            // NOTE:
+            // Perubahan periode tidak boleh memicu proses filter otomatis.
+            // Filter hanya dijalankan saat tombol "Filter" ditekan.
         }
 
         // Initialize daterangepicker on page load
