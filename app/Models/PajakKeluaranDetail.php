@@ -87,6 +87,16 @@ class PajakKeluaranDetail extends Model
             });
     }
 
+    public function scopeCategoryType($query, string $category)
+    {
+        return $query->where('category_type', $category);
+    }
+
+    public function scopeMainCategories($query)
+    {
+        return $query->whereNotNull('category_type');
+    }
+
     public static function getFromLive($pt, $brand, $depo, $start, $end, $tipe, $chstatus)
     {
         try {
