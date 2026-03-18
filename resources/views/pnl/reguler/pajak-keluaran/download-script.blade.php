@@ -115,7 +115,8 @@
             },
             error: function(error) {
                 console.error('Error: ' + error);
-                // $('#sp-' + tipe).hide();
+                $('#sp-' + tipe).hide();
+                $('.fa-download').show();
             }
         });
     }

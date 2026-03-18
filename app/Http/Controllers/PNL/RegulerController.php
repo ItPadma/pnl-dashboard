@@ -121,7 +121,6 @@ class RegulerController extends Controller
             $columnName = $this->resolveSortableColumn($columnName);
             $columnSortOrder =
                 strtolower($columnSortOrder) === 'asc' ? 'asc' : 'desc';
-            $searchValue = $request->get('search')['value'] ?? '';
 
             // Query base
             $dbquery = PajakKeluaranDetail::query();
@@ -130,7 +129,6 @@ class RegulerController extends Controller
 
             // OPTIMIZED: Single COUNT query instead of multiple calls
             $totalRecords = $dbquery->count();
-            $totalRecordswithFilter = $totalRecords;
 
             // Notify if no records found (without loop)
             if ($totalRecords == 0) {
@@ -172,7 +170,7 @@ class RegulerController extends Controller
             return response()->json([
                 'draw' => intval($draw),
                 'iTotalRecords' => $totalRecords,
-                'iTotalDisplayRecords' => $totalRecordswithFilter,
+                'iTotalDisplayRecords' => $totalRecords,
                 'aaData' => $records,
                 'status' => true,
             ]);
@@ -218,7 +216,6 @@ class RegulerController extends Controller
             $columnName = $this->resolveSortableColumn($columnName);
             $columnSortOrder =
                 strtolower($columnSortOrder) === 'asc' ? 'asc' : 'desc';
-            $searchValue = $request->get('search')['value'] ?? '';
             $grouped = $request->get('grouped') ?? false;
 
             // Query base
@@ -233,7 +230,6 @@ class RegulerController extends Controller
                 // To paginate effectively, we need to first group by the invoice numbers
                 // Since there can be multiple items per invoice, total records = distinct invoices
                 $totalRecords = (clone $dbquery)->distinct('no_invoice')->count('no_invoice');
-                $totalRecordswithFilter = $totalRecords;
 
                 // Step 1: Paginate on the grouped invoices
                 $paginatedInvoicesQuery = (clone $dbquery)
@@ -373,7 +369,6 @@ class RegulerController extends Controller
             } else {
                 // Original ungrouped logic
                 $totalRecords = $dbquery->count();
-                $totalRecordswithFilter = $totalRecords;
                 // OPTIMIZED: Add sort direction to orderBy
                 $records = $dbquery
                     ->orderBy($columnName, $columnSortOrder)
@@ -403,7 +398,7 @@ class RegulerController extends Controller
             return response()->json([
                 'draw' => intval($draw),
                 'iTotalRecords' => $totalRecords,
-                'iTotalDisplayRecords' => $totalRecordswithFilter,
+                'iTotalDisplayRecords' => $totalRecords,
                 'aaData' => $records,
                 'status' => true,
             ]);
@@ -897,212 +892,18 @@ class RegulerController extends Controller
             $pt = $this->normalizeFilter($request->pt ?? ['all']);
             $brand = $this->normalizeFilter($request->brand ?? ['all']);
             $depo = $this->normalizeFilter($request->depo ?? ['all']);
-            $periode_awal = null;
-            $periode_akhir = null;
-            if ($request->has('periode') && ! empty($request->periode)) {
-                $periode_parts = explode(' - ', $request->periode);
-                if (count($periode_parts) === 2) {
-                    $periode_awal = \Carbon\Carbon::createFromFormat(
-                        'd/m/Y',
-                        $periode_parts[0],
-                    )->format('Y-m-d');
-                    $periode_akhir = \Carbon\Carbon::createFromFormat(
-                        'd/m/Y',
-                        $periode_parts[1],
-                    )->format('Y-m-d');
-                } else {
-                    $periode_awal = \Carbon\Carbon::createFromFormat(
-                        'd/m/Y',
-                        $request->periode,
-                    )->format('Y-m-d');
-                    $periode_akhir = \Carbon\Carbon::createFromFormat(
-                        'd/m/Y',
-                        $request->periode,
-                    )->format('Y-m-d');
-                }
-            }
+            $periode = $request->periode;
+            $chstatus = $request->chstatus ?? 'checked-ready2download';
 
-            // Base query
             $query = PajakKeluaranDetail::query();
             $query->selectRaw('
                 ISNULL(SUM(CASE WHEN is_downloaded = 0 AND is_checked = 1 THEN 1 ELSE 0 END), 0) AS ready2download_count,
                 ISNULL(SUM(CASE WHEN is_downloaded = 1 AND is_checked = 1 THEN 1 ELSE 0 END), 0) AS downloaded_count
             ');
 
-            // Additional filters
-            if (! in_array('all', $pt)) {
-                $query->whereIn('company', $pt);
-            }
-            if (! in_array('all', $brand)) {
-                $query->whereIn('brand', $brand);
-            }
-            $userInfo = getLoggedInUserInfo();
-            $userDepos = $userInfo ? $userInfo->depo : ['all'];
-            if (! is_array($userDepos)) {
-                $userDepos = [$userDepos];
-            }
+            $this->applyCommonCountFilters($query, $pt, $brand, $depo, $periode, $chstatus);
+            $this->applyTipeCountConditions($query, $tipe, $this->getActivePkpIds(), empty($this->getActivePkpIds()));
 
-            if ($userInfo && ! in_array('all', $userDepos)) {
-                $allowedDepos = $this->cacheService->getDepoNamesByCodes($userDepos);
-
-                if (! in_array('all', $depo)) {
-                    $requestedDepos = $this->cacheService->getDepoNamesByCodes($depo);
-                    $validDepos = array_intersect(
-                        $requestedDepos,
-                        $allowedDepos,
-                    );
-                    if (! empty($validDepos)) {
-                        $query->whereIn('depo', $validDepos);
-                    } else {
-                        $query->whereRaw('1 = 0');
-                    }
-                } else {
-                    if (! empty($allowedDepos)) {
-                        $query->whereIn('depo', $allowedDepos);
-                    } else {
-                        $query->whereRaw('1 = 0');
-                    }
-                }
-            } elseif (! in_array('all', $depo)) {
-                $depoNames = $this->cacheService->getDepoNamesByCodes($depo);
-                if (! empty($depoNames)) {
-                    $query->whereIn('depo', $depoNames);
-                } else {
-                    $query->whereRaw('1 = 0');
-                }
-            }
-            if ($periode_awal && $periode_akhir) {
-                $query
-                    ->where('tgl_faktur_pajak', '>=', $periode_awal)
-                    ->where('tgl_faktur_pajak', '<=', $periode_akhir);
-            }
-            if ($request->has('chstatus')) {
-                switch ($request->chstatus) {
-                    case 'checked-ready2download':
-                        $query->where('is_checked', '1');
-                        break;
-
-                    case 'unchecked':
-                        $query->where('is_checked', '0');
-                        break;
-
-                    case 'checked-downloaded':
-                        $query->where('is_downloaded', '1');
-                        break;
-
-                    default:
-                        break;
-                }
-            }
-
-            // Additional conditions based on the type
-            // OPTIMIZED: Cache PKP IDs once per request
-            $pkpIds = $this->getActivePkpIds();
-            $pkpEmpty = empty($pkpIds);
-
-            switch ($tipe) {
-                case 'pkp':
-                    $query->where(function ($q) use ($pkpIds, $pkpEmpty) {
-                        $q->where(function ($inner) use ($pkpIds, $pkpEmpty) {
-                            $inner->where('tipe_ppn', 'PPN')
-                                ->where('qty_pcs', '>', 0)
-                                ->where('has_moved', 'n')
-                                ->standardNik();
-                            // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
-                            if (! $pkpEmpty) {
-                                $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
-                            } else {
-                                $inner->whereRaw('1 = 0');
-                            }
-                        })->orWhere(function ($inner) {
-                            $inner->where('has_moved', 'y')
-                                ->where('moved_to', 'pkp');
-                        });
-                    });
-                    break;
-                case 'pkpnppn':
-                    $query->where(function ($q) use ($pkpIds, $pkpEmpty) {
-                        $q->where(function ($inner) use ($pkpIds, $pkpEmpty) {
-                            $inner->where('tipe_ppn', 'NON-PPN')
-                                ->where('qty_pcs', '>', 0)
-                                ->where('has_moved', 'n')
-                                ->standardNik();
-                            // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
-                            if (! $pkpEmpty) {
-                                $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
-                            } else {
-                                $inner->whereRaw('1 = 0');
-                            }
-                        })->orWhere(function ($inner) {
-                            $inner->where('has_moved', 'y')
-                                ->where('moved_to', 'pkpnppn');
-                        });
-                    });
-                    break;
-                case 'npkp':
-                    $query->where(function ($q) use ($pkpIds) {
-                        $q->where(function ($inner) use ($pkpIds) {
-                            $inner->where('tipe_ppn', 'PPN')
-                                ->where(function ($harga) {
-                                    $harga->where('hargatotal_sblm_ppn', '>', 0)
-                                        ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
-                                })
-                                ->where('has_moved', 'n')
-                                ->standardNik();
-                            // For NOT IN, use whereRaw with escaped ID list to avoid SQL Server parameter limit
-                            if (! empty($pkpIds)) {
-                                $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
-                            }
-                        })->orWhere(function ($inner) {
-                            $inner->where('has_moved', 'y')
-                                ->where('moved_to', 'npkp');
-                        });
-                    });
-                    break;
-                case 'npkpnppn':
-                    $query->where(function ($q) use ($pkpIds) {
-                        $q->where(function ($inner) use ($pkpIds) {
-                            $inner->where('tipe_ppn', 'NON-PPN')
-                                ->where('qty_pcs', '>', 0)
-                                ->where('has_moved', 'n')
-                                ->standardNik();
-                            // Use whereRaw with escaped ID list to avoid SQL Server parameter limit
-                            if (! empty($pkpIds)) {
-                                $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
-                            }
-                        })->orWhere(function ($inner) {
-                            $inner->where('has_moved', 'y')
-                                ->where('moved_to', 'npkpnppn');
-                        });
-                    });
-                    break;
-                case 'retur':
-                    $query->where(function ($q) {
-                        $q->where(function ($inner) {
-                            $inner->where('qty_pcs', '<', 0)
-                                ->where('hargatotal_sblm_ppn', '>=', -1000000)
-                                ->where('has_moved', 'n')
-                                ->standardNik();
-                        })->orWhere('moved_to', 'retur');
-                    });
-                    break;
-                case 'nonstandar':
-                    $this->applyNonStandarScope($query);
-                    break;
-                case 'pembatalan':
-                    $query->where('has_moved', 'y')
-                        ->where('moved_to', 'pembatalan');
-                    break;
-                case 'koreksi':
-                    $query->where('has_moved', 'y')
-                        ->where('moved_to', 'koreksi');
-                    break;
-                case 'pending':
-                    $query->where('has_moved', 'y')
-                        ->where('moved_to', 'pending');
-                    break;
-            }
-            // Log::info('sql count: '.$query->toSql());
             $counts = $query->get();
 
             return response()->json(
