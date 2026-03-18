@@ -4,6 +4,7 @@ namespace App\Http\Controllers\PNL;
 
 use App\Events\UserEvent;
 use App\Exports\PajakKeluaranDetailExport;
+use App\Exports\PajakKeluaranMultiSheetExport;
 use App\Exports\PajakKeluaranTemplateExport;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Utilities\LogController;
@@ -1218,14 +1219,27 @@ class RegulerController extends Controller
             ];
             $writerType = 'Xlsx';
 
-            $export = new PajakKeluaranDetailExport(
-                $tipe,
-                $pt,
-                $brand,
-                $depo,
-                $periode,
-                $chstatus,
-            );
+            // Use multi-sheet export when multiple tipes are selected or 'all';
+            // fall back to single-sheet export for single tipe (backward compat).
+            if (in_array('all', $tipe) || count($tipe) > 1) {
+                $export = new PajakKeluaranMultiSheetExport(
+                    $tipe,
+                    $pt,
+                    $brand,
+                    $depo,
+                    $periode,
+                    $chstatus,
+                );
+            } else {
+                $export = new PajakKeluaranDetailExport(
+                    $tipe,
+                    $pt,
+                    $brand,
+                    $depo,
+                    $periode,
+                    $chstatus,
+                );
+            }
             $response = Excel::download(
                 $export,
                 'pajak_keluaran_'.$tipeFilename.'.xlsx',
@@ -1236,6 +1250,14 @@ class RegulerController extends Controller
             $export->markAsDownloaded();
 
             return $response;
+        } catch (\RuntimeException $th) {
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => $th->getMessage(),
+                ],
+                422,
+            );
         } catch (\Throwable $th) {
             Log::error('Failed to download pajak keluaran', [
                 'context' => __METHOD__,

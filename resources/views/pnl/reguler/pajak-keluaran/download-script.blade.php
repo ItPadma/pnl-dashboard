@@ -245,6 +245,12 @@
             chstatus: $('#filter_chstatus').val()
         };
 
+        // Show info toast when exporting multiple sheets
+        if (tipe.includes('all') || tipe.length > 1) {
+            const sheetCount = tipe.includes('all') ? 9 : tipe.length;
+            toastr.info(`Mengexport ${sheetCount} sheet sesuai filter yang dipilih...`, 'Download Multi-Sheet');
+        }
+
         $.ajax({
             url: "{{ route('pnl.reguler.pajak-keluaran.download') }}",
             method: 'GET',

@@ -142,94 +142,105 @@ trait BuildsPajakKeluaranQuery
         $query->where(function ($mainQuery) use ($pkpIds, $pkpEmpty) {
             foreach ($this->tipe as $tipe) {
                 $mainQuery->orWhere(function ($q) use ($tipe, $pkpIds, $pkpEmpty) {
-                    switch ($tipe) {
-                        case 'pkp':
-                            $q->where(function ($inner) use ($pkpIds, $pkpEmpty) {
-                                $inner->where('tipe_ppn', 'PPN')
-                                    ->where('qty_pcs', '>', 0)
-                                    ->where('has_moved', 'n')
-                                    ->standardNik();
-                                if (! $pkpEmpty) {
-                                    $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
-                                } else {
-                                    $inner->whereRaw('1 = 0');
-                                }
-                            })->orWhere(function ($inner) {
-                                $inner->where('has_moved', 'y')
-                                    ->where('moved_to', 'pkp');
-                            });
-                            break;
-                        case 'pkpnppn':
-                            $q->where(function ($inner) use ($pkpIds, $pkpEmpty) {
-                                $inner->where('tipe_ppn', 'NON-PPN')
-                                    ->where('qty_pcs', '>', 0)
-                                    ->where('has_moved', 'n')
-                                    ->standardNik();
-                                if (! $pkpEmpty) {
-                                    $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
-                                } else {
-                                    $inner->whereRaw('1 = 0');
-                                }
-                            })->orWhere(function ($inner) {
-                                $inner->where('has_moved', 'y')
-                                    ->where('moved_to', 'pkpnppn');
-                            });
-                            break;
-                        case 'npkp':
-                            $q->where(function ($inner) use ($pkpIds) {
-                                $inner->where('tipe_ppn', 'PPN')
-                                    ->where(function ($harga) {
-                                        $harga->where('hargatotal_sblm_ppn', '>', 0)
-                                            ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
-                                    })
-                                    ->where('has_moved', 'n')
-                                    ->standardNik();
-                                if (! empty($pkpIds)) {
-                                    $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
-                                }
-                            })->orWhere(function ($inner) {
-                                $inner->where('has_moved', 'y')
-                                    ->where('moved_to', 'npkp');
-                            });
-                            break;
-                        case 'npkpnppn':
-                            $q->where(function ($inner) use ($pkpIds) {
-                                $inner->where('tipe_ppn', 'NON-PPN')
-                                    ->where('qty_pcs', '>', 0)
-                                    ->where('has_moved', 'n')
-                                    ->standardNik();
-                                if (! empty($pkpIds)) {
-                                    $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
-                                }
-                            })->orWhere(function ($inner) {
-                                $inner->where('has_moved', 'y')
-                                    ->where('moved_to', 'npkpnppn');
-                            });
-                            break;
-                        case 'retur':
-                            $q->where(function ($inner) {
-                                $inner->where('qty_pcs', '<', 0)
-                                    ->where('hargatotal_sblm_ppn', '>=', -1000000)
-                                    ->where('has_moved', 'n')
-                                    ->standardNik();
-                            })->orWhere('moved_to', 'retur');
-                            break;
-                        case 'nonstandar':
-                            $this->applyNonStandarScope($q);
-                            break;
-                        case 'pembatalan':
-                            $q->where('has_moved', 'y')->where('moved_to', 'pembatalan');
-                            break;
-                        case 'koreksi':
-                            $q->where('has_moved', 'y')->where('moved_to', 'koreksi');
-                            break;
-                        case 'pending':
-                            $q->where('has_moved', 'y')->where('moved_to', 'pending');
-                            break;
-                    }
+                    $this->applySingleTipeCondition($q, $tipe, $pkpIds, $pkpEmpty);
                 });
             }
         });
+    }
+
+    /**
+     * Apply filtering logic for a single tipe value.
+     *
+     * This method is extracted so it can be reused by classes that need to
+     * check or filter a single tipe without the wrapping OR group.
+     */
+    protected function applySingleTipeCondition($query, string $tipe, array $pkpIds, bool $pkpEmpty): void
+    {
+        switch ($tipe) {
+            case 'pkp':
+                $query->where(function ($inner) use ($pkpIds, $pkpEmpty) {
+                    $inner->where('tipe_ppn', 'PPN')
+                        ->where('qty_pcs', '>', 0)
+                        ->where('has_moved', 'n')
+                        ->standardNik();
+                    if (! $pkpEmpty) {
+                        $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
+                    } else {
+                        $inner->whereRaw('1 = 0');
+                    }
+                })->orWhere(function ($inner) {
+                    $inner->where('has_moved', 'y')
+                        ->where('moved_to', 'pkp');
+                });
+                break;
+            case 'pkpnppn':
+                $query->where(function ($inner) use ($pkpIds, $pkpEmpty) {
+                    $inner->where('tipe_ppn', 'NON-PPN')
+                        ->where('qty_pcs', '>', 0)
+                        ->where('has_moved', 'n')
+                        ->standardNik();
+                    if (! $pkpEmpty) {
+                        $inner->whereRaw('customer_id IN ('.$this->escapeSqlIdList($pkpIds).')');
+                    } else {
+                        $inner->whereRaw('1 = 0');
+                    }
+                })->orWhere(function ($inner) {
+                    $inner->where('has_moved', 'y')
+                        ->where('moved_to', 'pkpnppn');
+                });
+                break;
+            case 'npkp':
+                $query->where(function ($inner) use ($pkpIds) {
+                    $inner->where('tipe_ppn', 'PPN')
+                        ->where(function ($harga) {
+                            $harga->where('hargatotal_sblm_ppn', '>', 0)
+                                ->orWhere('hargatotal_sblm_ppn', '<=', -1000000);
+                        })
+                        ->where('has_moved', 'n')
+                        ->standardNik();
+                    if (! empty($pkpIds)) {
+                        $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
+                    }
+                })->orWhere(function ($inner) {
+                    $inner->where('has_moved', 'y')
+                        ->where('moved_to', 'npkp');
+                });
+                break;
+            case 'npkpnppn':
+                $query->where(function ($inner) use ($pkpIds) {
+                    $inner->where('tipe_ppn', 'NON-PPN')
+                        ->where('qty_pcs', '>', 0)
+                        ->where('has_moved', 'n')
+                        ->standardNik();
+                    if (! empty($pkpIds)) {
+                        $inner->whereRaw('customer_id NOT IN ('.$this->escapeSqlIdList($pkpIds).')');
+                    }
+                })->orWhere(function ($inner) {
+                    $inner->where('has_moved', 'y')
+                        ->where('moved_to', 'npkpnppn');
+                });
+                break;
+            case 'retur':
+                $query->where(function ($inner) {
+                    $inner->where('qty_pcs', '<', 0)
+                        ->where('hargatotal_sblm_ppn', '>=', -1000000)
+                        ->where('has_moved', 'n')
+                        ->standardNik();
+                })->orWhere('moved_to', 'retur');
+                break;
+            case 'nonstandar':
+                $this->applyNonStandarScope($query);
+                break;
+            case 'pembatalan':
+                $query->where('has_moved', 'y')->where('moved_to', 'pembatalan');
+                break;
+            case 'koreksi':
+                $query->where('has_moved', 'y')->where('moved_to', 'koreksi');
+                break;
+            case 'pending':
+                $query->where('has_moved', 'y')->where('moved_to', 'pending');
+                break;
+        }
     }
 
     /**

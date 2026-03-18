@@ -385,3 +385,161 @@ describe('StreamingDetailFakturSheet', function () {
         expect($result1)->toBe('UM.0002');
     });
 });
+
+// =============================================================================
+// PajakKeluaranMultiSheetExport
+// =============================================================================
+
+describe('PajakKeluaranMultiSheetExport', function () {
+
+    it('implements WithMultipleSheets', function () {
+        $export = new PajakKeluaranMultiSheetExport('all');
+
+        expect($export)->toBeInstanceOf(\Maatwebsite\Excel\Concerns\WithMultipleSheets::class);
+    });
+
+    it('returns no sheets when no data exists for any tipe', function () {
+        $export = new PajakKeluaranMultiSheetExport('all');
+
+        $sheets = $export->sheets();
+
+        expect($sheets)->toBeArray();
+        expect(count($sheets))->toBe(0);
+    });
+
+    it('normalizes single tipe string to array', function () {
+        $export = new PajakKeluaranMultiSheetExport('pkp');
+
+        $reflection = new ReflectionClass($export);
+        $property = $reflection->getProperty('tipe');
+        $property->setAccessible(true);
+
+        expect($property->getValue($export))->toBe(['pkp']);
+    });
+
+    it('normalizes all tipe to full list', function () {
+        $export = new PajakKeluaranMultiSheetExport('all');
+
+        $reflection = new ReflectionClass($export);
+        $property = $reflection->getProperty('tipe');
+        $property->setAccessible(true);
+
+        expect($property->getValue($export))->toBe([
+            'pkp', 'pkpnppn', 'npkp', 'npkpnppn', 'retur', 'nonstandar', 'pembatalan', 'koreksi', 'pending',
+        ]);
+    });
+
+    it('returns a sheet only for the tipe that has data', function () {
+        PajakKeluaranDetail::create([
+            'nik' => '3201010101010001',
+            'no_invoice' => 'INV-RETUR-001',
+            'no_do' => 'DO-001',
+            'kode_produk' => 'P001',
+            'qty_pcs' => -5,
+            'hargatotal_sblm_ppn' => -500000,
+            'tipe_ppn' => 'PPN',
+        ]);
+
+        $export = new PajakKeluaranMultiSheetExport('retur');
+
+        $sheets = $export->sheets();
+
+        expect(count($sheets))->toBe(1);
+        expect($sheets[0])->toBeInstanceOf(PajakKeluaranTipeSheet::class);
+        expect($sheets[0]->title())->toBe('Retur');
+    });
+
+    it('orders sheets by canonical tipe order', function () {
+        PajakKeluaranDetail::create([
+            'nik' => '3201010101010001',
+            'no_invoice' => 'INV-PENDING-001',
+            'no_do' => 'DO-001',
+            'kode_produk' => 'P001',
+            'qty_pcs' => 0,
+            'hargatotal_sblm_ppn' => 0,
+        ]);
+
+        // Manually set has_moved and moved_to via raw update
+        PajakKeluaranDetail::query()->update([
+            'has_moved' => 'y',
+            'moved_to' => 'pending',
+        ]);
+
+        $export = new PajakKeluaranMultiSheetExport(['pending', 'pkp']);
+
+        $sheets = $export->sheets();
+
+        expect(count($sheets))->toBe(1);
+        expect($sheets[0]->title())->toBe('Pending');
+    });
+});
+
+// =============================================================================
+// PajakKeluaranTipeSheet
+// =============================================================================
+
+describe('PajakKeluaranTipeSheet', function () {
+
+    it('returns correct sheet title', function () {
+        $sheet = new PajakKeluaranTipeSheet('pkp', 'PKP');
+
+        expect($sheet->title())->toBe('PKP');
+    });
+
+    it('returns correct sheet title for nonstandar', function () {
+        $sheet = new PajakKeluaranTipeSheet('nonstandar', 'Non Standar');
+
+        expect($sheet->title())->toBe('Non Standar');
+    });
+
+    it('returns chunk size of 1000', function () {
+        $sheet = new PajakKeluaranTipeSheet('pkp', 'PKP');
+
+        expect($sheet->chunkSize())->toBe(1000);
+    });
+
+    it('headings excludes internal columns', function () {
+        $sheet = new PajakKeluaranTipeSheet('pkp', 'PKP');
+
+        $headings = $sheet->headings();
+
+        expect($headings)->not->toContain('id');
+        expect($headings)->not->toContain('is_checked');
+        expect($headings)->not->toContain('is_downloaded');
+        expect($headings)->not->toContain('created_at');
+        expect($headings)->not->toContain('updated_at');
+    });
+
+    it('headings includes expected business columns', function () {
+        $sheet = new PajakKeluaranTipeSheet('pkp', 'PKP');
+
+        $headings = $sheet->headings();
+
+        expect($headings)->toContain('no_invoice');
+        expect($headings)->toContain('nik');
+        expect($headings)->toContain('kode_produk');
+        expect($headings)->toContain('nama_produk');
+        expect($headings)->toContain('dpp');
+        expect($headings)->toContain('ppn');
+    });
+
+    it('implements required export interfaces', function () {
+        $sheet = new PajakKeluaranTipeSheet('pkp', 'PKP');
+
+        expect($sheet)->toBeInstanceOf(\Maatwebsite\Excel\Concerns\FromQuery::class);
+        expect($sheet)->toBeInstanceOf(\Maatwebsite\Excel\Concerns\WithChunkReading::class);
+        expect($sheet)->toBeInstanceOf(\Maatwebsite\Excel\Concerns\WithHeadings::class);
+        expect($sheet)->toBeInstanceOf(\Maatwebsite\Excel\Concerns\WithMapping::class);
+        expect($sheet)->toBeInstanceOf(\Maatwebsite\Excel\Concerns\WithTitle::class);
+    });
+
+    it('has tipe array set to single element', function () {
+        $sheet = new PajakKeluaranTipeSheet('retur', 'Retur');
+
+        $reflection = new ReflectionClass($sheet);
+        $property = $reflection->getProperty('tipe');
+        $property->setAccessible(true);
+
+        expect($property->getValue($sheet))->toBe(['retur']);
+    });
+});
